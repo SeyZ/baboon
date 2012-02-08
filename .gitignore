@@ -1,2 +1,5 @@
 .vagrant
 Vagrantfile
+virtenv/
+demo/
+*pyc
