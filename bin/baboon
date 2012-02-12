@@ -1,0 +1,19 @@
+#!/usr/bin/python
+
+import os
+import sys
+
+##############################################################################
+# Check if we're in devel mode. If ../baboon exists, we're in devel mode
+# Append the folder to the pythonpath
+##############################################################################
+bin_path = os.path.dirname(os.path.abspath(__file__))
+baboon_path = bin_path + "/../baboon/"
+if os.path.exists(baboon_path):
+    sys.path.append(baboon_path)
+##############################################################################
+
+from main import Main
+
+if __name__ == "__main__":
+    Main()
