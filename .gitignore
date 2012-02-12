@@ -3,3 +3,4 @@ Vagrantfile
 virtenv/
 demo/
 *pyc
+*.swp
