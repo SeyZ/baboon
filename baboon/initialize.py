@@ -1,15 +1,16 @@
 import os
-
+import errno
 from config import config
+from errors.baboon_exception import BaboonException
 
 
 class Initializor(object):
     def __init__(self):
         metadir = os.path.join(config.path, ".baboon")
-
-        # Create the metadata folder if it doesn't exist
-        if not os.path.exists(metadir):
+        try:
             os.mkdir(metadir)
-            print 'done.'
-        else:
-            print "This folder has already been initialized."
+        except OSError, e:
+            if e.errno in (errno.EEXIST, errno.ENOENT,):
+                raise BaboonException("%s - %s." % (metadir, e))
+            else:
+                raise
