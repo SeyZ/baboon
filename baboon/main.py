@@ -6,6 +6,7 @@ from config import config
 from notifier import Notifier
 from initialize import Initializor
 
+
 class ArgumentParser(object):
    def __init__(self):
       parser = argparse.ArgumentParser(description='Baboon ! Ook !')
@@ -28,8 +29,8 @@ class Main(object):
       else:
          check = config.check_config()
          if not check:
-            print "%s seems to be not correctly initialized.\nYou should verify" \
-                " 'baboon init' was called in the directory." % config.path
+            print "%s seems to be not correctly initialized.\nYou should" \
+                " verify 'baboon init' was called in the directory." % config.path
             exit(1)
 
          notifier = Notifier()
