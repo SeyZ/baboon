@@ -1,8 +1,6 @@
 import os
-import sys
 import errno
 import unittest
-
 
 from mock import Mock
 from config import config
@@ -11,7 +9,6 @@ from errors.baboon_exception import BaboonException
 
 
 class TestInitConfig(unittest.TestCase):
-
 
     def test_success(self):
         """ Tests if the instanciation of the Initializor class works
@@ -38,7 +35,8 @@ class TestInitConfig(unittest.TestCase):
                                        'No such file or directory',
                                        '/foopath/.baboon')
 
-        with self.assertRaisesRegexp(BaboonException, 'No such file or directory'):
+        with self.assertRaisesRegexp(BaboonException,
+                                     'No such file or directory'):
             initializor = Initializor()
 
     def test_folder_enoent(self):
@@ -66,6 +64,7 @@ class TestInitConfig(unittest.TestCase):
 
         with self.assertRaises(OSError):
             initializor = Initializor()
+
 
 if __name__ == '__main__':
     unittest.main()
