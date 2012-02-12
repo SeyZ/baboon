@@ -1,10 +1,12 @@
 import os
+import sys
 
 import argparse
 
 from config import config
 from notifier import Notifier
 from initialize import Initializor
+from errors.baboon_exception import BaboonException
 
 
 class ArgumentParser(object):
@@ -25,7 +27,10 @@ class Main(object):
           config.path = arg_parser.args.path
 
       if arg_parser.args.init:
-         Initializor()
+         try:
+            Initializor()
+         except BaboonException, e:
+            sys.stderr.write(str(e) + '\n')
       else:
          check = config.check_config()
          if not check:
