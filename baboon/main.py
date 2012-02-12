@@ -1,4 +1,5 @@
 import os
+
 import argparse
 
 from config import config
@@ -9,7 +10,7 @@ class ArgumentParser(object):
    def __init__(self):
       parser = argparse.ArgumentParser(description='Baboon ! Ook !')
       parser.add_argument('--path', metavar='path',
-                          help='an integer for the accumulator')
+                          help='Specify the path you want to monitor')
       parser.add_argument('init', metavar='init', nargs='?',
                           help='Initialize the baboon metadata')
 
@@ -19,7 +20,8 @@ class ArgumentParser(object):
 class Main(object):
    def __init__(self):
       arg_parser = ArgumentParser()
-      config.path = arg_parser.args.path
+      if arg_parser.args.path:
+          config.path = arg_parser.args.path
 
       if arg_parser.args.init:
          Initializor()

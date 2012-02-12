@@ -5,12 +5,11 @@ from config import config
 
 class Initializor(object):
     def __init__(self):
-        if not config.path:
-            print "No path specified."
-            return
+        metadir = os.path.join(config.path, ".baboon")
 
-        metadir = "%s%s" % (config.path, '.baboon')
-
+        # Create the metadata folder if it doesn't exist
         if not os.path.exists(metadir):
             os.mkdir(metadir)
             print 'done.'
+        else:
+            print "This folder has already been initialized."
