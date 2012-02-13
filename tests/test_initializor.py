@@ -8,7 +8,7 @@ from initialize import Initializor
 from errors.baboon_exception import BaboonException
 
 
-class TestInitConfig(unittest.TestCase):
+class TestInitializor(unittest.TestCase):
 
     def setUp(self):
         config = Mock()
