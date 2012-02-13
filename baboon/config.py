@@ -20,6 +20,7 @@ class Config(object):
     def __init__(self):
         # Configures the default path
         self.path = os.path.abspath(".")
+        self.metadir_name = '.baboon'
 
         self.init_config()
 
@@ -34,7 +35,7 @@ class Config(object):
             exit(1)
 
     def check_config(self, safe=False):
-        path = os.path.join(self.path, ".baboon")
+        path = os.path.join(self.path, self.metadir_name)
         ret = os.path.isdir(path)
 
         if ret or safe:

@@ -10,10 +10,14 @@ from errors.baboon_exception import BaboonException
 
 class TestInitConfig(unittest.TestCase):
 
+    def setUp(self):
+        config = Mock()
+        config.metadir_name = '.baboon'
+
     def test_success(self):
         """ Tests if the instanciation of the Initializor class works
         """
-        os.path.join = Mock(return_value="/foopath/.baboon")
+        os.path.join = Mock(return_value="/foopath/%s" % config.metadir_name)
         os.path.exists = Mock(return_value=False)
         raised = False
         os.mkdir = Mock()
@@ -28,12 +32,12 @@ class TestInitConfig(unittest.TestCase):
     def test_folder_enoent(self):
         """ Tests if the path does not exist
         """
-        os.path.join = Mock(return_value="/foopath/.baboon")
+        os.path.join = Mock(return_value="/foopath/%s" % config.metadir_name)
 
         os.mkdir = Mock()
         os.mkdir.side_effect = OSError(errno.ENOENT,
                                        'No such file or directory',
-                                       '/foopath/.baboon')
+                                       "/foopath/%s" % config.metadir_name)
 
         with self.assertRaisesRegexp(BaboonException,
                                      'No such file or directory'):
@@ -42,12 +46,12 @@ class TestInitConfig(unittest.TestCase):
     def test_folder_enoent(self):
         """ Tests if the path already exist
         """
-        os.path.join = Mock(return_value="/foopath/.baboon")
+        os.path.join = Mock(return_value="/foopath/%s")
 
         os.mkdir = Mock()
         os.mkdir.side_effect = OSError(errno.EEXIST,
                                        'File exists',
-                                       '/foopath/.baboon')
+                                       "/foopath/%s" % config.metadir_name)
 
         with self.assertRaisesRegexp(BaboonException, 'File exists'):
             initializor = Initializor()
@@ -55,12 +59,12 @@ class TestInitConfig(unittest.TestCase):
     def test_mkdir_failed(self):
         """ Tests if there's another error raised by os.mkdir
         """
-        os.path.join = Mock(return_value="/foopath/.baboon")
+        os.path.join = Mock(return_value="/foopath/%s" % config.metadir_name)
 
         os.mkdir = Mock()
         os.mkdir.side_effect = OSError(errno.EPERM,
                                        'Operation not permitted',
-                                       '/foopath/.baboon')
+                                       "/foopath/%s" % config.metadir_name)
 
         with self.assertRaises(OSError):
             initializor = Initializor()
