@@ -6,7 +6,7 @@ from errors.baboon_exception import BaboonException
 
 class Initializor(object):
     def __init__(self):
-        metadir = os.path.join(config.path, ".baboon")
+        metadir = os.path.join(config.path, config.metadir_name)
         try:
             os.mkdir(metadir)
         except OSError, e:
