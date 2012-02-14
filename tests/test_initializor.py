@@ -43,7 +43,7 @@ class TestInitializor(unittest.TestCase):
                                      'No such file or directory'):
             initializor = Initializor()
 
-    def test_folder_enoent(self):
+    def test_folder_eexist(self):
         """ Tests if the path already exist
         """
         os.path.join = Mock(return_value="/foopath/%s")
