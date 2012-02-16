@@ -11,7 +11,10 @@ class Main(object):
    def __init__(self):
       if config.init:
          try:
-            Initializor()
+            init = Initializor()
+            init.create_metadir()
+            init.create_config_file()
+            init.walk_and_copy()
          except BaboonException, e:
             sys.stderr.write(str(e) + '\n')
       else:
