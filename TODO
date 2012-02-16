@@ -1,0 +1,4 @@
+[Tests]
+- tests/test_initializor.py
+    - test _ignore method
+    - test create_config_file method
