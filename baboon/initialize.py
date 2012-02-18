@@ -40,25 +40,11 @@ class Initializor(object):
         """ This methods walks down the folders and recursively copy any
         non-hidden folders and files to the metadir folder.
         """
-
         src = os.sep.join(self.metadir.split(os.sep)[:-1])
         dest = os.sep.join([self.metadir, 'watched'])
         try:
-            shutil.copytree(src, dest, ignore=self._ignore)
+            shutil.copytree(src, dest, ignore=lambda adir, files:
+                                [f for f in files if f.startswith('.')])
+
         except (shutil.Error, OSError), err:
             raise BaboonException("Baboon error: %s" % (err,))
-
-    def _ignore(self, folder, content):
-        """ This is the callable argument from shutil.copytree's ignore kwarg.
-        It will ignore the metadir_name folder as well as hidden folders and
-        hidden files.
-        """
-
-        to_ignore = [config.metadir_name]
-        if folder.startswith('.'):
-            to_ignore.append(folder)
-        for filename in content:
-            if filename.startswith('.'):
-                to_ignore.append(filename)
-
-        return to_ignore
