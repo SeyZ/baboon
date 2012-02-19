@@ -1,4 +1,3 @@
-import os
 import errno
 import shutil
 import unittest
