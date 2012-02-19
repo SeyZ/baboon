@@ -7,13 +7,13 @@ from errors.baboon_exception import BaboonException
 
 class ArgumentParser(object):
     def __init__(self):
-      parser = argparse.ArgumentParser(description='Baboon ! Ook !')
-      parser.add_argument('--path', metavar='path',
+        parser = argparse.ArgumentParser(description='Baboon ! Ook !')
+        parser.add_argument('--path', metavar='path',
                           help='Specify the path you want to monitor')
-      parser.add_argument('init', metavar='init', nargs='?', default=False,
-                          type=bool, help='Initialize the baboon metadata')
+        parser.add_argument('init', metavar='init', nargs='?', default=False,
+                            type=bool, help='Initialize the baboon metadata')
 
-      self.args = parser.parse_args()
+        self.args = parser.parse_args()
 
 
 class Config(object):
@@ -28,8 +28,11 @@ class Config(object):
         arg_parser = ArgumentParser()
         try:
             args = arg_parser.args
-            self.path = arg_parser.args.path or self.path
-            self.init = arg_parser.args.init is True
+            self.path = args.path or self.path
+            self.path = os.path.abspath(self.path)
+            self.metadir = "%s%s%s" % (self.path, os.sep, self.metadir_name)
+            self.metadir_watched = "%s%s%s" % (self.metadir, os.sep, 'watched')
+            self.init = args.init is True
         except AttributeError:
             sys.stderr.write("Failed to parse arguments\n")
             exit(1)
