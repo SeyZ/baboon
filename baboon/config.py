@@ -1,6 +1,7 @@
 import os
-import argparse
 import sys
+import argparse
+import logging
 
 from errors.baboon_exception import BaboonException
 
@@ -13,7 +14,22 @@ class ArgumentParser(object):
         parser.add_argument('init', metavar='init', nargs='?', default=False,
                             type=bool, help='Initialize the baboon metadata')
 
+        parser.add_argument('-q', '--quiet', help='set logging to ERROR',
+                          action='store_const', dest='loglevel',
+                          const=logging.ERROR, default=logging.INFO)
+
+        parser.add_argument('-d', '--debug', help='set logging to DEBUG',
+                          action='store_const', dest='loglevel',
+                          const=logging.DEBUG, default=logging.INFO)
+
+        parser.add_argument('-v', '--verbose', help='set logging to COMM',
+                          action='store_const', dest='loglevel',
+                          const=5, default=logging.INFO)
+
         self.args = parser.parse_args()
+
+        logging.basicConfig(level='INFO',
+                            format='%(levelname)-8s %(message)s')
 
 
 class Config(object):
