@@ -12,13 +12,15 @@ class EventHandler(pyinotify.ProcessEvent):
         print "File created : %s" % event.pathname
 
     def process_IN_MODIFY(self, event):
+        print "File modified : %s" % event.pathname
+
         filename = os.path.basename(event.pathname)
 
         old_file_path = "%s%s%s" % (config.metadir_watched, os.sep, filename)
         new_file_path = "%s%s%s" % (config.path, os.sep, filename)
 
         patch = diffman.diff(old_file_path, new_file_path)
-        service.send(patch)
+        service.broadcast(patch)
 
 
 class Notifier(object):
@@ -28,11 +30,9 @@ class Notifier(object):
 
         handler = EventHandler()
 
-        notifier = pyinotify.Notifier(vm, handler)
-        notifier.coalesce_events()
+        self.notifier = pyinotify.ThreadedNotifier(vm, handler)
+        self.notifier.coalesce_events()
         vm.add_watch(config.path, mask, rec=True)
 
-        notifier.loop()
-
     def watch(self):
-        self.notifier.loop()
+        self.notifier.start()
