@@ -1,19 +1,22 @@
 import logging
 import sleekxmpp
 
+from diffman import Diffman
 from sleekxmpp.xmlstream import ET
 
 
 class Transport(sleekxmpp.ClientXMPP):
-
     """
-    A simple SleekXMPP bot that will echo messages it
-    receives, along with a short thank you message.
     """
 
     def __init__(self, jid, password):
         sleekxmpp.ClientXMPP.__init__(self, jid, password)
 
+        # configures logger
+        self.logger = logging.getLogger(self.__class__.__name__)
+        self.logger.setLevel(logging.DEBUG)
+
+        # sets xmpp handlers
         self.add_event_handler("session_start", self.start)
         self.add_event_handler("message", self.message)
         self.register_handler(
@@ -24,7 +27,18 @@ class Transport(sleekxmpp.ClientXMPP):
                 self._handle_event))
 
     def _handle_event(self, msg):
-        print('Received pubsub event: %s' % msg['pubsub_event'])
+        if msg['type'] == 'headline':
+            self.logger.info("Received pubsub item(s)")
+            self.logger.debug("Received pubsub item(s) : %s" %
+                              msg['pubsub_event'])
+
+            differ = Diffman()
+            for item in msg['pubsub_event']['items']['substanzas']:
+                payload = item['payload'].text
+                differ.patch(payload)
+        else:
+            self.logger.debug("Received pubsub event: %s" %
+                              msg['pubsub_event'])
 
     def start(self, event):
         """ Processes the session_start event.
@@ -32,10 +46,9 @@ class Transport(sleekxmpp.ClientXMPP):
         self.send_presence()
         self.get_roster()
         self.pubsub = self.plugin["xep_0060"]
-        self.broadcast('test')
 
-    def broadcast(self, msg):
-        payload = ET.fromstring("<test xmlns='test'>%s</test>" % msg)
+    def broadcast(self, diff):
+        payload = ET.fromstring("<diff>%s</diff>" % diff)
         try:
             result = self.pubsub.publish('pubsub.localhost', 'node1',
                                          payload=payload)

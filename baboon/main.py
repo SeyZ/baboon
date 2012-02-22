@@ -12,6 +12,7 @@ class Main(object):
     def __init__(self):
         logging.basicConfig(level=logging.DEBUG,
                             format='%(levelname)-8s %(message)s')
+
         if config.init:
             self.default_initializor()
         else:

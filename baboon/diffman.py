@@ -1,10 +1,12 @@
-import jsonpickle
 from diff_match_patch import diff_match_patch
 
 
 class Diffman(object):
     def __init__(self):
         self.differ = diff_match_patch()
+
+        # configures the level severity (0 = very strict, 1 = relax)
+        self.differ.Match_Threshold = 0.3
 
     def diff(self, a, b):
         with open(a, 'r') as old:
@@ -13,9 +15,12 @@ class Diffman(object):
                 newtext = new.read()
 
                 thepatch = self.differ.patch_make(oldtext, newtext)
-                pickled = jsonpickle.encode(thepatch)
+                patch_stringified = self.differ.patch_toText(thepatch)
 
-                return pickled
+                return patch_stringified
 
+    def patch(self, patch_stringified):
+        thepatch = self.differ.patch_fromText(patch_stringified)
+        print thepatch
 
 diffman = Diffman()
