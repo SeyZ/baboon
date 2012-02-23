@@ -19,8 +19,13 @@ class Diffman(object):
 
                 return patch_stringified
 
-    def patch(self, patch_stringified):
+    def patch(self, patch_stringified, content):
         thepatch = self.differ.patch_fromText(patch_stringified)
-        print thepatch
+        if content is None:
+            print thepatch
+            return thepatch
+        else:
+            return self.differ.patch_apply(thepatch, content)
+
 
 diffman = Diffman()

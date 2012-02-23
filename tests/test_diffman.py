@@ -28,11 +28,8 @@ class TestDiffman(unittest.TestCase):
             m_file.read.side_effect = lambda: reads.pop(0)
 
             diffman = Diffman()
-            json_patch = diffman.diff(path1, path2)
-            thepatch = jsonpickle.decode(json_patch)
-
-            differ = diff_match_patch()
-            result = differ.patch_apply(thepatch, 'text1')
+            thepatch = diffman.diff(path1, path2)
+            result = diffman.patch(thepatch, 'text1')
 
             self.assertEquals('text2', result[0])
 
