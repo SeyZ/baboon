@@ -21,9 +21,15 @@ class Diffman(object):
 
                 return patch_stringified
 
-    def patch(self, patch, content):
+    def patch(self, patch, content=None):
         thepatch = patch
         if isinstance(patch, str):
             thepatch = self.differ.patch_fromText(patch)
 
-        return self.differ.patch_apply(thepatch, content)
+        minga = None
+        with open('/home/seyz/workspace/external/foo/.baboon/watched/TODO',
+                  'r') as f:
+            content = f.read()
+            minga = self.differ.patch_apply(thepatch, content)
+
+        return minga

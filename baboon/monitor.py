@@ -22,7 +22,7 @@ class EventHandler(pyinotify.ProcessEvent):
         new_file_path = "%s%s%s" % (config.path, os.sep, filename)
 
         patch = self.service.make_patch(old_file_path, new_file_path)
-        self.service.broadcast(patch)
+        self.service.broadcast(new_file_path, patch)
 
 
 class Monitor(object):

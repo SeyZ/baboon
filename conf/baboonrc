@@ -1,5 +1,6 @@
 [project]
 server_host=pubsub.localhost
 node_name = node1
+admin_jid=admin@localhost
 jid=seyz@localhost
 password=secret

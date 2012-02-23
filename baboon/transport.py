@@ -9,7 +9,7 @@ class Transport(sleekxmpp.ClientXMPP):
     """
     """
 
-    def __init__(self):
+    def __init__(self, handle_event):
         sleekxmpp.ClientXMPP.__init__(self, config.jid, config.password)
 
         # configures logger
@@ -24,21 +24,7 @@ class Transport(sleekxmpp.ClientXMPP):
                 'Pubsub event',
                 sleekxmpp.xmlstream.matcher.StanzaPath(
                     'message/pubsub_event'),
-                self._handle_event))
-
-    def _handle_event(self, msg):
-        if msg['type'] == 'headline':
-            self.logger.info("Received pubsub item(s)")
-            self.logger.debug("Received pubsub item(s) : %s" %
-                              msg['pubsub_event'])
-
-            differ = Diffman()
-            for item in msg['pubsub_event']['items']['substanzas']:
-                payload = item['payload'].text
-                differ.patch(payload)
-        else:
-            self.logger.debug("Received pubsub event: %s" %
-                              msg['pubsub_event'])
+                handle_event))
 
     def start(self, event):
         """ Processes the session_start event.
@@ -47,8 +33,14 @@ class Transport(sleekxmpp.ClientXMPP):
         self.get_roster()
         self.pubsub = self.plugin["xep_0060"]
 
-    def broadcast(self, diff):
-        payload = ET.fromstring("<diff>%s</diff>" % diff)
+    def broadcast(self, filepath, diff):
+        """ Broadcasts the diff to the pubsub xmpp node
+        @param filepath: the relative (project) file path
+        @type filepath: str
+        """
+        stanza = "<patch><file>%s</file><diff>%s</diff></patch>" \
+            % (filepath, diff)
+        payload = ET.fromstring(stanza)
         try:
             result = self.pubsub.publish(config.server_host, config.node_name,
                                          payload=payload)
