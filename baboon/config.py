@@ -3,6 +3,7 @@ import sys
 import argparse
 import logging
 
+from ConfigParser import RawConfigParser
 from errors.baboon_exception import BaboonException
 
 
@@ -41,6 +42,23 @@ class Config(object):
         self.init_config()
 
     def init_config(self):
+        self._init_config_arg()
+        self._init_config_file()
+
+    def check_config(self, safe=False):
+        path = os.path.join(self.path, self.metadir_name)
+        ret = os.path.isdir(path)
+
+        if ret or safe:
+            return ret
+        else:
+            msg = """%s seems to be not a directory. \
+Verify that 'baboon init' was called in the directory before.""" % path
+            raise BaboonException(msg)
+
+        # TODO: checks if server_host, jid and password is valid
+
+    def _init_config_arg(self):
         arg_parser = ArgumentParser()
         try:
             args = arg_parser.args
@@ -53,15 +71,14 @@ class Config(object):
             sys.stderr.write("Failed to parse arguments\n")
             exit(1)
 
-    def check_config(self, safe=False):
-        path = os.path.join(self.path, self.metadir_name)
-        ret = os.path.isdir(path)
+    def _init_config_file(self):
+        filename = 'conf/baboonrc'
+        parser = RawConfigParser()
+        parser.read(filename)
 
-        if ret or safe:
-            return ret
-        else:
-            msg = """%s seems to be not a directory. \
-Verify that 'baboon init' was called in the directory before.""" % path
-            raise BaboonException(msg)
+        for section in parser.sections():
+            for item in parser.items(section):
+                setattr(self, item[0], item[1])
+
 
 config = Config()

@@ -3,7 +3,7 @@ from transport import Transport
 
 class Service():
     def __init__(self):
-        self.xmpp = Transport('seyz@localhost', 'secret')
+        self.xmpp = Transport()
         self.xmpp.register_plugin('xep_0030')  # Service Discovery
         self.xmpp.register_plugin('xep_0004')  # Data Forms
         self.xmpp.register_plugin('xep_0060')  # PubSub
