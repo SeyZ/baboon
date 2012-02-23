@@ -2,7 +2,6 @@ import logging
 import sleekxmpp
 
 from config import config
-from diffman import Diffman
 from sleekxmpp.xmlstream import ET
 
 

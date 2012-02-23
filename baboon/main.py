@@ -2,9 +2,9 @@ import sys
 import logging
 
 from config import config
-from notifier import Notifier
+from monitor import Monitor
 from initialize import Initializor
-from service import service
+from service import Service
 from errors.baboon_exception import BaboonException
 
 
@@ -17,8 +17,12 @@ class Main(object):
             self.default_initializor()
         else:
             self.check_config()
-            self.watch()
-            service.start()
+
+            self.service = Service()
+            self.service.start()
+
+            self.monitor = Monitor(self.service)
+            self.monitor.watch()
 
     def default_initializor(self):
         try:
@@ -35,7 +39,3 @@ class Main(object):
         except BaboonException, e:
             sys.stderr.write(str(e) + '\n')
             exit(1)
-
-    def watch(self):
-        notifier = Notifier()
-        notifier.watch()

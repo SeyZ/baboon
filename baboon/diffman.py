@@ -9,6 +9,8 @@ class Diffman(object):
         self.differ.Match_Threshold = 0.3
 
     def diff(self, a, b):
+        """ Creates a patch between oldfile and newfile
+        """
         with open(a, 'r') as old:
             with open(b, 'r') as new:
                 oldtext = old.read()
@@ -19,13 +21,9 @@ class Diffman(object):
 
                 return patch_stringified
 
-    def patch(self, patch_stringified, content):
-        thepatch = self.differ.patch_fromText(patch_stringified)
-        if content is None:
-            print thepatch
-            return thepatch
-        else:
-            return self.differ.patch_apply(thepatch, content)
+    def patch(self, patch, content):
+        thepatch = patch
+        if isinstance(patch, str):
+            thepatch = self.differ.patch_fromText(patch)
 
-
-diffman = Diffman()
+        return self.differ.patch_apply(thepatch, content)

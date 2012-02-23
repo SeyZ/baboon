@@ -2,11 +2,13 @@ import os
 import pyinotify
 
 from config import config
-from diffman import diffman
-from service import service
 
 
 class EventHandler(pyinotify.ProcessEvent):
+
+    def __init__(self, service):
+        super(EventHandler, self).__init__()
+        self.service = service
 
     def process_IN_CREATE(self, event):
         print "File created : %s" % event.pathname
@@ -19,20 +21,22 @@ class EventHandler(pyinotify.ProcessEvent):
         old_file_path = "%s%s%s" % (config.metadir_watched, os.sep, filename)
         new_file_path = "%s%s%s" % (config.path, os.sep, filename)
 
-        patch = diffman.diff(old_file_path, new_file_path)
-        service.broadcast(patch)
+        patch = self.service.make_patch(old_file_path, new_file_path)
+        self.service.broadcast(patch)
 
 
-class Notifier(object):
-    def __init__(self):
+class Monitor(object):
+    def __init__(self, service):
+        self.service = service
+
         vm = pyinotify.WatchManager()
         mask = pyinotify.IN_MODIFY | pyinotify.IN_CREATE
 
-        handler = EventHandler()
+        handler = EventHandler(service)
 
-        self.notifier = pyinotify.ThreadedNotifier(vm, handler)
-        self.notifier.coalesce_events()
+        self.monitor = pyinotify.ThreadedNotifier(vm, handler)
+        self.monitor.coalesce_events()
         vm.add_watch(config.path, mask, rec=True)
 
     def watch(self):
-        self.notifier.start()
+        self.monitor.start()
