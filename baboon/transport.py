@@ -38,8 +38,13 @@ class Transport(sleekxmpp.ClientXMPP):
         @param filepath: the relative (project) file path
         @type filepath: str
         """
-        stanza = "<patch><file>%s</file><diff>%s</diff></patch>" \
-            % (filepath, diff)
+        stanza = """
+<patch>
+  <project>%s</project>
+  <file>%s</file>
+  <diff>%s</diff>
+</patch>""" % (config.project_name, filepath, diff)
+
         payload = ET.fromstring(stanza)
         try:
             result = self.pubsub.publish(config.server_host, config.node_name,

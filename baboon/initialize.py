@@ -24,10 +24,11 @@ class Initializor(object):
         """ This is git-like. Config files holds folders that must be watched
         by the mighty Baboon.
         """
-
         config_file_path = os.sep.join([self.metadir, 'config'])
         try:
-            open(config_file_path, 'a').close()
+            # create cfg file with the project name (current dir) by default
+            with open(config_file_path, 'a') as f:
+                f.write('project_name = %s' % os.path.basename(os.getcwd()))
         except OSError, err:
             if err.errno in (errno.EPERM):
                 raise BaboonException("Baboon error : %s - %s" %

@@ -12,17 +12,19 @@ class Main(object):
     def __init__(self):
         logging.basicConfig(level=logging.DEBUG,
                             format='%(levelname)-8s %(message)s')
+        try:
+            if config.init:
+                self.default_initializor()
+            else:
+                self.check_config()
 
-        if config.init:
-            self.default_initializor()
-        else:
-            self.check_config()
+                self.service = Service()
+                self.service.start()
 
-            self.service = Service()
-            self.service.start()
-
-            self.monitor = Monitor(self.service)
-            self.monitor.watch()
+                self.monitor = Monitor(self.service)
+                self.monitor.watch()
+        except BaboonException as err:
+            sys.stderr.write(err)
 
     def default_initializor(self):
         try:

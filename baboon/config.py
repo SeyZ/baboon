@@ -44,6 +44,7 @@ class Config(object):
     def init_config(self):
         self._init_config_arg()
         self._init_config_file()
+        self._init_config_project()
 
     def check_config(self, safe=False):
         path = os.path.join(self.path, self.metadir_name)
@@ -64,8 +65,8 @@ Verify that 'baboon init' was called in the directory before.""" % path
             args = arg_parser.args
             self.path = args.path or self.path
             self.path = os.path.abspath(self.path)
-            self.metadir = "%s%s%s" % (self.path, os.sep, self.metadir_name)
-            self.metadir_watched = "%s%s%s" % (self.metadir, os.sep, 'watched')
+            self.metadir = os.path.join(self.path, self.metadir_name)
+            self.metadir_watched = os.path.join(self.metadir, 'watched')
             self.init = args.init is True
         except AttributeError:
             sys.stderr.write("Failed to parse arguments\n")
@@ -80,5 +81,29 @@ Verify that 'baboon init' was called in the directory before.""" % path
             for item in parser.items(section):
                 setattr(self, item[0], item[1])
 
+    def _init_config_project(self):
+        # TODO: the config project must support the ConfigParser format ?
+        if not self.init:
+            try:
+                filename = os.path.join(self.metadir, 'config')
+                with open(filename, 'r') as f:
+                    lines = f.readlines()
+                    for line in lines:
+                        try:
+                            splitted = line.split('=')
+                            setattr(self, splitted[0].strip(),
+                                    splitted[1].strip())
+                        except:
+                            err = 'Cannot parse the project config file'
+                            raise BaboonException(err)
+            except:
+                err = 'Cannot find a baboonrc in the project to watch'
+                raise BaboonException(err)
 
-config = Config()
+
+# Need to be refactored !
+try:
+    config = Config()
+except BaboonException as err:
+    sys.stderr.write("%s\n" % err)
+    exit(1)
