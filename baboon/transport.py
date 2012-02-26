@@ -1,7 +1,7 @@
 import logging
 import sleekxmpp
 
-from config import config
+from config import Config
 from sleekxmpp.xmlstream import ET
 
 
@@ -10,7 +10,9 @@ class Transport(sleekxmpp.ClientXMPP):
     """
 
     def __init__(self, handle_event):
-        sleekxmpp.ClientXMPP.__init__(self, config.jid, config.password)
+        self.config = Config()
+        sleekxmpp.ClientXMPP.__init__(self, self.config.jid,
+                                      self.config.password)
 
         # configures logger
         self.logger = logging.getLogger(self.__class__.__name__)
@@ -44,16 +46,17 @@ class Transport(sleekxmpp.ClientXMPP):
   <file>%s</file>
   <diff>%s</diff>
   <author>%s</author>
-</patch>""" % (config.project_name, filepath, diff, config.jid)
+</patch>""" % (self.config.project_name, filepath, diff, self.config.jid)
 
         payload = ET.fromstring(stanza)
         try:
-            result = self.pubsub.publish(config.server_host, config.node_name,
+            result = self.pubsub.publish(self.config.server_host,
+                                         self.config.node_name,
                                          payload=payload)
             id = result['pubsub']['publish']['item']['id']
             print('Published at item id: %s' % id)
         except:
-            logging.error('Could not publish to: %s' % config.node_name)
+            logging.error('Could not publish to: %s' % self.config.node_name)
 
     def message(self, msg):
         """ Processes incoming message stanzas. Also includes MUC messages and

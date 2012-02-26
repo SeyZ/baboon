@@ -6,20 +6,37 @@ from ConfigParser import RawConfigParser
 from errors.baboon_exception import BaboonException
 
 
+def singleton(cls):
+    instances = {}
+
+    def getinstance():
+        if cls not in instances:
+            instances[cls] = cls()
+        return instances[cls]
+    return getinstance
+
+
 class ArgumentParser(object):
     def __init__(self):
         parser = argparse.ArgumentParser(description='Baboon ! Ook !')
         parser.add_argument('--path', metavar='path',
                           help='Specify the path you want to monitor')
+        parser.add_argument('--config', metavar='config',
+                            help='Override the default location of the \
+                                config file')
         parser.add_argument('init', metavar='init', nargs='?', default=False,
                             type=bool, help='Initialize the baboon metadata')
 
         self.args = parser.parse_args()
 
 
+@singleton
 class Config(object):
+    """ Borg configuration class
+    """
+
     def __init__(self):
-        # Configures the default path
+        # configures the default path
         self.path = os.path.abspath(".")
         self.metadir_name = '.baboon'
 
@@ -35,7 +52,9 @@ class Config(object):
         """
         self._init_config_arg()
         self._init_config_file()
-        self._init_config_project()
+        if self.init is False:
+            self.check_config()  # checks the configuration, should be ok
+            self._init_config_project()
 
     def check_config(self, safe=False):
         """ Checks the configuration state
@@ -54,13 +73,17 @@ Verify that 'baboon init' was called in the directory before.""" % path
 
     def _get_config_path(self):
         """ Gets the configuration path with the priority order :
-        1) <project_path>/conf/baboonrc
-        2) ~/.baboonrc
-        3) /etc/baboon/baboonrc
-        4) environment variable : BABOONRC
+        1) config command line argument
+        2) <project_path>/conf/baboonrc
+        3) ~/.baboonrc
+        4) /etc/baboon/baboonrc
+        5) environment variable : BABOONRC
 
         elsewhere : return None
         """
+        if self.configpath is not None:
+            return self.configpath
+
         config_name = 'baboonrc'
 
         etc_path = '/etc/baboonrc/%s' % config_name
@@ -84,6 +107,8 @@ Verify that 'baboon init' was called in the directory before.""" % path
             self.metadir = os.path.join(self.path, self.metadir_name)
             self.metadir_watched = os.path.join(self.metadir, 'watched')
             self.init = args.init is True
+            self.configpath = args.config
+
         except AttributeError:
             sys.stderr.write("Failed to parse arguments\n")
             exit(1)
@@ -95,7 +120,8 @@ Verify that 'baboon init' was called in the directory before.""" % path
 
         for section in parser.sections():
             for item in parser.items(section):
-                setattr(self, item[0], item[1])
+                if not hasattr(self, item[0]):
+                    setattr(self, item[0], item[1])
 
     def _init_config_project(self):
         # TODO: the config project must support the ConfigParser format ?
@@ -115,11 +141,3 @@ Verify that 'baboon init' was called in the directory before.""" % path
             except:
                 err = 'Cannot find a baboonrc in the project to watch'
                 raise BaboonException(err)
-
-
-# Need to be refactored !
-try:
-    config = Config()
-except BaboonException as err:
-    sys.stderr.write("%s\n" % err)
-    exit(1)

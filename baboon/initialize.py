@@ -1,13 +1,14 @@
 import os
 import shutil
 import errno
-from config import config
+from config import Config
 from errors.baboon_exception import BaboonException
 
 
 class Initializor(object):
     def __init__(self):
-        self.metadir = os.path.join(config.path, config.metadir_name)
+        self.config = Config()
+        self.metadir = os.path.join(self.config.path, self.config.metadir_name)
 
     def create_metadir(self):
         try:

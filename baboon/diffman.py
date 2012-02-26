@@ -1,12 +1,13 @@
 import os
 
 from errors.baboon_exception import BaboonException
-from config import config
+from config import Config
 from diff_match_patch import diff_match_patch
 
 
 class Diffman(object):
     def __init__(self):
+        self.config = Config()
         self.differ = diff_match_patch()
 
         # configures the level severity (0 = very strict, 1 = relax)
@@ -32,7 +33,7 @@ class Diffman(object):
 
         result = None
         try:
-            filename = os.path.join(config.metadir, thefile)
+            filename = os.path.join(self.config.metadir, thefile)
             with open(filename, 'r') as f:
                 content = f.read()
                 result = self.differ.patch_apply(thepatch, content)

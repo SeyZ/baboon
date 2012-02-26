@@ -1,7 +1,7 @@
 import sys
 import logging
 
-from config import config
+from config import Config
 from monitor import Monitor
 from initialize import Initializor
 from service import Service
@@ -12,8 +12,12 @@ class Main(object):
     def __init__(self):
         logging.basicConfig(level=logging.DEBUG,
                             format='%(levelname)-8s %(message)s')
+
         try:
-            if config.init:
+            # instanciates the config (singleton with borg pattern)
+            self.config = Config()
+
+            if self.config.init:
                 self.default_initializor()
             else:
                 self.check_config()
@@ -23,8 +27,8 @@ class Main(object):
 
                 self.monitor = Monitor(self.service)
                 self.monitor.watch()
-        except BaboonException as err:
-            sys.stderr.write(err)
+        except BaboonException, err:
+            sys.stderr.write("%s\n" % err)
 
     def default_initializor(self):
         try:
@@ -37,7 +41,7 @@ class Main(object):
 
     def check_config(self):
         try:
-            config.check_config()
+            self.config.check_config()
         except BaboonException, e:
             sys.stderr.write(str(e) + '\n')
             exit(1)

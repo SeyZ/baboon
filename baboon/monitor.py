@@ -2,7 +2,7 @@ import os
 import pyinotify
 
 from errors.baboon_exception import BaboonException
-from config import config
+from config import Config
 
 
 class EventHandler(pyinotify.ProcessEvent):
@@ -12,6 +12,7 @@ class EventHandler(pyinotify.ProcessEvent):
         methods.
         """
         super(EventHandler, self).__init__()
+        self.config = Config()
         self.service = service
 
     def process_IN_CREATE(self, event):
@@ -29,12 +30,13 @@ class EventHandler(pyinotify.ProcessEvent):
 
         filename = os.path.basename(event.pathname)
 
-        old_file_path = "%s%s%s" % (config.metadir_watched, os.sep, filename)
-        new_file_path = "%s%s%s" % (config.path, os.sep, filename)
+        old_file_path = "%s%s%s" % (self.config.metadir_watched, os.sep,
+                                    filename)
+        new_file_path = "%s%s%s" % (self.config.path, os.sep, filename)
 
         rel_path = None
         try:
-            rel_path = new_file_path.split(config.path)[1]
+            rel_path = new_file_path.split(self.config.path)[1]
         except:
             err = 'Cannot retrieve the relative project path'
             raise BaboonException(err)
@@ -49,6 +51,7 @@ class Monitor(object):
         watched project.
         @param service: Forwards the service to the L{EventHandler} class
         """
+        self.config = Config()
         self.service = service
 
         vm = pyinotify.WatchManager()
@@ -58,7 +61,7 @@ class Monitor(object):
 
         self.monitor = pyinotify.ThreadedNotifier(vm, handler)
         self.monitor.coalesce_events()
-        vm.add_watch(config.path, mask, rec=True)
+        vm.add_watch(self.config.path, mask, rec=True)
 
     def watch(self):
         """ Starts to watch the watched project

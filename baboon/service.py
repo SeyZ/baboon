@@ -1,6 +1,6 @@
 import logging
 
-from config import config
+from config import Config
 from transport import Transport
 from diffman import Diffman
 
@@ -9,6 +9,7 @@ class Service(object):
     def __init__(self):
         """
         """
+        self.config = Config()
 
         self.logger = logging.getLogger(self.__class__.__name__)
         self.logger.setLevel(logging.DEBUG)
@@ -42,7 +43,7 @@ class Service(object):
         Returns True if success
         """
         return self.diffman.patch(thepatch, "%s%s"
-                                  % (config.path, thefile))
+                                  % (self.config.path, thefile))
 
     def _handle_event(self, msg):
         if msg['type'] == 'headline':
@@ -58,7 +59,7 @@ class Service(object):
                     thediff = payload[2].text
                     author = payload[3].text
 
-                    if author != config.jid:
+                    if author != self.config.jid:
                         result = self.apply_patch(project_name, thediff,
                                               filepath)
                         if False in result[1]:
@@ -78,4 +79,4 @@ class Service(object):
                               msg['pubsub_event'])
 
     def notify(self, msg):
-        self.xmpp.sendMessage(config.admin_jid, msg)
+        self.xmpp.sendMessage(self.config.admin_jid, msg)
