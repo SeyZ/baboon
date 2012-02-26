@@ -26,11 +26,20 @@ class Config(object):
         self.init_config()
 
     def init_config(self):
+        """ Initializes:
+        - the argument parser
+        - the baboon configuration file
+        - the watched project configuration file
+
+        and puts all configurations in the config dict
+        """
         self._init_config_arg()
         self._init_config_file()
         self._init_config_project()
 
     def check_config(self, safe=False):
+        """ Checks the configuration state
+        """
         path = os.path.join(self.path, self.metadir_name)
         ret = os.path.isdir(path)
 
