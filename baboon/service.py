@@ -37,12 +37,12 @@ class Service(object):
         self.logger.debug("Created the patch: %s" % patch)
         return patch
 
-    def apply_patch(self, thepatch, thefile):
+    def apply_patch(self, project_name, thepatch, thefile):
         """ Applies the patch on the file 'thefile'.
         Returns True if success
         """
-
-        return not False in self.diffman.patch(thepatch, thefile)[1]
+        return self.diffman.patch(thepatch, "%s%s"
+                                  % (config.path, thefile))
 
     def _handle_event(self, msg):
         if msg['type'] == 'headline':
@@ -53,14 +53,22 @@ class Service(object):
             for item in msg['pubsub_event']['items']['substanzas']:
                 try:
                     payload = item['payload']
-                    thefile = payload[0].text
-                    thediff = payload[1].text
-                    result = self.apply_patch(thediff, thefile)
+                    project_name = payload[0].text
+                    filepath = payload[1].text
+                    thediff = payload[2].text
+                    author = payload[3].text
 
-                    if result is False:
-                        self.notify("Conflict detected !")
-                    else:
-                        self.notify("Tutto bene !")
+                    if author != config.jid:
+                        result = self.apply_patch(project_name, thediff,
+                                              filepath)
+                        if False in result[1]:
+                            msg = "Conflict detected"
+                            self.logger.info(msg)
+                            self.notify(msg)
+                        else:
+                            msg = "Everything seems to be perfect"
+                            self.logger.debug(msg)
+                            self.notify(msg)
                 except:
                     # ugly hack to match good patch item
                     pass

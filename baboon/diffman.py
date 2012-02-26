@@ -1,3 +1,7 @@
+import os
+
+from errors.baboon_exception import BaboonException
+from config import config
 from diff_match_patch import diff_match_patch
 
 
@@ -6,7 +10,7 @@ class Diffman(object):
         self.differ = diff_match_patch()
 
         # configures the level severity (0 = very strict, 1 = relax)
-        self.differ.Match_Threshold = 0.3
+        self.differ.Match_Threshold = 0.1
 
     def diff(self, a, b):
         """ Creates a patch between oldfile and newfile
@@ -21,15 +25,18 @@ class Diffman(object):
 
                 return patch_stringified
 
-    def patch(self, patch, content=None):
+    def patch(self, patch, thefile, content=None):
         thepatch = patch
         if isinstance(patch, str):
             thepatch = self.differ.patch_fromText(patch)
 
-        minga = None
-        with open('/home/seyz/workspace/external/foo/.baboon/watched/TODO',
-                  'r') as f:
-            content = f.read()
-            minga = self.differ.patch_apply(thepatch, content)
+        result = None
+        try:
+            filename = os.path.join(config.metadir, thefile)
+            with open(filename, 'r') as f:
+                content = f.read()
+                result = self.differ.patch_apply(thepatch, content)
+        except OSError as err:
+            raise BaboonException(err)
 
-        return minga
+        return result

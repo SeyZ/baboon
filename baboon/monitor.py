@@ -1,6 +1,7 @@
 import os
 import pyinotify
 
+from errors.baboon_exception import BaboonException
 from config import config
 
 
@@ -21,8 +22,15 @@ class EventHandler(pyinotify.ProcessEvent):
         old_file_path = "%s%s%s" % (config.metadir_watched, os.sep, filename)
         new_file_path = "%s%s%s" % (config.path, os.sep, filename)
 
+        rel_path = None
+        try:
+            rel_path = new_file_path.split(config.path)[1]
+        except:
+            err = 'Cannot retrieve the relative project path'
+            raise BaboonException(err)
+
         patch = self.service.make_patch(old_file_path, new_file_path)
-        self.service.broadcast(new_file_path, patch)
+        self.service.broadcast(rel_path, patch)
 
 
 class Monitor(object):
