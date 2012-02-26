@@ -59,6 +59,29 @@ Verify that 'baboon init' was called in the directory before.""" % path
 
         # TODO: checks if server_host, jid and password is valid
 
+    def _get_config_path(self):
+        """ Gets the configuration path with the priority order :
+        1) <project_path>/conf/baboonrc
+        2) ~/.baboonrc
+        3) /etc/baboon/baboonrc
+        4) environment variable : BABOONRC
+
+        elsewhere : return None
+        """
+        config_name = 'baboonrc'
+
+        etc_path = '/etc/baboonrc/%s' % config_name
+        user_path = '%s/.%s' % (os.path.expanduser('~'), config_name)
+        curdir_path = '%s/conf/%s' % (os.curdir, config_name)
+
+        for loc in etc_path, user_path, curdir_path:
+            if os.path.isfile(loc):
+                return loc
+
+        # if there's no good path, use the global environment
+        # elsewhere, return None
+        return os.environ.get("BABOONRC")
+
     def _init_config_arg(self):
         arg_parser = ArgumentParser()
         try:
@@ -73,7 +96,7 @@ Verify that 'baboon init' was called in the directory before.""" % path
             exit(1)
 
     def _init_config_file(self):
-        filename = 'conf/baboonrc'
+        filename = self._get_config_path()
         parser = RawConfigParser()
         parser.read(filename)
 
