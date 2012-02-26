@@ -2,18 +2,20 @@ import os
 import unittest
 
 from mock import Mock
-from config import config
+from config import Config
 from errors.baboon_exception import BaboonException
 
 
 class TestConfig(unittest.TestCase):
+    def setUp(self):
+        self.config = Config()
 
     def test_check_config_success(self):
         """ Tests if the check_config() works"""
         os.path.join = Mock(return_value='/foopath')
         os.path.isdir = Mock(return_value=True)
 
-        ret = config.check_config()
+        ret = self.config.check_config()
 
         self.assertEquals(ret, True)
 
@@ -24,7 +26,7 @@ class TestConfig(unittest.TestCase):
         os.path.isdir = Mock(return_value=False)
 
         with self.assertRaises(BaboonException):
-            ret = config.check_config()
+            ret = self.config.check_config()
             self.assertEquals(ret, None)
 
     def test_check_config_failure_safe(self):
@@ -36,7 +38,7 @@ class TestConfig(unittest.TestCase):
         raised = False
 
         try:
-            ret = config.check_config(True)
+            ret = self.config.check_config(True)
         except:
             raised = True
 
