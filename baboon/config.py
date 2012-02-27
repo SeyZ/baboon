@@ -1,6 +1,7 @@
 import os
 import sys
 import argparse
+import logging
 
 from utils import singleton
 from ConfigParser import RawConfigParser
@@ -18,7 +19,24 @@ class ArgumentParser(object):
         parser.add_argument('init', metavar='init', nargs='?', default=False,
                             type=bool, help='Initialize the baboon metadata')
 
+        # logging args
+        parser.add_argument('-d', '--debug', help='set logging to DEBUG',
+                            action='store_const',
+                            dest='loglevel',
+                            const=logging.DEBUG,
+                            default=logging.INFO)
+
         self.args = parser.parse_args()
+
+        # configures the logger level setted in the logging args
+        from logger import ColorLogger
+        logging.basicConfig()
+
+        handler = logging.getLogger().handlers[0]
+        logging.getLogger().removeHandler(handler)
+
+        logging.setLoggerClass(ColorLogger)
+        logging.getLogger().setLevel(self.args.loglevel)
 
 
 @singleton

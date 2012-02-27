@@ -1,7 +1,6 @@
 import sys
-import logging
 
-from utils import logger
+from logger import logger
 from config import Config
 from monitor import Monitor
 from initialize import Initializor
@@ -12,9 +11,6 @@ from errors.baboon_exception import BaboonException
 @logger
 class Main(object):
     def __init__(self):
-        logging.basicConfig(level=logging.INFO,
-                            format='%(levelname)-8s (%(name)s) %(message)s')
-
         try:
             # instanciates the config (singleton with borg pattern)
             self.config = Config()

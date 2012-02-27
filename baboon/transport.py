@@ -1,6 +1,8 @@
+import sys
 import sleekxmpp
+import logging
 
-from utils import logger
+from logger import logger
 from config import Config
 from sleekxmpp.xmlstream import ET
 

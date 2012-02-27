@@ -2,7 +2,7 @@ import os
 import pyinotify
 
 from errors.baboon_exception import BaboonException
-from utils import logger
+from logger import logger
 from config import Config
 
 
