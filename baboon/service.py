@@ -20,10 +20,12 @@ class Service(object):
         self.diffman = Diffman()
 
     def start(self):
+        self.logger.info('Connecting to XMPP...')
         if self.xmpp.connect():
+            self.logger.info('Connected to XMPP')
             self.xmpp.process()
         else:
-            print("Unable to connect.")
+            self.logger.error("Unable to connect.")
 
     def broadcast(self, filepath, patch):
         self.xmpp.broadcast(filepath, patch)
@@ -32,7 +34,7 @@ class Service(object):
         """ Creates a patch between oldfile and newfile
         """
         patch = self.diffman.diff(oldfile, newfile)
-        self.logger.debug("Created the patch: %s" % patch)
+        self.logger.info("Created the patch: %s" % patch)
         return patch
 
     def apply_patch(self, project_name, thepatch, thefile):

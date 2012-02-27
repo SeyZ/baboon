@@ -54,7 +54,7 @@ class Transport(sleekxmpp.ClientXMPP):
                                          self.config.node_name,
                                          payload=payload)
             id = result['pubsub']['publish']['item']['id']
-            print('Published at item id: %s' % id)
+            self.logger.info('Published at item id: %s' % id)
         except:
             self.logger.error('Could not publish to: %s' %
                               self.config.node_name)

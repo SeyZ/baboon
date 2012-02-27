@@ -2,9 +2,11 @@ import os
 import pyinotify
 
 from errors.baboon_exception import BaboonException
+from utils import logger
 from config import Config
 
 
+@logger
 class EventHandler(pyinotify.ProcessEvent):
 
     def __init__(self, service):
@@ -19,14 +21,14 @@ class EventHandler(pyinotify.ProcessEvent):
         """ Triggered when a file is created in the watched project.
         @param event: the event provided by pyinotify.ProcessEvent.
         """
-        print "File created : %s" % event.pathname
+        self.logger.info("File created : %s" % event.pathname)
 
     def process_IN_MODIFY(self, event):
         """ Triggered when a file is modified in the watched project.
         @param event: the event provided by pyinotify.ProcessEvent.
         @raise BaboonException: if cannot retrieve the relative project path
         """
-        print "File modified : %s" % event.pathname
+        self.logger.info("File modified : %s" % event.pathname)
 
         filename = os.path.basename(event.pathname)
 
