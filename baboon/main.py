@@ -12,7 +12,7 @@ from errors.baboon_exception import BaboonException
 @logger
 class Main(object):
     def __init__(self):
-        logging.basicConfig(level=logging.DEBUG,
+        logging.basicConfig(level=logging.INFO,
                             format='%(levelname)-8s (%(name)s) %(message)s')
 
         try:

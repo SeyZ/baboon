@@ -1,18 +1,15 @@
-import logging
-
+from utils import logger
 from config import Config
 from transport import Transport
 from diffman import Diffman
 
 
+@logger
 class Service(object):
     def __init__(self):
         """
         """
         self.config = Config()
-
-        self.logger = logging.getLogger(self.__class__.__name__)
-        self.logger.setLevel(logging.DEBUG)
 
         self.xmpp = Transport(self._handle_event)
         self.xmpp.register_plugin('xep_0030')  # Service Discovery
