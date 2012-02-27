@@ -2,18 +2,9 @@ import os
 import sys
 import argparse
 
+from utils import singleton
 from ConfigParser import RawConfigParser
 from errors.baboon_exception import BaboonException
-
-
-def singleton(cls):
-    instances = {}
-
-    def getinstance():
-        if cls not in instances:
-            instances[cls] = cls()
-        return instances[cls]
-    return getinstance
 
 
 class ArgumentParser(object):

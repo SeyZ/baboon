@@ -1,22 +1,20 @@
-import logging
 import sleekxmpp
 
+from utils import logger
 from config import Config
 from sleekxmpp.xmlstream import ET
 
 
+@logger
 class Transport(sleekxmpp.ClientXMPP):
     """
     """
 
     def __init__(self, handle_event):
         self.config = Config()
+
         sleekxmpp.ClientXMPP.__init__(self, self.config.jid,
                                       self.config.password)
-
-        # configures logger
-        self.logger = logging.getLogger(self.__class__.__name__)
-        self.logger.setLevel(logging.DEBUG)
 
         # sets xmpp handlers
         self.add_event_handler("session_start", self.start)
@@ -34,6 +32,8 @@ class Transport(sleekxmpp.ClientXMPP):
         self.send_presence()
         self.get_roster()
         self.pubsub = self.plugin["xep_0060"]
+
+        self.logger.info('XMPP initialization done')
 
     def broadcast(self, filepath, diff):
         """ Broadcasts the diff to the pubsub xmpp node
@@ -56,7 +56,8 @@ class Transport(sleekxmpp.ClientXMPP):
             id = result['pubsub']['publish']['item']['id']
             print('Published at item id: %s' % id)
         except:
-            logging.error('Could not publish to: %s' % self.config.node_name)
+            self.logger.error('Could not publish to: %s' %
+                              self.config.node_name)
 
     def message(self, msg):
         """ Processes incoming message stanzas. Also includes MUC messages and
