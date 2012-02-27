@@ -79,4 +79,4 @@ class Service(object):
                               msg['pubsub_event'])
 
     def notify(self, msg):
-        self.xmpp.sendMessage(self.config.admin_jid, msg)
+        self.xmpp.sendMessage(self.config.jid, msg)

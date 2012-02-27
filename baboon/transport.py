@@ -64,4 +64,4 @@ class Transport(sleekxmpp.ClientXMPP):
         error messages.
         """
         if msg['type'] in ('chat', 'normal'):
-            msg.reply("Thanks for sending\n%(body)s" % msg).send()
+            self.logger.info("Received the message %(body)s:" % msg)
