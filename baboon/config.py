@@ -23,7 +23,7 @@ class ArgumentParser(object):
 
 @singleton
 class Config(object):
-    """ Borg configuration class
+    """ Singleton configuration class
     """
 
     def __init__(self):
