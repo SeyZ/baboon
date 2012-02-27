@@ -33,7 +33,7 @@ class Diffman(object):
 
         result = None
         try:
-            filename = os.path.join(self.config.metadir, thefile)
+            filename = os.path.join(self.config.path, thefile)
             with open(filename, 'r') as f:
                 content = f.read()
                 result = self.differ.patch_apply(thepatch, content)
