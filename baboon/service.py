@@ -47,7 +47,7 @@ class Service(object):
     def _handle_event(self, msg):
         if msg['type'] == 'headline':
             self.logger.info("Received pubsub item(s)")
-            self.logger.debug("Received pubsub item(s) : %s" %
+            self.logger.debug("Received pubsub item(s): \n%s" %
                               msg['pubsub_event'])
 
             for item in msg['pubsub_event']['items']['substanzas']:
@@ -74,7 +74,7 @@ class Service(object):
                     pass
 
         else:
-            self.logger.debug("Received pubsub event: %s" %
+            self.logger.debug("Received pubsub event: \n%s" %
                               msg['pubsub_event'])
 
     def notify(self, msg):

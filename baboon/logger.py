@@ -39,7 +39,7 @@ class ColorFormatter(logging.Formatter):
         return logging.Formatter.format(self, record)
 
 
-class ColorLogger(logging.Logger):
+class BaboonLogger(logging.Logger):
     FORMAT = """%(levelname)-18s $BOLD%(name)-20s$RESET \
 %(message)s ($BOLD%(filename)s$RESET:%(lineno)d)"""
 
@@ -56,6 +56,11 @@ class ColorLogger(logging.Logger):
 
         self.addHandler(console)
         return
+
+    @staticmethod
+    def setLoggerLevel(logger, level):
+        log = logging.getLogger(logger)
+        log.setLevel(level)
 
 
 def logger(theclass):

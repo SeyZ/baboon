@@ -3,3 +3,7 @@ server_host=pubsub.localhost
 node_name = node1
 jid=seyz@localhost
 password=secret
+
+[log]
+sleekxmpp=logs/sleekxmpp.log
+baboon=console

@@ -29,13 +29,8 @@ class ArgumentParser(object):
         self.args = parser.parse_args()
 
         # configures the logger level setted in the logging args
-        from logger import ColorLogger
-        logging.basicConfig()
-
-        handler = logging.getLogger().handlers[0]
-        logging.getLogger().removeHandler(handler)
-
-        logging.setLoggerClass(ColorLogger)
+        from logger import BaboonLogger
+        logging.setLoggerClass(BaboonLogger)
         logging.getLogger().setLevel(self.args.loglevel)
 
 
@@ -117,6 +112,7 @@ Verify that 'baboon init' was called in the directory before.""" % path
             self.metadir_watched = os.path.join(self.metadir, 'watched')
             self.init = args.init is True
             self.configpath = args.config
+            self.loglevel = args.loglevel
 
         except AttributeError:
             sys.stderr.write("Failed to parse arguments\n")
