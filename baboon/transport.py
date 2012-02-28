@@ -99,11 +99,7 @@ class Transport(sleekxmpp.ClientXMPP):
         for h in sleekxmpp_logger.handlers:
             sleekxmpp_logger.removeHandler(h)
 
-        root_logger = logging.getLogger()
-        for h in root_logger.handlers:
-            root_logger.removeHandler(h)
-
-        # log in a file
+        # add a handler file
         dest = 'logs/%s' % filename
         sleekxmpp_logger.addHandler(logging.FileHandler(dest))
         self.logger.debug("Redirected the sleekxmpp logger to the file %s" %
