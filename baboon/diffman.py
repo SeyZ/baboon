@@ -11,7 +11,7 @@ class Diffman(object):
         self.differ = diff_match_patch()
 
         # configures the level severity (0 = very strict, 1 = relax)
-        self.differ.Match_Threshold = 0.1
+        self.differ.Match_Threshold = 0.05
 
     def diff(self, a, b):
         """ Creates a patch between oldfile and newfile
