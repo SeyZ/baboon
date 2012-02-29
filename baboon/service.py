@@ -67,7 +67,7 @@ class Service(object):
                             self.notify(msg)
                         else:
                             msg = "Everything seems to be perfect"
-                            self.logger.debug(msg)
+                            self.logger.info(msg)
                             self.notify(msg)
                 except:
                     # ugly hack to match good patch item
