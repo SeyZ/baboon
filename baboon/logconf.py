@@ -1,6 +1,5 @@
 LOGGING = {
     'version': 1,
-        'disable_existing_loggers': True,
     'formatters': {
         'verbose': {
             'format': '%(levelname)s %(asctime)s %(module)s %(message)s'

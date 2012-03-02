@@ -8,10 +8,6 @@ from utils import singleton
 from ConfigParser import RawConfigParser
 from errors.baboon_exception import BaboonException
 
-from logging.config import BaseConfigurator
-from importlib import import_module
-BaseConfigurator.importer = staticmethod(import_module)
-
 
 class ArgumentParser(object):
     def __init__(self):
@@ -40,10 +36,6 @@ class Config(object):
     """
 
     def __init__(self):
-        # configures the logger level setted in the logging args
-        from logconf import LOGGING
-        logging.config.dictConfig(LOGGING)
-
         # configures the default path
         self.path = os.path.abspath(".")
         self.metadir_name = '.baboon'
@@ -59,6 +51,7 @@ class Config(object):
         and puts all configurations in the config dict
         """
         self._init_config_arg()
+        self._init_logging()
         self._init_config_file()
         if self.init is False:
             self.check_config()  # checks the configuration, should be ok
@@ -120,6 +113,18 @@ Verify that 'baboon init' was called in the directory before.""" % path
 
         except AttributeError:
             sys.stderr.write("Failed to parse arguments\n")
+            exit(1)
+
+    def _init_logging(self):
+        """ configures the logger level setted in the logging args
+        """
+
+        try:
+            from logconf import LOGGING
+            LOGGING['loggers']['baboon']['level'] = self.loglevel
+            logging.config.dictConfig(LOGGING)
+        except:
+            sys.stderr.write("Failed to parse the logging config file\n")
             exit(1)
 
     def _init_config_file(self):
