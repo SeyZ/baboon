@@ -16,6 +16,12 @@ class Diffman(object):
     def diff(self, a, b):
         """ Creates a patch between oldfile and newfile
         """
+        if not os.path.exists(a):
+            open(a, 'a').close()
+
+        if not os.path.exists(b):
+            open(b, 'a').close()
+
         with open(a, 'r') as old:
             with open(b, 'r') as new:
                 oldtext = old.read()

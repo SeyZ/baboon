@@ -28,7 +28,8 @@ class EventHandler(pyinotify.ProcessEvent):
         @param event: the event provided by pyinotify.ProcessEvent.
         @raise BaboonException: if cannot retrieve the relative project path
         """
-        self.logger.info("File modified : %s" % event.pathname)
+        self.logger.info("Received %s event type of file %s" %
+                         (event.maskname, event.pathname))
 
         filename = os.path.basename(event.pathname)
 
@@ -46,6 +47,11 @@ class EventHandler(pyinotify.ProcessEvent):
         patch = self.service.make_patch(old_file_path, new_file_path)
         self.service.broadcast(rel_path, patch)
 
+    def process_IN_DELETE(self, event):
+        """ Trigered when a file is deleted in the watched project.
+        """
+        self.process_IN_MODIFY(event)
+
 
 class Monitor(object):
     def __init__(self, service):
@@ -57,7 +63,7 @@ class Monitor(object):
         self.service = service
 
         vm = pyinotify.WatchManager()
-        mask = pyinotify.IN_MODIFY | pyinotify.IN_CREATE
+        mask = pyinotify.IN_MODIFY | pyinotify.IN_CREATE | pyinotify.IN_DELETE
 
         handler = EventHandler(service)
 

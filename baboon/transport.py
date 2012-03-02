@@ -1,5 +1,3 @@
-import os
-import logging
 import sleekxmpp
 
 from logger import logger
@@ -91,19 +89,4 @@ class Transport(sleekxmpp.ClientXMPP):
     def _configure_logger(self, logger_name, filename):
         """ Configured the sleekxmpp logger.
         """
-
-        sleekxmpp_logger = logging.getLogger(logger_name)
-        sleekxmpp_logger.setLevel(self.config.loglevel)
-
-        # remove all handlers
-        for h in sleekxmpp_logger.handlers:
-            sleekxmpp_logger.removeHandler(h)
-
-        # add a handler file
-        dest = 'logs/%s' % filename
-        sleekxmpp_logger.addHandler(logging.FileHandler(dest))
-        self.logger.debug("Redirected the sleekxmpp logger to the file %s" %
-                     os.path.abspath(dest))
-
-        self.logger.debug("Configured SleekXMPP logger")
-
+        pass

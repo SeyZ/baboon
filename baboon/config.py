@@ -2,10 +2,15 @@ import os
 import sys
 import argparse
 import logging
+import logging.config
 
 from utils import singleton
 from ConfigParser import RawConfigParser
 from errors.baboon_exception import BaboonException
+
+from logging.config import BaseConfigurator
+from importlib import import_module
+BaseConfigurator.importer = staticmethod(import_module)
 
 
 class ArgumentParser(object):
@@ -28,11 +33,6 @@ class ArgumentParser(object):
 
         self.args = parser.parse_args()
 
-        # configures the logger level setted in the logging args
-        from logger import BaboonLogger
-        logging.setLoggerClass(BaboonLogger)
-        logging.getLogger().setLevel(self.args.loglevel)
-
 
 @singleton
 class Config(object):
@@ -40,6 +40,10 @@ class Config(object):
     """
 
     def __init__(self):
+        # configures the logger level setted in the logging args
+        from logconf import LOGGING
+        logging.config.dictConfig(LOGGING)
+
         # configures the default path
         self.path = os.path.abspath(".")
         self.metadir_name = '.baboon'
