@@ -1,4 +1,5 @@
 import sys
+import signal
 
 from logger import logger
 from config import Config
@@ -15,6 +16,9 @@ class Main(object):
             # instanciates the config (singleton with borg pattern)
             self.config = Config()
 
+            # exists baboon when receiving a sigint signal
+            signal.signal(signal.SIGINT, self.sigint_handler)
+
             if self.config.init:
                 self.default_initializor()
             else:
@@ -25,8 +29,22 @@ class Main(object):
 
                 self.monitor = Monitor(self.service)
                 self.monitor.watch()
+
+            signal.pause()
         except BaboonException, err:
             sys.stderr.write("%s\n" % err)
+
+    def sigint_handler(self, signal, frame):
+        """ Handler method for the SIGINT signal.
+        XMPP connection and service monitoring are correctly closed.
+        Closing baboon in a clean way.
+        """
+        self.logger.debug("Received SIGINT signal")
+        self.monitor.close()
+        self.service.close()
+
+        self.logger.info("Bye !")
+        sys.exit(0)
 
     def default_initializor(self):
         try:

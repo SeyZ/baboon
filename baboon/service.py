@@ -20,12 +20,16 @@ class Service(object):
         self.diffman = Diffman()
 
     def start(self):
-        self.logger.info('Connecting to XMPP...')
+        self.logger.info("Connecting to XMPP...")
         if self.xmpp.connect():
-            self.logger.info('Connected to XMPP')
+            self.logger.info("Connected to XMPP")
             self.xmpp.process()
         else:
             self.logger.error("Unable to connect.")
+
+    def close(self):
+        self.logger.info("Closing the XMPP connection...")
+        self.xmpp.close()
 
     def broadcast(self, filepath, patch):
         self.xmpp.broadcast(filepath, patch)

@@ -55,6 +55,10 @@ class Transport(sleekxmpp.ClientXMPP):
 
         self.logger.info('XMPP initialization done')
 
+    def close(self):
+        self.disconnect()
+        self.logger.info('Closed the XMPP connection')
+
     def broadcast(self, filepath, diff):
         """ Broadcasts the diff to the pubsub xmpp node
         @param filepath: the relative (project) file path

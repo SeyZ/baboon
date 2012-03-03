@@ -53,6 +53,7 @@ class EventHandler(pyinotify.ProcessEvent):
         self.process_IN_MODIFY(event)
 
 
+@logger
 class Monitor(object):
     def __init__(self, service):
         """ Watches file change events (creation, modification) in the
@@ -75,3 +76,10 @@ class Monitor(object):
         """ Starts to watch the watched project
         """
         self.monitor.start()
+        self.logger.info("Started to monitor the %s directory"
+                         % self.config.path)
+
+    def close(self):
+        """ Stops the monitoring on the watched project
+        """
+        self.monitor.stop()
