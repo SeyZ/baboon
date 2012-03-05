@@ -38,7 +38,7 @@ class Service(object):
         """ Creates a patch between oldfile and newfile
         """
         patch = self.diffman.diff(oldfile, newfile)
-        self.logger.info("Created the patch: %s" % patch)
+        self.logger.debug("Created the patch: %s" % patch)
         return patch
 
     def apply_patch(self, project_name, thepatch, thefile):
