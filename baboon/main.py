@@ -30,7 +30,7 @@ class Main(object):
                 self.monitor = Monitor(self.service)
                 self.monitor.watch()
 
-            signal.pause()
+                signal.pause()
         except BaboonException, err:
             sys.stderr.write("%s\n" % err)
 
@@ -51,9 +51,11 @@ class Main(object):
             init = Initializor()
             init.create_metadir()
             init.create_config_file()
+            init.create_ignore_file()
             init.walk_and_copy()
         except BaboonException, e:
-            sys.stderr.write(str(e) + '\n')
+            sys.stderr.write('%s\n' % e)
+            exit(1)
 
     def check_config(self):
         try:

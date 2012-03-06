@@ -1,6 +1,7 @@
 import os
 import pyinotify
 
+from fnmatch import fnmatch
 from errors.baboon_exception import BaboonException
 from logger import logger
 from config import Config
@@ -31,7 +32,15 @@ class EventHandler(pyinotify.ProcessEvent):
         self.logger.info("Received %s event type of file %s" %
                          (event.maskname, event.pathname))
 
+        # verifies the filename doesn't match an ignore patterns
         filename = os.path.basename(event.pathname)
+        for pattern in self.config.ignore_patterns:
+            if fnmatch(filename, pattern):
+                self.logger.debug("Ignored the modify event on %s (match "
+                                  "the ignore pattern %s)."
+                                  % (filename, pattern))
+                # ignore IN_MODIFY event if matched
+                return
 
         old_file_path = "%s%s%s" % (self.config.metadir_watched, os.sep,
                                     filename)

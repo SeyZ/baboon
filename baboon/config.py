@@ -53,6 +53,7 @@ class Config(object):
         self._init_config_arg()
         self._init_logging()
         self._init_config_file()
+        self._init_ignore_file()
         if self.init is False:
             self.check_config()  # checks the configuration, should be ok
             self._init_config_project()
@@ -136,6 +137,14 @@ Verify that 'baboon init' was called in the directory before.""" % path
             for item in parser.items(section):
                 if not hasattr(self, item[0]):
                     setattr(self, item[0], item[1])
+
+    def _init_ignore_file(self):
+        filename = os.path.join(self.metadir, 'ignore')
+        self.ignore_patterns = []
+        with open(filename, 'r') as f:
+            lines = f.readlines()
+            for pattern in lines:
+                self.ignore_patterns.append(pattern.replace('\n', ''))
 
     def _init_config_project(self):
         # TODO: the config project must support the ConfigParser format ?

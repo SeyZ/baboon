@@ -38,6 +38,24 @@ class Initializor(object):
             else:
                 raise
 
+    def create_ignore_file(self):
+        """ By default, Baboon does not care about :
+        - Hidden files
+        _ Backup files (ends with ~ or arrounded by #)
+        """
+        ignore_file_path = os.sep.join([self.metadir, 'ignore'])
+        try:
+            with open(ignore_file_path, 'a') as f:
+                f.write('*~\n')
+                f.write('#*#\n')
+        except OSError, err:
+            if err.errno in (errno.EPERM):
+                raise BaboonException("Baboon error : %s - %s" %
+                                      (err.strerror,
+                                       os.path.abspath(ignore_file_path)))
+            else:
+                raise
+
     def walk_and_copy(self):
         """ This methods walks down the folders and recursively copy any
         non-hidden folders and files to the metadir folder.
@@ -45,8 +63,10 @@ class Initializor(object):
         src = os.sep.join(self.metadir.split(os.sep)[:-1])
         dest = os.sep.join([self.metadir, 'watched'])
         try:
-            shutil.copytree(src, dest, ignore=lambda adir, files:
-                                [f for f in files if f.startswith('.')])
+            shutil.copytree(src, dest, ignore=self._ignore_files)
 
         except (shutil.Error, OSError), err:
             raise BaboonException("Baboon error: %s" % (err,))
+
+    def _ignore_files(self, adir, files):
+        return [f for f in files if f.startswith('.')]
