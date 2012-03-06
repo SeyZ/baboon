@@ -1,5 +1,6 @@
 import os
 
+from base64 import b64encode, b64decode
 from errors.baboon_exception import BaboonException
 from config import Config
 from diff_match_patch import diff_match_patch
@@ -31,14 +32,14 @@ class Diffman(object):
 
                 diffs = self._diff_lineMode(oldtext, newtext)
                 thepatch = self.dmp.patch_make(diffs)
-                patch_stringified = self.dmp.patch_toText(thepatch)
+                encoded_patch = b64encode(self.dmp.patch_toText(thepatch))
 
-                return patch_stringified
+                return encoded_patch
 
     def patch(self, patch, thefile, content=None):
         thepatch = patch
-        if isinstance(patch, str):
-            thepatch = self.dmp.patch_fromText(patch)
+        if isinstance(patch, basestring):
+            thepatch = self.dmp.patch_fromText(b64decode(patch))
 
         result = None
         try:
