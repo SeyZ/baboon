@@ -29,18 +29,21 @@ class EventHandler(pyinotify.ProcessEvent):
         @param event: the event provided by pyinotify.ProcessEvent.
         @raise BaboonException: if cannot retrieve the relative project path
         """
-        self.logger.info("Received %s event type of file %s" %
-                         (event.maskname, event.pathname))
-
         # verifies the filename doesn't match an ignore patterns
-        filename = os.path.basename(event.pathname)
+        fullpath = event.pathname
+        filename = os.path.basename(fullpath)
+        relpath = fullpath.split(self.config.path)[1]
+
         for pattern in self.config.ignore_patterns:
-            if fnmatch(filename, pattern):
+            if fnmatch(relpath, pattern):
                 self.logger.debug("Ignored the modify event on %s (match "
                                   "the ignore pattern %s)."
-                                  % (filename, pattern))
+                                  % (fullpath, pattern))
                 # ignore IN_MODIFY event if matched
                 return
+
+        self.logger.info("Received %s event type of file %s" %
+                         (event.maskname, event.pathname))
 
         old_file_path = "%s%s%s" % (self.config.metadir_watched, os.sep,
                                     filename)

@@ -139,12 +139,13 @@ Verify that 'baboon init' was called in the directory before.""" % path
                     setattr(self, item[0], item[1])
 
     def _init_ignore_file(self):
-        filename = os.path.join(self.metadir, 'ignore')
-        self.ignore_patterns = []
-        with open(filename, 'r') as f:
-            lines = f.readlines()
-            for pattern in lines:
-                self.ignore_patterns.append(pattern.replace('\n', ''))
+        if os.path.isdir(self.metadir):  # initialization seems to be good ?
+            filename = os.path.join(self.metadir, 'ignore')
+            self.ignore_patterns = []
+            with open(filename, 'r') as f:
+                lines = f.readlines()
+                for pattern in lines:
+                    self.ignore_patterns.append(pattern.replace('\n', ''))
 
     def _init_config_project(self):
         # TODO: the config project must support the ConfigParser format ?
@@ -164,3 +165,42 @@ Verify that 'baboon init' was called in the directory before.""" % path
             except:
                 err = 'Cannot find a baboonrc in the project to watch'
                 raise BaboonException(err)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

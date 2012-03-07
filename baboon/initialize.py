@@ -46,8 +46,9 @@ class Initializor(object):
         ignore_file_path = os.sep.join([self.metadir, 'ignore'])
         try:
             with open(ignore_file_path, 'a') as f:
-                f.write('*~\n')
-                f.write('#*#\n')
+                f.write('*~\n')  # ignore filename~ files
+                f.write('#*#\n')  # ignore #filename# files
+                f.write('**/.*\n')  # ignore hidden files
         except OSError, err:
             if err.errno in (errno.EPERM):
                 raise BaboonException("Baboon error : %s - %s" %
