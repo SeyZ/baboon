@@ -1,3 +1,5 @@
+import os
+
 from logger import logger
 from config import Config
 from transport import Transport
@@ -45,8 +47,8 @@ class Service(object):
         """ Applies the patch on the file 'thefile'.
         Returns True if success
         """
-        return self.diffman.patch(thepatch, "%s%s"
-                                  % (self.config.path, thefile))
+        return self.diffman.patch(thepatch, "%s" % os.path.join(
+                self.config.path, thefile))
 
     def _handle_event(self, msg):
         if msg['type'] == 'headline':
@@ -64,8 +66,8 @@ class Service(object):
 
                     if author != self.config.jid:
                         result = self.apply_patch(project_name, thediff,
-                                              filepath)
-                        if False in result[1]:
+                                                  filepath)
+                        if not result:
                             msg = "Conflict detected"
                             self.logger.info(msg)
                             self.notify(msg)
@@ -74,7 +76,6 @@ class Service(object):
                             self.logger.info(msg)
                             self.notify(msg)
                 except:
-                    # ugly hack to match good patch item
                     pass
 
         else:

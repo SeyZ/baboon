@@ -31,11 +31,17 @@ class EventHandler(pyinotify.ProcessEvent):
         """
         # verifies the filename doesn't match an ignore patterns
         fullpath = event.pathname
-        filename = os.path.basename(fullpath)
-        relpath = fullpath.split(self.config.path)[1]
+        rel_path = None
+        try:
+            rel_path = fullpath.split(self.config.path)[1]
+            if rel_path.startswith('/'):
+                rel_path = rel_path[1:]
+        except:
+            err = 'Cannot retrieve the relative project path'
+            raise BaboonException(err)
 
         for pattern in self.config.ignore_patterns:
-            if fnmatch(relpath, pattern):
+            if fnmatch(rel_path, pattern):
                 self.logger.debug("Ignored the modify event on %s (match "
                                   "the ignore pattern %s)."
                                   % (fullpath, pattern))
@@ -46,18 +52,16 @@ class EventHandler(pyinotify.ProcessEvent):
                          (event.maskname, event.pathname))
 
         old_file_path = "%s%s%s" % (self.config.metadir_watched, os.sep,
-                                    filename)
-        new_file_path = "%s%s%s" % (self.config.path, os.sep, filename)
-
-        rel_path = None
-        try:
-            rel_path = new_file_path.split(self.config.path)[1]
-        except:
-            err = 'Cannot retrieve the relative project path'
-            raise BaboonException(err)
+                                    rel_path)
+        new_file_path = "%s%s%s" % (self.config.path, os.sep, rel_path)
 
         patch = self.service.make_patch(old_file_path, new_file_path)
-        self.service.broadcast(rel_path, patch)
+
+        # if the patch is empty, avoid to send it
+        if patch != '<![CDATA[]]>':
+            self.service.broadcast(rel_path, patch)
+        else:
+            self.logger.debug("Empty patch detected (not sent).")
 
     def process_IN_DELETE(self, event):
         """ Trigered when a file is deleted in the watched project.
