@@ -1,5 +1,6 @@
 import os
 import pyinotify
+import shutil
 
 from fnmatch import fnmatch
 from errors.baboon_exception import BaboonException
@@ -60,6 +61,10 @@ class EventHandler(pyinotify.ProcessEvent):
         # if the patch is empty, avoid to send it
         if patch != '<![CDATA[]]>':
             self.service.broadcast(rel_path, patch)
+
+            # copy the new version of file to the metadir
+            shutil.copy2(fullpath,
+                         os.path.join(self.config.metadir_watched, rel_path))
         else:
             self.logger.debug("Empty patch detected (not sent).")
 

@@ -49,6 +49,7 @@ class Initializor(object):
                 f.write('*~\n')  # ignore filename~ files
                 f.write('#*#\n')  # ignore #filename# files
                 f.write('**/.*\n')  # ignore hidden files
+                f.write('.baboon*') # metadir
         except OSError, err:
             if err.errno in (errno.EPERM):
                 raise BaboonException("Baboon error : %s - %s" %
