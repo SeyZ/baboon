@@ -1,3 +1,6 @@
+import os
+import tempfile
+
 from git import Repo
 from config import Config
 
@@ -10,7 +13,7 @@ class Diffman(object):
         """ Computes the diff of the filepath
         """
         repo = Repo(self.config.path)
-        hcommit = repo.commit('master')
+        hcommit = repo.commit('HEAD')
         diffs = hcommit.diff(None, paths=filepath, create_patch=True)
 
         thepatch = ''
@@ -22,14 +25,20 @@ class Diffman(object):
         return thepatch
 
     def patch(self, patch, thefile, content=None):
+        # if there's no diff, there's no conflict
+        if patch in ("", None):
+            return True
+
+        # open the scm repository
         repo = Repo(self.config.path)
 
-        with open('/tmp/patchfile', 'w') as f:
-            f.write(patch)
+        # write the file in a temporary file
+        tmp = tempfile.mkstemp()
+        os.write(tmp[0], patch)
 
         git = repo.git
         try:
-            output = git.apply('--check', '/tmp/patchfile')
+            output = git.apply('--check', tmp[1])
         except:
             return False
 
