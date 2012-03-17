@@ -7,6 +7,10 @@ class Diffman(object):
 
     @abstractproperty
     def scm_name(self):
+        """ The name of the scm. This name will be used in the baboonrc
+        configuration file in order to retrieve and instanciate the correct
+        class.
+        """
         return
 
     def __init__(self):
@@ -14,15 +18,19 @@ class Diffman(object):
 
     @abstractmethod
     def diff(self, filepath):
-        """ Computes the diff of the filepath
+        """ Computes the diff between HEAD and the current working state of
+        the filepath
         """
         return
 
     @abstractmethod
     def patch(self, patch, thefile, content=None):
-        """
+        """ Checks if the file can be patched with the patch.
+        Return True if there's no conflict.
         """
 
     def _escape(self, text):
+        """ Escape the text with CDATA.
+        """
         escaped_text = map(lambda x: "<![CDATA[%s]]>" % x, text.split("]]>"))
         return "<![CDATA[]]]><![CDATA[]>]]>".join(escaped_text)
