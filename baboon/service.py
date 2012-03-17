@@ -4,6 +4,7 @@ from logger import logger
 from config import Config
 from transport import Transport
 from diffman import Diffman
+from scm_plugins import *
 
 
 @logger
@@ -19,7 +20,12 @@ class Service(object):
         self.xmpp.register_plugin('xep_0060')  # PubSub
         self.xmpp.register_plugin('xep_0199')  # XMPP Ping
 
-        self.diffman = Diffman()
+        # Initialize the scm class to use
+        scm_classes = Diffman.__subclasses__()
+        for cls in scm_classes:
+            tmp_inst = cls()
+            if tmp_inst.scm_name == self.config.scm:
+                self.diffman = tmp_inst
 
     def start(self):
         self.logger.info("Connecting to XMPP...")
