@@ -33,17 +33,18 @@ class Service(object):
         self.logger.info("Closing the XMPP connection...")
         self.xmpp.close()
 
-    def broadcast(self, filepath, patch):
-        self.xmpp.broadcast(filepath, patch)
+    def broadcast(self, filepath):
+        thediff = self.make_patch(filepath)
+        self.xmpp.broadcast(filepath, thediff)
 
-    def make_patch(self, oldfile, newfile):
-        """ Creates a patch between oldfile and newfile
+    def make_patch(self, filepath):
+        """ Creates a patch of the filepath
         """
-        patch = self.diffman.diff(oldfile, newfile)
+        patch = self.diffman.diff(filepath)
         self.logger.debug("Created the patch: %s" % patch)
         return patch
 
-    def apply_patch(self, project_name, thepatch, thefile):
+    def apply_patch(self, thepatch, thefile):
         """ Applies the patch on the file 'thefile'.
         Returns True if success
         """
@@ -59,14 +60,12 @@ class Service(object):
             for item in msg['pubsub_event']['items']['substanzas']:
                 try:
                     payload = item['payload']
-                    project_name = payload[0].text
-                    filepath = payload[1].text
-                    thediff = payload[2].text
-                    author = payload[3].text
+                    filepath = payload[0].text
+                    thediff = payload[1].text
+                    author = payload[2].text
 
                     if author != self.config.jid:
-                        result = self.apply_patch(project_name, thediff,
-                                                  filepath)
+                        result = self.apply_patch(thediff, filepath)
                         if not result:
                             msg = "Conflict detected"
                             self.logger.info(msg)

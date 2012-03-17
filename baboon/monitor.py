@@ -1,8 +1,5 @@
-import os
 import pyinotify
-import shutil
 
-from fnmatch import fnmatch
 from errors.baboon_exception import BaboonException
 from logger import logger
 from config import Config
@@ -30,7 +27,6 @@ class EventHandler(pyinotify.ProcessEvent):
         @param event: the event provided by pyinotify.ProcessEvent.
         @raise BaboonException: if cannot retrieve the relative project path
         """
-        # verifies the filename doesn't match an ignore patterns
         fullpath = event.pathname
         rel_path = None
         try:
@@ -41,24 +37,9 @@ class EventHandler(pyinotify.ProcessEvent):
             err = 'Cannot retrieve the relative project path'
             raise BaboonException(err)
 
-        for pattern in self.config.ignore_patterns:
-            if fnmatch(rel_path, pattern):
-                self.logger.debug("Ignored the modify event on %s (match "
-                                  "the ignore pattern %s)."
-                                  % (fullpath, pattern))
-                # ignore IN_MODIFY event if matched
-                return
-
         self.logger.info("Received %s event type of file %s" %
-                         (event.maskname, event.pathname))
-
-        old_file_path = "%s%s%s" % (self.config.metadir_watched, os.sep,
-                                    rel_path)
-        new_file_path = "%s%s%s" % (self.config.path, os.sep, rel_path)
-
-        patch = self.service.make_patch(old_file_path, new_file_path)
-
-        self.service.broadcast(rel_path, patch)
+                         (event.maskname, fullpath))
+        self.service.broadcast(rel_path)
 
     def process_IN_DELETE(self, event):
         """ Trigered when a file is deleted in the watched project.

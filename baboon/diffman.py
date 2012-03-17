@@ -1,9 +1,4 @@
-import os
-import subprocess
-import shlex
-
 from git import Repo
-from errors.baboon_exception import BaboonException
 from config import Config
 
 
@@ -11,12 +6,12 @@ class Diffman(object):
     def __init__(self):
         self.config = Config()
 
-    def diff(self, a, b):
-        """ Creates a patch between oldfile and newfile
+    def diff(self, filepath):
+        """ Computes the diff of the filepath
         """
         repo = Repo(self.config.path)
         hcommit = repo.commit('master')
-        diffs = hcommit.diff(None, create_patch=True)
+        diffs = hcommit.diff(None, paths=filepath, create_patch=True)
 
         thepatch = ''
         for i in diffs:

@@ -66,11 +66,10 @@ class Transport(sleekxmpp.ClientXMPP):
         """
         stanza = """
 <patch>
-  <project>%s</project>
   <file>%s</file>
   <diff>%s</diff>
   <author>%s</author>
-</patch>""" % (self.config.project_name, filepath, diff, self.config.jid)
+</patch>""" % (filepath, diff, self.config.jid)
 
         payload = ET.fromstring(stanza)
         try:
