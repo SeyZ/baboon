@@ -58,15 +58,7 @@ class EventHandler(pyinotify.ProcessEvent):
 
         patch = self.service.make_patch(old_file_path, new_file_path)
 
-        # if the patch is empty, avoid to send it
-        if patch != '<![CDATA[]]>':
-            self.service.broadcast(rel_path, patch)
-
-            # copy the new version of file to the metadir
-            shutil.copy2(fullpath,
-                         os.path.join(self.config.metadir_watched, rel_path))
-        else:
-            self.logger.debug("Empty patch detected (not sent).")
+        self.service.broadcast(rel_path, patch)
 
     def process_IN_DELETE(self, event):
         """ Trigered when a file is deleted in the watched project.
