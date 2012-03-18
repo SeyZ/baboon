@@ -1,1 +1,1 @@
-__all__ = ["diffman_git",]
+__all__ = ["diffman_git", "diffman_hg"]

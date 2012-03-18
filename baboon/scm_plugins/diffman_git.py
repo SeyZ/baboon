@@ -1,14 +1,11 @@
 import os
 import tempfile
 
-from  diffman import Diffman
+from diffman import Diffman
 from git import Repo
-from config import Config
 
 
 class DiffmanGit(Diffman):
-    def __init__(self):
-        self.config = Config()
 
     @property
     def scm_name(self):
@@ -17,6 +14,7 @@ class DiffmanGit(Diffman):
     def diff(self, filepath):
         """ Computes the diff of the filepath
         """
+
         repo = Repo(self.config.path)
         hcommit = repo.commit('HEAD')
         diffs = hcommit.diff(None, paths=filepath, create_patch=True)
@@ -38,7 +36,7 @@ class DiffmanGit(Diffman):
         repo = Repo(self.config.path)
 
         # write the file in a temporary file
-        tmp = tempfile.mkstemp()
+        tmp = tempfile.mkstemp(prefix='.')
         os.write(tmp[0], patch)
 
         git = repo.git
@@ -48,7 +46,3 @@ class DiffmanGit(Diffman):
             return False
 
         return output == ""
-
-    def _escape(self, text):
-        escaped_text = map(lambda x: "<![CDATA[%s]]>" % x, text.split("]]>"))
-        return "<![CDATA[]]]><![CDATA[]>]]>".join(escaped_text)

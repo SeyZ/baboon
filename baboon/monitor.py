@@ -1,3 +1,4 @@
+import os
 import pyinotify
 
 from errors.baboon_exception import BaboonException
@@ -20,6 +21,8 @@ class EventHandler(pyinotify.ProcessEvent):
         """ Triggered when a file is created in the watched project.
         @param event: the event provided by pyinotify.ProcessEvent.
         """
+        if self._is_hidden(event.pathname):
+            return
         self.logger.info("File created : %s" % event.pathname)
 
     def process_IN_MODIFY(self, event):
@@ -28,6 +31,10 @@ class EventHandler(pyinotify.ProcessEvent):
         @raise BaboonException: if cannot retrieve the relative project path
         """
         fullpath = event.pathname
+
+        if self._is_hidden(fullpath):
+            return
+
         rel_path = None
         try:
             rel_path = fullpath.split(self.config.path)[1]
@@ -37,6 +44,10 @@ class EventHandler(pyinotify.ProcessEvent):
             err = 'Cannot retrieve the relative project path'
             raise BaboonException(err)
 
+        # TODO: Depend on mercurial, ugly thing ! Cannot be here !
+        if rel_path.startswith('hg-check'):
+            return
+
         self.logger.info("Received %s event type of file %s" %
                          (event.maskname, fullpath))
         self.service.broadcast(rel_path)
@@ -45,6 +56,10 @@ class EventHandler(pyinotify.ProcessEvent):
         """ Trigered when a file is deleted in the watched project.
         """
         self.process_IN_MODIFY(event)
+
+    def _is_hidden(self, filepath):
+        name = os.path.basename(os.path.abspath(filepath))
+        return name.startswith('.')
 
 
 @logger
@@ -58,7 +73,7 @@ class Monitor(object):
         self.service = service
 
         vm = pyinotify.WatchManager()
-        mask = pyinotify.IN_MODIFY | pyinotify.IN_CREATE | pyinotify.IN_DELETE
+        mask = pyinotify.IN_CREATE | pyinotify.IN_MODIFY | pyinotify.IN_DELETE
 
         handler = EventHandler(service)
 
