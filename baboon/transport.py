@@ -7,13 +7,13 @@ from sleekxmpp.xmlstream import ET
 
 @logger
 class Transport(sleekxmpp.ClientXMPP):
-    """ The transport has the responsability to communicate with the sleekxmpp
-    library via XMPP protocol.
+    """ The transport has the responsability to communicate with the
+    sleekxmpp library via XMPP protocol.
     """
 
     def __init__(self, handle_event):
-        """ @param handle_event: this method will be called when a message is
-        received via XMPP.
+        """ @param handle_event: this method will be called when a
+        message is received via XMPP.
         @type handle_event: method.
         """
 
@@ -60,9 +60,8 @@ class Transport(sleekxmpp.ClientXMPP):
         self.logger.info('Closed the XMPP connection')
 
     def broadcast(self, filepath, diff):
-        """ Broadcasts the diff to the pubsub xmpp node
-        @param filepath: the relative (project) file path
-        @type filepath: str
+        """ Broadcasts the diff to the pubsub xmpp node @param
+        filepath: the relative (project) file path @type filepath: str
         """
         stanza = """
 <patch>
