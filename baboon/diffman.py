@@ -28,9 +28,3 @@ class Diffman(object):
         """ Checks if the file can be patched with the patch.
         Return True if there's no conflict.
         """
-
-    def _escape(self, text):
-        """ Escape the text with CDATA.
-        """
-        escaped_text = map(lambda x: "<![CDATA[%s]]>" % x, text.split("]]>"))
-        return "<![CDATA[]]]><![CDATA[]>]]>".join(escaped_text)

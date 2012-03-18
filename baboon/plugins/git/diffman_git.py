@@ -23,8 +23,6 @@ class DiffmanGit(Diffman):
         for i in diffs:
             thepatch += i.diff
 
-        thepatch = self._escape(thepatch)
-
         return thepatch
 
     def patch(self, patch, thefile, content=None):

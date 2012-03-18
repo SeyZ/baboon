@@ -1,5 +1,7 @@
 import os
 
+from base64 import b64encode, b64decode
+from zlib import compress, decompress
 from logger import logger
 from config import Config
 from transport import Transport
@@ -40,6 +42,13 @@ class Service(object):
 
     def broadcast(self, filepath):
         thediff = self.make_patch(filepath)
+
+        # compress the diff
+        thediff = compress(thediff, 9)
+
+        # base64 the diff
+        thediff = b64encode(thediff)
+
         self.xmpp.broadcast(filepath, thediff)
 
     def make_patch(self, filepath):
@@ -67,6 +76,8 @@ class Service(object):
                     payload = item['payload']
                     filepath = payload[0].text
                     thediff = payload[1].text
+                    thediff = b64decode(thediff)
+                    thediff = decompress(thediff)
                     author = payload[2].text
 
                     if author != self.config.jid:

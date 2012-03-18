@@ -17,7 +17,7 @@ class DiffmanHg(Diffman):
         """
 
         repo = Repo(self.config.path)
-        thepatch = self._escape(repo.hg_command("diff", filepath))
+        thepatch = repo.hg_command("diff", filepath)
 
         return thepatch
 
