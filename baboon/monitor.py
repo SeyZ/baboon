@@ -104,7 +104,7 @@ class Monitor(object):
         exclude_paths = pyinotify.ExcludeFilter(handler.exclude_paths())
 
         # add the watcher
-        vm.add_watch(self.config.path, mask, rec=True,
+        vm.add_watch(self.config.path, mask, rec=True, auto_add=True,
                      exclude_filter=exclude_paths)
 
     def watch(self):
