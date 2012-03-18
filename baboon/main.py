@@ -3,9 +3,10 @@ import signal
 
 from logger import logger
 from config import Config
-from monitor import Monitor
 from service import Service
 from errors.baboon_exception import BaboonException
+from plugins import *
+from monitor import Monitor
 
 
 @logger
@@ -17,9 +18,6 @@ class Main(object):
 
             # exists baboon when receiving a sigint signal
             signal.signal(signal.SIGINT, self.sigint_handler)
-
-            # load plugins
-            from plugins import *
 
             self.service = Service()
             self.service.start()

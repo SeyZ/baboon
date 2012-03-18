@@ -86,6 +86,7 @@ class Monitor(object):
         # Initialize the event handler class to use depending on the SCM to use
         handler = None
         scm_classes = EventHandler.__subclasses__()
+
         for cls in scm_classes:
             tmp_inst = cls(service)
             if tmp_inst.scm_name == self.config.scm:

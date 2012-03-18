@@ -1,7 +1,7 @@
-from monitor import Monitor
+from monitor import EventHandler
 
 
-class EventHandlerGit(Monitor):
+class EventHandlerGit(EventHandler):
     @property
     def scm_name(self):
         return 'git'
