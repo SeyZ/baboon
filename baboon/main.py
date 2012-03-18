@@ -18,6 +18,9 @@ class Main(object):
             # exists baboon when receiving a sigint signal
             signal.signal(signal.SIGINT, self.sigint_handler)
 
+            # load plugins
+            from plugins import *
+
             self.service = Service()
             self.service.start()
 

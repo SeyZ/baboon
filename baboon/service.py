@@ -4,7 +4,6 @@ from logger import logger
 from config import Config
 from transport import Transport
 from diffman import Diffman
-from scm_plugins import *
 
 
 @logger
