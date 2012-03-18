@@ -93,6 +93,13 @@ class Config(object):
     def _init_logging(self):
         """ configures the logger level setted in the logging args
         """
+        try:
+            log_dir = os.path.join(os.getcwd(), 'logs')
+            if not os.path.exists(log_dir):
+                os.mkdir(log_dir)
+        except IOError:
+            sys.stderr.write("Cannot create the logs directory\n")
+            exit(1)
 
         try:
             from logconf import LOGGING
