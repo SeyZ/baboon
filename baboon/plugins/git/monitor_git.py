@@ -1,5 +1,3 @@
-import os
-import fnmatch
 from monitor import EventHandler
 
 
@@ -10,13 +8,15 @@ class EventHandlerGit(EventHandler):
 
     def exclude_paths(self):
         excl = ['.*\.git.*']
-
-        gitignore = os.path.join(self.config.path, '.gitignore')
-        if os.path.exists(gitignore):
-            with open(gitignore, 'r') as f:
-                lines = f.readlines()
-                for line in lines:
-                    regexp = fnmatch.translate(line)
-                    excl.append(regexp)
+        gitignore_files = self._parse_gitignore()
+        if gitignore_files != None:
+            excl.append(gitignore_files)
 
         return excl
+
+    def _parse_gitignore(self):
+        """ Parse the .gitignore file in the repository and return a
+        list of all ignored patterns
+        """
+        # TODO: implement this method !
+        return
