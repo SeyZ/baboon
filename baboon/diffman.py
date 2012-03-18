@@ -1,45 +1,36 @@
-import os
-import subprocess
-import shlex
-
-from git import Repo
-from errors.baboon_exception import BaboonException
+from abc import ABCMeta, abstractmethod, abstractproperty
 from config import Config
 
 
 class Diffman(object):
+    __metaclass__ = ABCMeta
+
+    @abstractproperty
+    def scm_name(self):
+        """ The name of the scm. This name will be used in the baboonrc
+        configuration file in order to retrieve and instanciate the correct
+        class.
+        """
+        return
+
     def __init__(self):
         self.config = Config()
 
-    def diff(self, a, b):
-        """ Creates a patch between oldfile and newfile
+    @abstractmethod
+    def diff(self, filepath):
+        """ Computes the diff between HEAD and the current working state of
+        the filepath
         """
-        repo = Repo(self.config.path)
-        hcommit = repo.commit('master')
-        diffs = hcommit.diff(None, create_patch=True)
+        return
 
-        thepatch = ''
-        for i in diffs:
-            thepatch += i.diff
-
-        thepatch = self._escape(thepatch)
-
-        return thepatch
-
+    @abstractmethod
     def patch(self, patch, thefile, content=None):
-        repo = Repo(self.config.path)
-
-        with open('/tmp/patchfile', 'w') as f:
-            f.write(patch)
-
-        git = repo.git
-        try:
-            output = git.apply('--check', '/tmp/patchfile')
-        except:
-            return False
-
-        return output == ""
+        """ Checks if the file can be patched with the patch.
+        Return True if there's no conflict.
+        """
 
     def _escape(self, text):
+        """ Escape the text with CDATA.
+        """
         escaped_text = map(lambda x: "<![CDATA[%s]]>" % x, text.split("]]>"))
         return "<![CDATA[]]]><![CDATA[]>]]>".join(escaped_text)

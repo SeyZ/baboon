@@ -17,9 +17,6 @@ class ArgumentParser(object):
         parser.add_argument('--config', metavar='config',
                             help='Override the default location of the \
                                 config file')
-        parser.add_argument('init', metavar='init', nargs='?', default=False,
-                            type=bool, help='Initialize the baboon metadata')
-
         # logging args
         parser.add_argument('-d', '--debug', help='set logging to DEBUG',
                             action='store_const',
@@ -38,8 +35,8 @@ class Config(object):
     def __init__(self):
         # configures the default path
         self.path = os.path.abspath(".")
-        self.metadir_name = '.baboon'
 
+        # init the configuration
         self.init_config()
 
     def init_config(self):
@@ -53,25 +50,6 @@ class Config(object):
         self._init_config_arg()
         self._init_logging()
         self._init_config_file()
-        self._init_ignore_file()
-        if self.init is False:
-            self.check_config()  # checks the configuration, should be ok
-            self._init_config_project()
-
-    def check_config(self, safe=False):
-        """ Checks the configuration state
-        """
-        path = os.path.join(self.path, self.metadir_name)
-        ret = os.path.isdir(path)
-
-        if ret or safe:
-            return ret
-        else:
-            msg = """%s seems to be not a directory. \
-Verify that 'baboon init' was called in the directory before.""" % path
-            raise BaboonException(msg)
-
-        # TODO: checks if server_host, jid and password is valid
 
     def _get_config_path(self):
         """ Gets the configuration path with the priority order :
@@ -104,11 +82,7 @@ Verify that 'baboon init' was called in the directory before.""" % path
         arg_parser = ArgumentParser()
         try:
             args = arg_parser.args
-            self.path = args.path or self.path
-            self.path = os.path.abspath(self.path)
-            self.metadir = os.path.join(self.path, self.metadir_name)
-            self.metadir_watched = os.path.join(self.metadir, 'watched')
-            self.init = args.init is True
+            self.path = os.path.abspath(args.path or self.path)
             self.configpath = args.config
             self.loglevel = args.loglevel
 
@@ -137,70 +111,3 @@ Verify that 'baboon init' was called in the directory before.""" % path
             for item in parser.items(section):
                 if not hasattr(self, item[0]):
                     setattr(self, item[0], item[1])
-
-    def _init_ignore_file(self):
-        if os.path.isdir(self.metadir):  # initialization seems to be good ?
-            filename = os.path.join(self.metadir, 'ignore')
-            self.ignore_patterns = []
-            with open(filename, 'r') as f:
-                lines = f.readlines()
-                for pattern in lines:
-                    self.ignore_patterns.append(pattern.replace('\n', ''))
-
-    def _init_config_project(self):
-        # TODO: the config project must support the ConfigParser format ?
-        if not self.init:
-            try:
-                filename = os.path.join(self.metadir, 'config')
-                with open(filename, 'r') as f:
-                    lines = f.readlines()
-                    for line in lines:
-                        try:
-                            splitted = line.split('=')
-                            setattr(self, splitted[0].strip(),
-                                    splitted[1].strip())
-                        except:
-                            err = 'Cannot parse the project config file'
-                            raise BaboonException(err)
-            except:
-                err = 'Cannot find a baboonrc in the project to watch'
-                raise BaboonException(err)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
