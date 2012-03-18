@@ -1,8 +1,5 @@
-.vagrant
-Vagrantfile
 virtenv/
-demo/
-*pyc
+*py[co]
 *.swp
 build/
 doc/
