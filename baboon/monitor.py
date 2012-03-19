@@ -45,12 +45,13 @@ class EventHandler(pyinotify.ProcessEvent):
         """
         fullpath = event.pathname
         rel_path = self.get_rel_path(fullpath)
+        send = False
 
         for excl in self.exclude_paths():
-            if re.search(excl, fullpath):
-                return
+            send = re.search(excl, rel_path) != None
 
-        self.service.broadcast(rel_path)
+        if send:
+            self.service.broadcast(rel_path)
 
     def process_IN_DELETE(self, event):
         """ Trigered when a file is deleted in the watched project.
@@ -100,12 +101,8 @@ class Monitor(object):
         self.monitor = pyinotify.ThreadedNotifier(vm, handler)
         self.monitor.coalesce_events()
 
-        # get the exclude path from the current SCM plugin
-        exclude_paths = pyinotify.ExcludeFilter(handler.exclude_paths())
-
         # add the watcher
-        vm.add_watch(self.config.path, mask, rec=True, auto_add=True,
-                     exclude_filter=exclude_paths)
+        vm.add_watch(self.config.path, mask, rec=True, auto_add=True)
 
     def watch(self):
         """ Starts to watch the watched project
