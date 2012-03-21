@@ -1,15 +1,15 @@
-### Development installation
+## Development installation
 You need a virtualenv to avoid polluting your system python installation.
 I use the virtualenvwrapper tool.
 
-### Virtualenvwrapper
+## Virtualenvwrapper
     $ pip install virtualenvwrapper
 
 For the documentation of virtualenvwrapper,
 [take a look here](http://www.doughellmann.com/docs/virtualenvwrapper/index.html)
 (including the installation process).
 
-### Create the virtual environment
+## Create the virtual environment
     $ mkvirtualenv baboon
     New python executable in baboon/bin/python
     Installing setuptools............done.
@@ -20,10 +20,7 @@ For the documentation of virtualenvwrapper,
     virtualenvwrapper.user_scripts creating ~/workspace/virtenvs/baboon/bin/postactivate
     virtualenvwrapper.user_scripts creating ~/workspace/virtenvs/baboon/bin/get_env_details
 
-### Enable the new virtual environment
+## Enable the new virtual environment
     $ workon baboon
 
-### Install dependencies
-    $ python setup.py install
-    ...
 
