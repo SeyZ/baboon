@@ -5,3 +5,5 @@ build/
 doc/
 .ropeproject/
 logs/
+*.egg*
+dist/
