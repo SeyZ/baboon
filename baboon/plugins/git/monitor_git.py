@@ -11,19 +11,25 @@ class EventHandlerGit(EventHandler):
 
     def exclude_paths(self):
         excl = ['.*\.git.*']
+        incl = []
+
         gitignore_files = self._parse_gitignore()
         if gitignore_files != None:
-            excl += gitignore_files
+            incl += gitignore_files[0]
+            excl += gitignore_files[1]
 
-        return excl
+        return incl, excl
 
     def _parse_gitignore(self):
-        """ Parse the .gitignore file in the repository and return a
-        list of all ignored patterns
+        """ Parses the .gitignore file in the repository.
+        Returns a tuple with:
+        1st elem: negative regexps (regexps to not match)
+        2nd elem: regexps
         """
         gitignore_path = os.path.join(self.config.path, '.gitignore')
         lines = []  # contains each line of the .gitignore file
         results = []  # contains the result regexp patterns
+        neg_results = []  # contains the result negative regexp patterns
 
         with open(gitignore_path, 'r') as f:
             lines = f.readlines()
@@ -33,9 +39,14 @@ class EventHandlerGit(EventHandler):
 
         # For each git pattern, convert it to regexp pattern
         for line in lines:
-            results.append(self._gitline_to_regexp(line))
+            regexp = self._gitline_to_regexp(line)
+            if regexp is not None:
+                if not line.startswith('!'):
+                    results.append(regexp)
+                else:
+                    neg_results.append(regexp)
 
-        return results
+        return neg_results, results
 
     def _gitline_comparator(self, a, b):
         """ Compares a and b. I want to have pattern started with '!'
@@ -71,6 +82,7 @@ class EventHandlerGit(EventHandler):
         # included again. If a negated pattern matches, this will
         # override
         if line.startswith('!'):
+            line = line[1:]
             negation = True
 
         # If the pattern does not contain a slash /, git treats it
@@ -89,9 +101,7 @@ class EventHandlerGit(EventHandler):
         regex = fnmatch.translate(line)
         regex = regex.replace('\\Z(?ms)', '')
 
-        if negation:
-            regex = '(?!%s)' % regex
-
-        regex = '.*%s.*' % regex
+        if not negation:
+            regex = '.*%s.*' % regex
 
         return regex

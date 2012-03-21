@@ -1,3 +1,4 @@
+import os
 import re
 import pyinotify
 
@@ -44,13 +45,21 @@ class EventHandler(pyinotify.ProcessEvent):
         @raise BaboonException: if cannot retrieve the relative project path
         """
         fullpath = event.pathname
-        rel_path = self.get_rel_path(fullpath)
-        send = False
+        rel_path = os.path.relpath(fullpath, self.config.path)
+        excls = self.exclude_paths()
 
-        for excl in self.exclude_paths():
-            send = re.search(excl, rel_path) != None
-
-        if send:
+        for excl in excls[1]:
+            regexp = re.compile(excl)
+            # If the rel_path matches the current exclude regexp, we
+            # need to test if the rel_path matches at least one
+            # include regexp.
+            if regexp.search(rel_path) is not None:
+                # If no, avoids to broadcast the diff
+                if not self._match_incl_regexp(excls, rel_path):
+                    break
+        else:
+            # Broadcasts the change on the rel_path if there's no
+            # break above.
             self.service.broadcast(rel_path)
 
     def process_IN_DELETE(self, event):
@@ -58,17 +67,14 @@ class EventHandler(pyinotify.ProcessEvent):
         """
         self.process_IN_MODIFY(event)
 
-    def get_rel_path(self, fullpath):
-        rel_path = None
-        try:
-            rel_path = fullpath.split(self.config.path)[1]
-            if rel_path.startswith('/'):
-                rel_path = rel_path[1:]
-        except:
-            err = 'Cannot retrieve the relative project path'
-            raise BaboonException(err)
+    def _match_incl_regexp(self, excls, rel_path):
+        for incl in excls[0]:
+            neg_regexp = re.compile(incl)
+            # si ca match
+            if neg_regexp.search(rel_path) is not None:
+                return True
 
-        return rel_path
+        return False
 
 
 @logger
