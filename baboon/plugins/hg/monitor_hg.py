@@ -9,6 +9,9 @@ class EventHandlerHg(EventHandler):
         return 'hg'
 
     def exclude_paths(self):
+        # Always ignore the .hg directory. In addition, mercurial
+        # generates temporary files that match *hg-check* pattern. We
+        # need to ignore it too.
         excl = ['.*\.hg.*', '.*hg-check.*']
 
         hgignore_files = self._parse_hgignore()
