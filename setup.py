@@ -2,12 +2,9 @@
 
 from setuptools import setup, find_packages
 
-requires = ['sleekxmpp >= 1.0',
-            'dnspython >= 1.9.4',
-            'pyinotify >= 0.9.3',
-            'GitPython >= 0.3.0',
-            'hgapi >= 1.1.0',
-            ]
+requires = []
+with open('requirements.txt', 'r') as f:
+    requires = f.readlines()
 
 setup(name='baboon',
       version='0.1',
