@@ -3,26 +3,34 @@ import logging
 
 
 class ColoredConsoleHandler(logging.StreamHandler):
-    def emit(self, record):
-        BLACK, RED, GREEN, YELLOW, BLUE, MAGENTA, CYAN, WHITE = range(8)
-        # Need to make a actual copy of the record
-        # to prevent altering the message for other loggers
-        myrecord = copy.copy(record)
-        levelno = myrecord.levelno
-        if(levelno >= 50):  # CRITICAL / FATAL
-            color = '\x1b[3%s\m' % RED  # red
-        elif(levelno >= 40):  # ERROR
-            color = '\x1b[3%sm' % RED
-        elif(levelno >= 30):  # WARNING
-            color = '\x1b[3%sm' % YELLOW
-        elif(levelno >= 20):  # INFO
-            color = '\x1b[%sm' % GREEN
-        elif(levelno >= 10):  # DEBUG
-            color = '\x1b[3%sm' % CYAN
-        else:  # NOTSET and anything else
-            color = '\x1b[0m'  # normal
-        myrecord.msg = color + str(myrecord.msg) + '\x1b[0m'  # normal
-        logging.StreamHandler.emit(self, myrecord)
+    BLACK, RED, GREEN, YELLOW, BLUE, MAGENTA, CYAN, WHITE = range(8)
+    COLORS = {
+        'FATAL': RED,
+        'ERROR': RED,
+        'WARNING': YELLOW,
+        'INFO': GREEN,
+        'DEBUG': CYAN,
+        }
+
+    def emit(self, r):
+        # Need to make a actual copy of the record to prevent altering
+        # the message for other loggers.
+        record = copy.copy(r)
+        levelname = record.levelname
+
+        # Configures the current colors to use.
+        color = self.COLORS[record.levelname]
+
+        # Colories the levelname of each log message
+        record.levelname = self._get_fg_color(color) + str(levelname) + \
+            self._reset()
+        logging.StreamHandler.emit(self, record)
+
+    def _get_fg_color(self, color):
+        return '\x1B[1;3%sm' % color
+
+    def _reset(self):
+        return '\x1B[1;%sm' % self.BLACK
 
 
 LOGGING = {
