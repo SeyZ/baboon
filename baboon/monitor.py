@@ -8,6 +8,7 @@ from logger import logger
 from config import Config
 
 
+@logger
 class EventHandler(pyinotify.ProcessEvent):
     __metaclass__ = ABCMeta
 
@@ -54,6 +55,8 @@ class EventHandler(pyinotify.ProcessEvent):
             # need to test if the rel_path matches at least one
             # include regexp.
             if regexp.search(rel_path) is not None:
+                self.logger.debug("The path %s matches the ignore regexp"
+                                  " %s." % (rel_path, excl))
                 # If no, avoids to broadcast the diff
                 if not self._match_incl_regexp(excls, rel_path):
                     break
@@ -61,6 +64,11 @@ class EventHandler(pyinotify.ProcessEvent):
             # Broadcasts the change on the rel_path if there's no
             # break above.
             self.service.broadcast(rel_path)
+            return
+
+        # Here only if the broadcast has not been done.
+        self.logger.debug("Ignore the modification on %s" %
+                          rel_path)
 
     def process_IN_DELETE(self, event):
         """ Trigered when a file is deleted in the watched project.
@@ -72,6 +80,8 @@ class EventHandler(pyinotify.ProcessEvent):
             neg_regexp = re.compile(incl)
             # si ca match
             if neg_regexp.search(rel_path) is not None:
+                self.logger.debug("The same path %s matches the include"
+                                  " regexp %s." % (rel_path, incl))
                 return True
 
         return False
