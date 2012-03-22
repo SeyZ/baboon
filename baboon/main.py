@@ -28,6 +28,12 @@ class Main(object):
             signal.pause()
         except BaboonException, err:
             sys.stderr.write("%s\n" % err)
+            # Try to close the service properly. If the service is not
+            # correctly started, the close() method has no effect.
+            self.service.close()
+
+            # Exits with a fail return code
+            sys.exit(1)
 
     def sigint_handler(self, signal, frame):
         """ Handler method for the SIGINT signal.
