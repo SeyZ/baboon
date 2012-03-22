@@ -2,7 +2,7 @@ import copy
 import logging
 
 
-class ColoredConsoleHandler(logging.StreamHandler):
+class ConsoleUnixColoredHandler(logging.StreamHandler):
     BLACK, RED, GREEN, YELLOW, BLUE, MAGENTA, CYAN, WHITE = range(8)
     COLORS = {
         'FATAL': RED,
@@ -62,7 +62,7 @@ LOGGING = {
         },
         'console': {
             'level': 'DEBUG',
-            'class': 'logconf.ColoredConsoleHandler',
+            'class': 'logconf.ConsoleUnixColoredHandler',
             'formatter': 'simple',
             'stream': 'ext://sys.stdout',
         }
