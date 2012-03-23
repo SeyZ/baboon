@@ -1,11 +1,11 @@
 import sys
 import signal
 
+from plugins import *
 from logger import logger
 from config import Config
 from service import Service
 from errors.baboon_exception import BaboonException
-from plugins import *
 from monitor import Monitor
 
 

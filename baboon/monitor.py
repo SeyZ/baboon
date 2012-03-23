@@ -107,12 +107,16 @@ class Monitor(object):
         for cls in scm_classes:
             tmp_inst = cls(service)
             if tmp_inst.scm_name == self.config.scm:
+                self.logger.debug("Uses the %s class for the monitoring of FS "
+                                  "changes" % tmp_inst.scm_name)
                 handler = tmp_inst
-
-        if handler is None:
-            raise BaboonException("Cannot get a valid FS event handler class"
-                                  " for your SCM written in your baboonrc"
-                                  " file")
+                break
+            else:
+                # Raises this BaboonException if no plugin has found
+                # according to the scm entry in the config file
+                raise BaboonException("Cannot get a valid FS event handler"
+                                      " class for your SCM written in your"
+                                      " baboonrc file")
 
         self.monitor = pyinotify.ThreadedNotifier(vm, handler)
         self.monitor.coalesce_events()
