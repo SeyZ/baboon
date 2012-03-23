@@ -1,3 +1,0 @@
-[Tests]
-- tests/test_initializor.py
-    - test create_config_file method
