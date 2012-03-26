@@ -53,11 +53,11 @@ class Transport(sleekxmpp.ClientXMPP):
         # register the pubsub plugin
         self.pubsub = self.plugin["xep_0060"]
 
-        self.logger.info('XMPP initialization done')
+        self.logger.info('Ready')
 
     def close(self):
         self.disconnect()
-        self.logger.info('Closed the XMPP connection')
+        self.logger.debug('Closed the XMPP connection')
 
     def broadcast(self, filepath, diff):
         """ Broadcasts the diff to the pubsub xmpp node @param
@@ -76,7 +76,7 @@ class Transport(sleekxmpp.ClientXMPP):
                                          self.config.node_name,
                                          payload=payload)
             id = result['pubsub']['publish']['item']['id']
-            self.logger.info('Published at item id: %s' % id)
+            self.logger.debug('Published at item id: %s' % id)
         except:
             self.logger.error('Could not publish to: %s' %
                               self.config.node_name)
@@ -86,7 +86,7 @@ class Transport(sleekxmpp.ClientXMPP):
         error messages.
         """
         if msg['type'] in ('chat', 'normal'):
-            self.logger.info("Received the message %(body)s:" % msg)
+            self.logger.debug("Received the message %(body)s:" % msg)
 
     def _configure_logger(self, logger_name, filename):
         """ Configured the sleekxmpp logger.

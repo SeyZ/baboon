@@ -34,12 +34,6 @@ class EventHandler(pyinotify.ProcessEvent):
         """
         return
 
-    def process_IN_CREATE(self, event):
-        """ Triggered when a file is created in the watched project.
-        @param event: the event provided by pyinotify.ProcessEvent.
-        """
-        pass
-
     def process_IN_MODIFY(self, event):
         """ Triggered when a file is modified in the watched project.
         @param event: the event provided by pyinotify.ProcessEvent.
@@ -98,7 +92,7 @@ class Monitor(object):
         self.service = service
 
         vm = pyinotify.WatchManager()
-        mask = pyinotify.IN_CREATE | pyinotify.IN_MODIFY | pyinotify.IN_DELETE
+        mask = pyinotify.IN_MODIFY | pyinotify.IN_DELETE
 
         # Initialize the event handler class to use depending on the SCM to use
         handler = None
@@ -128,7 +122,7 @@ class Monitor(object):
         """ Starts to watch the watched project
         """
         self.monitor.start()
-        self.logger.info("Started to monitor the %s directory"
+        self.logger.debug("Started to monitor the %s directory"
                          % self.config.path)
 
     def close(self):

@@ -16,10 +16,7 @@ class Service(object):
         self.config = Config()
 
         self.xmpp = Transport(self._handle_event)
-        self.xmpp.register_plugin('xep_0030')  # Service Discovery
-        self.xmpp.register_plugin('xep_0004')  # Data Forms
         self.xmpp.register_plugin('xep_0060')  # PubSub
-        self.xmpp.register_plugin('xep_0199')  # XMPP Ping
 
         # Initialize the scm class to use
         scm_classes = Diffman.__subclasses__()
@@ -29,15 +26,15 @@ class Service(object):
                 self.diffman = tmp_inst
 
     def start(self):
-        self.logger.info("Connecting to XMPP...")
+        self.logger.debug("Connecting to XMPP...")
         if self.xmpp.connect():
-            self.logger.info("Connected to XMPP")
+            self.logger.debug("Connected to XMPP")
             self.xmpp.process()
         else:
             self.logger.error("Unable to connect.")
 
     def close(self):
-        self.logger.info("Closing the XMPP connection...")
+        self.logger.debug("Closing the XMPP connection...")
         self.xmpp.close()
 
     def broadcast(self, filepath):
@@ -67,7 +64,6 @@ class Service(object):
 
     def _handle_event(self, msg):
         if msg['type'] == 'headline':
-            self.logger.info("Received pubsub item(s)")
             self.logger.debug("Received pubsub item(s): \n%s" %
                               msg['pubsub_event'])
 
@@ -83,12 +79,13 @@ class Service(object):
                     if author != self.config.jid:
                         result = self.apply_patch(thediff, filepath)
                         if not result:
-                            msg = "Conflict detected"
+                            msg = "Conflict detected with %s in %s:\n%s" % \
+                                (author, filepath, thediff)
                             self.logger.info(msg)
                             self.notify(msg)
                         else:
                             msg = "Everything seems to be perfect"
-                            self.logger.info(msg)
+                            self.logger.debug(msg)
                             self.notify(msg)
                 except:
                     pass
