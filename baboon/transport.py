@@ -53,7 +53,7 @@ class Transport(sleekxmpp.ClientXMPP):
         # register the pubsub plugin
         self.pubsub = self.plugin["xep_0060"]
 
-        self.logger.info('Ready')
+        self.logger.info('Connected')
 
     def close(self):
         self.disconnect()
@@ -87,8 +87,3 @@ class Transport(sleekxmpp.ClientXMPP):
         """
         if msg['type'] in ('chat', 'normal'):
             self.logger.debug("Received the message %(body)s:" % msg)
-
-    def _configure_logger(self, logger_name, filename):
-        """ Configured the sleekxmpp logger.
-        """
-        pass
