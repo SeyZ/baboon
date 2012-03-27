@@ -20,12 +20,6 @@ class Transport(sleekxmpp.ClientXMPP):
         self.config = Config()
         self.logger.debug("Loaded baboon configuration")
 
-        self._configure_logger('sleekxmpp', 'sleekxmpp.log')
-        self._configure_logger('sleekxmpp.features.feature_bind.bind',
-                               'sleekxmpp.log')
-        self._configure_logger('sleekxmpp.features.feature_session.session',
-                               'sleekxmpp.log')
-
         sleekxmpp.ClientXMPP.__init__(self, self.config.jid,
                                       self.config.password)
         self.logger.debug("Configured SleekXMPP library")
