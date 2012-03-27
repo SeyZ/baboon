@@ -15,6 +15,11 @@ class Service(object):
         """
         self.config = Config()
 
+        # Key: author + filepath
+        # Value: True if the last message received by the author was a
+        # conflict
+        self.in_conflict = {}
+
         self.xmpp = Transport(self._handle_event)
         self.xmpp.register_plugin('xep_0060')  # PubSub
 
@@ -79,14 +84,23 @@ class Service(object):
                     if author != self.config.jid:
                         result = self.apply_patch(thediff, filepath)
                         if not result:
-                            msg = "Conflict detected with %s in %s:\n%s" % \
-                                (author, filepath, thediff)
+                            self.in_conflict[author + filepath] = True
+                            msg = "Conflict detected with %s in %s" % \
+                                (author, filepath)
                             self.logger.info(msg)
+                            self.logger.debug("With the diff:\n%s" % thediff)
                             self.notify(msg)
                         else:
-                            msg = "Everything seems to be perfect"
-                            self.logger.debug(msg)
-                            self.notify(msg)
+                            if self.in_conflict.get(author + filepath):
+                                msg = "Conflict resolved with %s in %s" % \
+                                    (author, filepath)
+                                self.in_conflict[author + filepath] = False
+                                self.logger.info(msg)
+                                self.notify(msg)
+                            else:
+                                msg = "Everything seems to be perfect with" \
+                                    " %s in %s" % (author, filepath)
+                                self.logger.debug(msg)
                 except:
                     pass
 
