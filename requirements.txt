@@ -3,3 +3,5 @@ dnspython>=1.9.4
 hgapi>=1.1.0
 pyinotify>=0.9.3
 sleekxmpp>=1.0
+mock>=0.8.0
+nose>=1.1.2
