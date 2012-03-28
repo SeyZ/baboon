@@ -4,9 +4,10 @@ import signal
 from plugins import *
 from logger import logger
 from config import Config
-from service import Service
 from errors.baboon_exception import BaboonException
+from transport import Transport
 from monitor import Monitor
+from diffman import Diffman
 
 
 @logger
@@ -19,18 +20,30 @@ class Main(object):
             # exists baboon when receiving a sigint signal
             signal.signal(signal.SIGINT, self.sigint_handler)
 
-            self.service = Service()
-            self.service.start()
+            # Initialize the scm class to use
+            scm_classes = Diffman.__subclasses__()
+            for cls in scm_classes:
+                tmp_inst = cls()
+                if tmp_inst.scm_name == self.config.scm:
+                    self.diffman = tmp_inst
 
-            self.monitor = Monitor(self.service)
+            # TODO verify self.diffman
+
+            self.transport = Transport(self.diffman)
+            self.transport.open()
+
+            self.monitor = Monitor(self.transport, self.diffman)
             self.monitor.watch()
 
             signal.pause()
         except BaboonException, err:
             sys.stderr.write("%s\n" % err)
-            # Try to close the service properly. If the service is not
-            # correctly started, the close() method has no effect.
-            self.service.close()
+            # Try to close the transport properly. If the transport is
+            # not correctly started, the close() method has no effect.
+            self.transport.close()
+
+            # Same thing for the monitor
+            self.monitor.close()
 
             # Exits with a fail return code
             sys.exit(1)
@@ -41,8 +54,8 @@ class Main(object):
         Closing baboon in a clean way.
         """
         self.logger.debug("Received SIGINT signal")
+        self.transport.close()
         self.monitor.close()
-        self.service.close()
 
         self.logger.info("Bye !")
         sys.exit(0)
