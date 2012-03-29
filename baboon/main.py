@@ -5,6 +5,7 @@ from plugins import *
 from logger import logger
 from config import Config
 from errors.baboon_exception import BaboonException
+from service import Service
 from transport import Transport
 from monitor import Monitor
 from diffman import Diffman
@@ -29,7 +30,9 @@ class Main(object):
 
             # TODO verify self.diffman
 
-            self.transport = Transport(self.diffman)
+            self.service = Service(self.diffman)
+
+            self.transport = Transport(self.service)
             self.transport.open()
 
             self.monitor = Monitor(self.transport, self.diffman)

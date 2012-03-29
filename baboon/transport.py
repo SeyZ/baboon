@@ -1,11 +1,8 @@
-import os
 import sleekxmpp
 
-from base64 import b64decode
-from zlib import decompress
+from sleekxmpp.xmlstream import ET
 from logger import logger
 from config import Config
-from sleekxmpp.xmlstream import ET
 
 
 @logger
@@ -14,22 +11,15 @@ class Transport(sleekxmpp.ClientXMPP):
     sleekxmpp library via XMPP protocol.
     """
 
-    def __init__(self, diffman):
-        """ @param handle_event: this method will be called when a
-        message is received via XMPP.
-        @type handle_event: method.
+    def __init__(self, service):
+        """
         """
 
         self.config = Config()
         self.logger.debug("Loaded baboon configuration")
 
-        # Key: author + filepath
-        # Value: True if the last message received by the author was a
-        # conflict
-        self.in_conflict = {}
-
-        # Store the diffman class
-        self.diffman = diffman
+        # Store the service class
+        self.service = service
 
         sleekxmpp.ClientXMPP.__init__(self, self.config.jid,
                                       self.config.password)
@@ -83,44 +73,10 @@ class Transport(sleekxmpp.ClientXMPP):
         if msg['type'] in ('normal', 'headline'):
             self.logger.debug("Received pubsub item(s): \n%s" %
                               msg['pubsub_event'])
-            self._verify_msg(msg)
+            self.service.verify_msg(msg['pubsub_event']['items']['substanzas'])
         else:
             self.logger.debug("Received pubsub event: \n%s" %
                               msg['pubsub_event'])
-
-    def _verify_msg(self, msg):
-        for item in msg['pubsub_event']['items']['substanzas']:
-            try:
-                payload = item['payload']
-                filepath = payload[0].text
-                thediff = payload[1].text
-                thediff = b64decode(thediff)
-                thediff = decompress(thediff)
-                author = payload[2].text
-
-                if author != self.config.jid:
-                    result = self.diffman.patch(thediff, "%s" % os.path.join(
-                            self.config.path, filepath))
-                    if not result:
-                        self.in_conflict[author + filepath] = True
-                        msg = "Conflict detected with %s in %s" % \
-                            (author, filepath)
-                        self.logger.info(msg)
-                        self.logger.debug("With the diff:\n%s" % thediff)
-                        self.notify(msg)
-                    else:
-                        if self.in_conflict.get(author + filepath):
-                            msg = "Conflict resolved with %s in %s" % \
-                                (author, filepath)
-                            self.in_conflict[author + filepath] = False
-                            self.logger.info(msg)
-                            self.notify(msg)
-                        else:
-                            msg = "Everything seems to be perfect with" \
-                                " %s in %s" % (author, filepath)
-                            self.logger.debug(msg)
-            except:
-                pass
 
     def close(self):
         self.disconnect()
