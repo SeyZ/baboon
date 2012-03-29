@@ -73,7 +73,8 @@ class Transport(sleekxmpp.ClientXMPP):
         if msg['type'] in ('normal', 'headline'):
             self.logger.debug("Received pubsub item(s): \n%s" %
                               msg['pubsub_event'])
-            self.service.verify_msg(msg['pubsub_event']['items']['substanzas'])
+            items = msg['pubsub_event']['items']['substanzas']
+            self.service.verify_msg(items)
         else:
             self.logger.debug("Received pubsub event: \n%s" %
                               msg['pubsub_event'])

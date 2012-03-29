@@ -1,9 +1,9 @@
 import os
 
-from config import Config
-from logger import logger
 from base64 import b64decode
 from zlib import decompress
+from config import Config
+from logger import logger
 
 
 @logger
@@ -23,12 +23,18 @@ class Service(object):
 
     def verify_msg(self, items):
         for item in items:
-            payload = item['payload']
-            filepath = payload[0].text
-            thediff = payload[1].text
-            thediff = b64decode(thediff)
-            thediff = decompress(thediff)
-            author = payload[2].text
+            try:
+                payload = item['payload']
+                filepath = payload[0].text
+                thediff = payload[1].text
+                thediff = b64decode(thediff)
+                thediff = decompress(thediff)
+                author = payload[2].text
+            except IndexError:
+                # If the payload is corrupted, continue in order to
+                # process the next element (maybe it will be valid).
+                self.logger.error("Received a corrupted payload")
+                continue
 
             if author != self.config.jid:
                 result = self.diffman.patch(thediff, "%s" % os.path.join(
