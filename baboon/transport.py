@@ -1,8 +1,8 @@
 import sleekxmpp
 
+from sleekxmpp.xmlstream import ET
 from logger import logger
 from config import Config
-from sleekxmpp.xmlstream import ET
 
 
 @logger
@@ -11,18 +11,22 @@ class Transport(sleekxmpp.ClientXMPP):
     sleekxmpp library via XMPP protocol.
     """
 
-    def __init__(self, handle_event):
-        """ @param handle_event: this method will be called when a
-        message is received via XMPP.
-        @type handle_event: method.
+    def __init__(self, service):
+        """
         """
 
         self.config = Config()
         self.logger.debug("Loaded baboon configuration")
 
+        # Store the service class
+        self.service = service
+
         sleekxmpp.ClientXMPP.__init__(self, self.config.jid,
                                       self.config.password)
         self.logger.debug("Configured SleekXMPP library")
+
+        # Register plugins
+        self.register_plugin('xep_0060')  # PubSub
 
         self.add_event_handler("session_start", self.start)
         self.logger.debug("Listening 'session_start' sleekxmpp event")
@@ -35,8 +39,16 @@ class Transport(sleekxmpp.ClientXMPP):
                 'Pubsub event',
                 sleekxmpp.xmlstream.matcher.StanzaPath(
                     'message/pubsub_event'),
-                handle_event))
+                self._handle_event))
         self.logger.debug("Listening 'message/pubsub_event' sleekxmpp event")
+
+    def open(self):
+        self.logger.debug("Connecting to XMPP...")
+        if self.connect():
+            self.logger.debug("Connected to XMPP")
+            self.process()
+        else:
+            self.logger.error("Unable to connect.")
 
     def start(self, event):
         """ Handler for the session_start sleekxmpp event
@@ -48,6 +60,24 @@ class Transport(sleekxmpp.ClientXMPP):
         self.pubsub = self.plugin["xep_0060"]
 
         self.logger.info('Connected')
+        self.retreive_messages()
+
+    def retreive_messages(self):
+        result = self.pubsub.get_item(self.config.server_host,
+                                      self.config.node_name,
+                                      '')
+        items = result['pubsub']['items']['substanzas']
+        self.logger.info('Retreived %s items' % len(items))
+
+    def _handle_event(self, msg):
+        if msg['type'] in ('normal', 'headline'):
+            self.logger.debug("Received pubsub item(s): \n%s" %
+                              msg['pubsub_event'])
+            items = msg['pubsub_event']['items']['substanzas']
+            self.service.verify_msg(items)
+        else:
+            self.logger.debug("Received pubsub event: \n%s" %
+                              msg['pubsub_event'])
 
     def close(self):
         self.disconnect()

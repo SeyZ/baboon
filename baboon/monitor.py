@@ -2,6 +2,8 @@ import os
 import re
 import pyinotify
 
+from base64 import b64encode
+from zlib import compress
 from abc import ABCMeta, abstractmethod, abstractproperty
 from errors.baboon_exception import BaboonException
 from logger import logger
@@ -12,13 +14,14 @@ from config import Config
 class EventHandler(pyinotify.ProcessEvent):
     __metaclass__ = ABCMeta
 
-    def __init__(self, service):
+    def __init__(self, transport, diffman):
         """ @param service: the service in order to call some baboon util
         methods.
         """
         super(EventHandler, self).__init__()
         self.config = Config()
-        self.service = service
+        self.transport = transport
+        self.diffman = diffman
 
     @abstractproperty
     def scm_name(self):
@@ -55,9 +58,16 @@ class EventHandler(pyinotify.ProcessEvent):
                 if not self._match_incl_regexp(excls, rel_path):
                     break
         else:
+            # Computes the changes on the rel_path
+            thediff = self.diffman.diff(rel_path)
+            # compress the diff
+            thediff = compress(thediff, 9)
+            # base64 the diff
+            thediff = b64encode(thediff)
+
             # Broadcasts the change on the rel_path if there's no
             # break above.
-            self.service.broadcast(rel_path)
+            self.transport.broadcast(rel_path, thediff)
             return
 
         # Here only if the broadcast has not been done.
@@ -83,13 +93,14 @@ class EventHandler(pyinotify.ProcessEvent):
 
 @logger
 class Monitor(object):
-    def __init__(self, service):
+    def __init__(self, transport, diffman):
         """ Watches file change events (creation, modification) in the
         watched project.
         @param service: Forwards the service to the L{EventHandler} class
         """
         self.config = Config()
-        self.service = service
+        self.transport = transport
+        self.diffman = diffman
 
         vm = pyinotify.WatchManager()
         mask = pyinotify.IN_MODIFY | pyinotify.IN_DELETE
@@ -99,7 +110,7 @@ class Monitor(object):
         scm_classes = EventHandler.__subclasses__()
 
         for cls in scm_classes:
-            tmp_inst = cls(service)
+            tmp_inst = cls(self.transport, self.diffman)
             if tmp_inst.scm_name == self.config.scm:
                 self.logger.debug("Uses the %s class for the monitoring of FS "
                                   "changes" % tmp_inst.scm_name)
