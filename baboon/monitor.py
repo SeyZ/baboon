@@ -2,12 +2,11 @@ import os
 import re
 import pyinotify
 
-from base64 import b64encode
-from zlib import compress
 from abc import ABCMeta, abstractmethod, abstractproperty
 from errors.baboon_exception import BaboonException
 from logger import logger
 from config import Config
+from transport import Item
 
 
 @logger
@@ -60,14 +59,12 @@ class EventHandler(pyinotify.ProcessEvent):
         else:
             # Computes the changes on the rel_path
             thediff = self.diffman.diff(rel_path)
-            # compress the diff
-            thediff = compress(thediff, 9)
-            # base64 the diff
-            thediff = b64encode(thediff)
-
-            # Broadcasts the change on the rel_path if there's no
-            # break above.
-            self.transport.broadcast(rel_path, thediff)
+            payload = {
+                'filepath': rel_path,
+                'diff': thediff,
+                'author': self.config.jid,
+                }
+            self.transport.broadcast(Item(payload))
             return
 
         # Here only if the broadcast has not been done.
