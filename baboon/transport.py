@@ -11,15 +11,15 @@ class Transport(sleekxmpp.ClientXMPP):
     sleekxmpp library via XMPP protocol.
     """
 
-    def __init__(self, service):
+    def __init__(self, mediator):
         """
         """
 
         self.config = Config()
         self.logger.debug("Loaded baboon configuration")
 
-        # Store the service class
-        self.service = service
+        # Store the mediator class
+        self.mediator = mediator
 
         sleekxmpp.ClientXMPP.__init__(self, self.config.jid,
                                       self.config.password)
@@ -120,7 +120,7 @@ class Transport(sleekxmpp.ClientXMPP):
             payloads = [Item(self._transform(x['payload'])) for x in items]
 
             # Verifies if there's a conflict in the payloads
-            self.service.verify_msg(payloads)
+            self.mediator.verify_msg(payloads)
         else:
             self.logger.debug("Received pubsub event: \n%s" %
                               msg['pubsub_event'])

@@ -5,8 +5,8 @@ from logger import logger
 
 
 @logger
-class Service(object):
-    """ The purpose of the service is to manipulate payload of the
+class Mediator(object):
+    """ The purpose of the mediator is to manipulate payload of the
     Transport (from, to).
     """
 

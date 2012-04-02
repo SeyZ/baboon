@@ -14,8 +14,7 @@ class EventHandler(pyinotify.ProcessEvent):
     __metaclass__ = ABCMeta
 
     def __init__(self, transport, diffman):
-        """ @param service: the service in order to call some baboon util
-        methods.
+        """
         """
         super(EventHandler, self).__init__()
         self.config = Config()
@@ -93,7 +92,6 @@ class Monitor(object):
     def __init__(self, transport, diffman):
         """ Watches file change events (creation, modification) in the
         watched project.
-        @param service: Forwards the service to the L{EventHandler} class
         """
         self.config = Config()
         self.transport = transport
