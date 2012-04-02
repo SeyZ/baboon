@@ -64,11 +64,16 @@ class Transport(sleekxmpp.ClientXMPP):
         self.retreive_messages()
 
     def retreive_messages(self):
+        """ Retreives the last message on the pubsub xmpp node.
+        """
+
         result = self.pubsub.get_item(self.config.server_host,
                                       self.config.node_name,
                                       '')
         items = result['pubsub']['items']['substanzas']
         self.logger.info('Retreived %s items' % len(items))
+
+        self._verify(items)
 
     def close(self):
         self.disconnect()
@@ -112,18 +117,23 @@ class Transport(sleekxmpp.ClientXMPP):
             self.logger.debug("Received pubsub item(s): \n%s" %
                               msg['pubsub_event'])
 
-            # Gets the sleekxmpp stanzas
             items = msg['pubsub_event']['items']['substanzas']
-
-            # Transforms a list of sleekxmpp stanzas to a list of
-            # dicts
-            payloads = [Item(self._transform(x['payload'])) for x in items]
-
-            # Verifies if there's a conflict in the payloads
-            self.mediator.verify_msg(payloads)
+            self._verify(items)
         else:
             self.logger.debug("Received pubsub event: \n%s" %
                               msg['pubsub_event'])
+
+    def _verify(self, items):
+        """ Parses the items and ask to the mediator if there're
+        conflicts or not.
+        """
+
+        # Transforms a list of sleekxmpp stanzas to a list of
+        # dicts
+        payloads = [Item(self._transform(x['payload'])) for x in items]
+
+        # Verifies if there's a conflict in the payloads
+        self.mediator.verify_msg(payloads)
 
     def _transform(self, xmpp_payload):
         """ Transforms a XmppEventItem to a human readable dict
