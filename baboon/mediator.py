@@ -14,12 +14,16 @@ class Mediator(object):
         self.config = Config()
         self.diffman = diffman
 
-        # Key: author + filepath
-        # Value: True if the last message received by the author was a
-        # conflict
+        # Useful to detect if the previous message was a conflict or
+        # not.
+        # Key: author + filepath Value: True if the last message
+        # received by the author was a conflict
         self.in_conflict = {}
 
     def verify_msg(self, payloads):
+        """ Verifies if the list of Payload can be applied or not. If
+        no, there's a conflict.
+        """
         for payload in payloads:
             author = payload['author']
             filepath = payload['filepath']
