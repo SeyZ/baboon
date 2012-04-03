@@ -11,11 +11,19 @@ from transport import Item
 
 @logger
 class EventHandler(pyinotify.ProcessEvent):
+    """ An abstract class that extends a pyinotify.ProcessEvent in
+    order to describe the behavior when a file is
+    added/modified/deleted. The behavior is dependend of the SCM to
+    detect exclude patterns (e.g. .git for git, .hg for hg, etc.)
+    """
+
     __metaclass__ = ABCMeta
 
     def __init__(self, transport, diffman):
+        """ Take the diffman to generate a patch when a change is
+        detected and a transport to send it to other people.
         """
-        """
+
         super(EventHandler, self).__init__()
         self.config = Config()
         self.transport = transport
@@ -27,12 +35,14 @@ class EventHandler(pyinotify.ProcessEvent):
         configuration file in order to retrieve and instanciate the correct
         class.
         """
+
         return
 
     @abstractmethod
     def exclude_paths(self):
         """ A list of regexp patterns to exclude from the Watcher
         """
+
         return
 
     def process_IN_MODIFY(self, event):
@@ -40,6 +50,7 @@ class EventHandler(pyinotify.ProcessEvent):
         @param event: the event provided by pyinotify.ProcessEvent.
         @raise BaboonException: if cannot retrieve the relative project path
         """
+
         fullpath = event.pathname
         rel_path = os.path.relpath(fullpath, self.config.path)
         excls = self.exclude_paths()
@@ -73,6 +84,7 @@ class EventHandler(pyinotify.ProcessEvent):
     def process_IN_DELETE(self, event):
         """ Trigered when a file is deleted in the watched project.
         """
+
         self.process_IN_MODIFY(event)
 
     def _match_incl_regexp(self, excls, rel_path):
@@ -93,6 +105,7 @@ class Monitor(object):
         """ Watches file change events (creation, modification) in the
         watched project.
         """
+
         self.config = Config()
         self.transport = transport
         self.diffman = diffman
@@ -127,6 +140,7 @@ class Monitor(object):
     def watch(self):
         """ Starts to watch the watched project
         """
+
         self.monitor.start()
         self.logger.debug("Started to monitor the %s directory"
                          % self.config.path)
@@ -134,4 +148,5 @@ class Monitor(object):
     def close(self):
         """ Stops the monitoring on the watched project
         """
+
         self.monitor.stop()
