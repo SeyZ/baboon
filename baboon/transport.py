@@ -12,7 +12,9 @@ class Transport(sleekxmpp.ClientXMPP):
     """
 
     def __init__(self, mediator):
-        """
+        """ Takes a mediator in order to verify if the received
+        messages can be applied or not. During the init, Transport
+        initializes all SleekXMPP stuff like plugins, events and more.
         """
 
         self.config = Config()
@@ -44,6 +46,9 @@ class Transport(sleekxmpp.ClientXMPP):
         self.logger.debug("Listening 'message/pubsub_event' sleekxmpp event")
 
     def open(self):
+        """ Connects to the XMPP server.
+        """
+
         self.logger.debug("Connecting to XMPP...")
         if self.connect():
             self.logger.debug("Connected to XMPP")
@@ -52,8 +57,9 @@ class Transport(sleekxmpp.ClientXMPP):
             self.logger.error("Unable to connect.")
 
     def start(self, event):
-        """ Handler for the session_start sleekxmpp event
+        """ Handler for the session_start sleekxmpp event.
         """
+
         self.send_presence()
         self.get_roster()
 
@@ -109,6 +115,7 @@ class Transport(sleekxmpp.ClientXMPP):
         """ Processes incoming message stanzas. Also includes MUC messages and
         error messages.
         """
+
         if msg['type'] in ('chat', 'normal'):
             self.logger.debug("Received the message %(body)s:" % msg)
 
@@ -161,7 +168,7 @@ class Item(dict):
 
     def __init__(self, payload, *args):
         """ Registers the useful information from the payload dict to
-        the item dict
+        the item dict.
         """
 
         dict.__init__(self, args)
@@ -170,6 +177,8 @@ class Item(dict):
         self.__setitem__('diff', payload['diff'])
 
     def to_xml(self):
+        """ Exports an Item to a xml string.
+        """
         return self.TEMPLATE.format(self['filepath'],
                                     self['diff'],
                                     self['author'])
