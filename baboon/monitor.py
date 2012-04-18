@@ -1,8 +1,10 @@
 import os
 import re
-import pyinotify
 
 from abc import ABCMeta, abstractmethod, abstractproperty
+from watchdog.observers import Observer
+from watchdog.events import FileSystemEventHandler
+
 from errors.baboon_exception import BaboonException
 from logger import logger
 from config import Config
@@ -10,8 +12,8 @@ from transport import Item
 
 
 @logger
-class EventHandler(pyinotify.ProcessEvent):
-    """ An abstract class that extends a pyinotify.ProcessEvent in
+class EventHandler(FileSystemEventHandler):
+    """ An abstract class that extends watchdog FileSystemEventHandler in
     order to describe the behavior when a file is
     added/modified/deleted. The behavior is dependend of the SCM to
     detect exclude patterns (e.g. .git for git, .hg for hg, etc.)
@@ -45,13 +47,14 @@ class EventHandler(pyinotify.ProcessEvent):
 
         return
 
-    def process_IN_MODIFY(self, event):
+    def on_modified(self, event):
         """ Triggered when a file is modified in the watched project.
-        @param event: the event provided by pyinotify.ProcessEvent.
+        @param event: the watchdog event
         @raise BaboonException: if cannot retrieve the relative project path
         """
 
-        fullpath = event.pathname
+        fullpath = event.src_path
+        self.logger.debug('Detected a modification on [{0}]'.format(fullpath))
         rel_path = os.path.relpath(fullpath, self.config.path)
         excls = self.exclude_paths()
 
@@ -81,11 +84,11 @@ class EventHandler(pyinotify.ProcessEvent):
         self.logger.debug("Ignore the modification on %s" %
                           rel_path)
 
-    def process_IN_DELETE(self, event):
+    def on_deleted(self, event):
         """ Trigered when a file is deleted in the watched project.
         """
 
-        self.process_IN_MODIFY(event)
+        self.on_modified(event)
 
     def _match_incl_regexp(self, excls, rel_path):
         for incl in excls[0]:
@@ -110,9 +113,6 @@ class Monitor(object):
         self.transport = transport
         self.diffman = diffman
 
-        vm = pyinotify.WatchManager()
-        mask = pyinotify.IN_MODIFY | pyinotify.IN_DELETE
-
         # Initialize the event handler class to use depending on the SCM to use
         handler = None
         scm_classes = EventHandler.__subclasses__()
@@ -131,11 +131,12 @@ class Monitor(object):
                                       " class for your SCM written in your"
                                       " baboonrc file")
 
-        self.monitor = pyinotify.ThreadedNotifier(vm, handler)
-        self.monitor.coalesce_events()
-
-        # add the watcher
-        vm.add_watch(self.config.path, mask, rec=True, auto_add=True)
+        self.monitor = Observer()
+        try:
+            self.monitor.schedule(handler, self.config.path, recursive=True)
+        except OSError, err:
+            self.logger.error(err)
+            raise BaboonException(err)
 
     def watch(self):
         """ Starts to watch the watched project
@@ -150,3 +151,4 @@ class Monitor(object):
         """
 
         self.monitor.stop()
+        self.monitor.join()

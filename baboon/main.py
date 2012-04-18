@@ -14,6 +14,8 @@ from diffman import Diffman
 @logger
 class Main(object):
     def __init__(self):
+        self.monitor = None
+
         try:
             # instanciates the config
             self.config = Config()
@@ -38,7 +40,9 @@ class Main(object):
             self.monitor = Monitor(self.transport, self.diffman)
             self.monitor.watch()
 
+            # TODO this won't work on windows...
             signal.pause()
+
         except BaboonException, err:
             sys.stderr.write("%s\n" % err)
             # Try to close the transport properly. If the transport is
@@ -46,7 +50,8 @@ class Main(object):
             self.transport.close()
 
             # Same thing for the monitor
-            self.monitor.close()
+            if self.monitor:
+                self.monitor.close()
 
             # Exits with a fail return code
             sys.exit(1)
