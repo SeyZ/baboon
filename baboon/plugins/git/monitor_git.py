@@ -1,24 +1,76 @@
 import os
+import re
 import fnmatch
 
 from monitor import EventHandler
 
 
 class EventHandlerGit(EventHandler):
+    def __init__(self, transport, diffman):
+        super(EventHandlerGit, self).__init__(transport, diffman)
+
+        # My ignore file name is...
+        self.gitignore_path = os.path.join(self.config.path, '.gitignore')
+
+        # Lists of compiled RegExp objects
+        self.include_regexps = []
+        self.exclude_regexps = [re.compile('.*\.git.*')]
+
+        # Update those lists
+        self._populate_gitignore_items()
+
     @property
     def scm_name(self):
         return 'git'
 
-    def exclude_paths(self):
-        excl = ['.*\.git.*']
-        incl = []
+    def exclude(self, rel_path):
+        # First, check if the modified file is the gitignore file. If it's the
+        # case, update include/exclude paths lists.
+        if rel_path == self.gitignore_path:
+            self._populate_gitignore_items()
 
-        gitignore_files = self._parse_gitignore()
-        if gitignore_files != None:
-            incl += gitignore_files[0]
-            excl += gitignore_files[1]
+        # Return True only if rel_path matches an exclude pattern AND does NOT
+        # match an include pattern. Else, return False
+        if (self._match_excl_regexp(rel_path) and
+            not self._match_incl_regexp(rel_path)):
+            return True
 
-        return incl, excl
+        return False
+
+    def _populate_gitignore_items(self):
+        '''This method populates include and exclude lists with compiled regexps
+        objects.'''
+
+        gitignore_items = self._parse_gitignore()
+        if gitignore_items != None:
+            # Let's compile them already :)
+            self.include_regexps += [re.compile(x) for x in gitignore_items[0]]
+            self.exclude_regexps += [re.compile(x) for x in gitignore_items[1]]
+
+    def _match_excl_regexp(self, rel_path):
+        '''Returns True if rel_path matches any item in exclude_regexp list.
+        '''
+
+        for regexp in self.exclude_regexps:
+            if regexp.search(rel_path) is not None:
+                self.logger.debug("The path %s matches the ignore regexp"
+                                  " %s." % (rel_path, regexp.pattern))
+                return True
+
+        return False
+
+    def _match_incl_regexp(self, rel_path):
+        '''Returns True if rel_path matches any item in include_regexp list.
+        '''
+
+        for neg_regexp in self.include_regexps:
+            if neg_regexp.search(rel_path) is not None:
+                self.logger.debug("The same path %s matches the include"
+                                  " regexp %s." % (rel_path,
+                                                   neg_regexp.pattern))
+                return True
+
+        return False
 
     def _parse_gitignore(self):
         """ Parses the .gitignore file in the repository.

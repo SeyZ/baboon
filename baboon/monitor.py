@@ -1,5 +1,4 @@
 import os
-import re
 
 from abc import ABCMeta, abstractmethod, abstractproperty
 from watchdog.observers import Observer
@@ -41,10 +40,10 @@ class EventHandler(FileSystemEventHandler):
         return
 
     @abstractmethod
-    def exclude_paths(self):
-        """ A list of regexp patterns to exclude from the Watcher
-        """
-
+    def exclude(self, path):
+        '''Returns True when file matches an exclude pattern specified in the
+        scm specific monitor plugin.
+        '''
         return
 
     def on_modified(self, event):
@@ -56,19 +55,8 @@ class EventHandler(FileSystemEventHandler):
         fullpath = event.src_path
         self.logger.debug('Detected a modification on [{0}]'.format(fullpath))
         rel_path = os.path.relpath(fullpath, self.config.path)
-        excls = self.exclude_paths()
-
-        for excl in excls[1]:
-            regexp = re.compile(excl)
-            # If the rel_path matches the current exclude regexp, we
-            # need to test if the rel_path matches at least one
-            # include regexp.
-            if regexp.search(rel_path) is not None:
-                self.logger.debug("The path %s matches the ignore regexp"
-                                  " %s." % (rel_path, excl))
-                # If no, avoids to broadcast the diff
-                if not self._match_incl_regexp(excls, rel_path):
-                    break
+        if self.exclude(rel_path):
+            self.logger.debug("Ignore the modification on %s" % rel_path)
         else:
             # Computes the changes on the rel_path
             thediff = self.diffman.diff(rel_path)
@@ -80,26 +68,11 @@ class EventHandler(FileSystemEventHandler):
             self.transport.broadcast(Item(payload))
             return
 
-        # Here only if the broadcast has not been done.
-        self.logger.debug("Ignore the modification on %s" %
-                          rel_path)
-
     def on_deleted(self, event):
         """ Trigered when a file is deleted in the watched project.
         """
 
         self.on_modified(event)
-
-    def _match_incl_regexp(self, excls, rel_path):
-        for incl in excls[0]:
-            neg_regexp = re.compile(incl)
-            # si ca match
-            if neg_regexp.search(rel_path) is not None:
-                self.logger.debug("The same path %s matches the include"
-                                  " regexp %s." % (rel_path, incl))
-                return True
-
-        return False
 
 
 @logger
