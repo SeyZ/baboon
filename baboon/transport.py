@@ -161,9 +161,9 @@ class Item(dict):
 
     TEMPLATE = """
 <patch>
-  <file>{0}</file>
-  <diff>{1}</diff>
-  <author>{2}</author>
+  <file><![CDATA[{0}]]></file>
+  <diff><![CDATA[{1}]]></diff>
+  <author><![CDATA[{2}]]></author>
 </patch>"""
 
     def __init__(self, payload, *args):
