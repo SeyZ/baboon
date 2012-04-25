@@ -3,6 +3,7 @@ import re
 import fnmatch
 
 from monitor import EventHandler
+from errors.baboon_exception import BaboonException
 
 
 class EventHandlerGit(EventHandler):
@@ -17,7 +18,8 @@ class EventHandlerGit(EventHandler):
         self.exclude_regexps = [re.compile('.*\.git.*')]
 
         # Update those lists
-        self._populate_gitignore_items()
+        if os.path.exists(self.gitignore_path):
+            self._populate_gitignore_items()
 
     @property
     def scm_name(self):
@@ -83,8 +85,11 @@ class EventHandlerGit(EventHandler):
         results = []  # contains the result regexp patterns
         neg_results = []  # contains the result negative regexp patterns
 
-        with open(gitignore_path, 'r') as f:
-            lines = f.readlines()
+        try:
+            with open(gitignore_path, 'r') as f:
+                lines = f.readlines()
+        except IOError as err:
+            raise BaboonException(format(err))
 
         # Sort the line in order to have inverse pattern first
         lines.sort(self._gitline_comparator)

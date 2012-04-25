@@ -97,12 +97,12 @@ class Monitor(object):
                                   "changes" % tmp_inst.scm_name)
                 handler = tmp_inst
                 break
-            else:
-                # Raises this BaboonException if no plugin has found
-                # according to the scm entry in the config file
-                raise BaboonException("Cannot get a valid FS event handler"
-                                      " class for your SCM written in your"
-                                      " baboonrc file")
+        else:
+            # Raises this BaboonException if no plugin has found
+            # according to the scm entry in the config file
+            raise BaboonException("Cannot get a valid FS event handler"
+                                  " class for your SCM written in your"
+                                  " baboonrc file")
 
         self.monitor = Observer()
         try:
