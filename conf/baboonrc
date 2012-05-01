@@ -1,5 +1,6 @@
 [project]
-baboonsrv=localhost:8080
+baboonsrv_host=localhost
+baboonsrv_port=8080
 pubsub=pubsub.localhost
 node = node1
 jid=seyz@localhost
