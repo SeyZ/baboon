@@ -1,6 +1,7 @@
 [project]
-server_host=pubsub.localhost
-node_name = node1
+baboonsrv=localhost:8080
+pubsub=pubsub.localhost
+node = node1
 jid=seyz@localhost
 password=secret
 

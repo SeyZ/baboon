@@ -5,10 +5,8 @@ from plugins import *
 from logger import logger
 from config import Config
 from errors.baboon_exception import BaboonException
-from mediator import Mediator
 from transport import Transport
 from monitor import Monitor
-from diffman import Diffman
 
 
 @logger
@@ -23,21 +21,10 @@ class Main(object):
             # exists baboon when receiving a sigint signal
             signal.signal(signal.SIGINT, self.sigint_handler)
 
-            # Initialize the scm class to use
-            scm_classes = Diffman.__subclasses__()
-            for cls in scm_classes:
-                tmp_inst = cls()
-                if tmp_inst.scm_name == self.config.scm:
-                    self.diffman = tmp_inst
-
-            # TODO verify self.diffman
-
-            self.mediator = Mediator(self.diffman)
-
-            self.transport = Transport(self.mediator)
+            self.transport = Transport()
             self.transport.open()
 
-            self.monitor = Monitor(self.transport, self.diffman)
+            self.monitor = Monitor(self.transport)
             self.monitor.watch()
 
             # TODO this won't work on windows...
