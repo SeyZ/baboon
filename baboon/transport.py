@@ -1,9 +1,10 @@
-import sleekxmpp
+import os
 import urllib
 import urllib2
 import json
 import subprocess
 import shlex
+import sleekxmpp
 
 from logger import logger
 from config import Config
@@ -80,7 +81,15 @@ class Transport(sleekxmpp.ClientXMPP):
         """
 
         opener = urllib2.build_opener(urllib2.HTTPHandler)
-        request = urllib2.Request(self.url.rsync_request())
+
+        data = {'project_name': self.config.node,
+                'username': self.config.jid,
+                'server_host': self.config.baboonsrv_host,
+                }
+
+        request = urllib2.Request(self.url.rsync_request(),
+                                  data=urllib.urlencode(data))
+
         request.get_method = lambda: 'POST'
         result = opener.open(request)
 
@@ -97,12 +106,27 @@ class Transport(sleekxmpp.ClientXMPP):
         req_id = trans_data['req_id']
         remote_dir = trans_data['remote_dir']
 
-        # Rsync...
-        rsync_cmd = 'rsync -ahv %s/ %s' % (self.config.path, remote_dir)
+        # Assumes that there's a rsync_key in the ~/.ssh/ folder.
+        rsync_key_path = os.path.expanduser('~/.ssh/rsync_key')
+
+        # Builds the rsync command
+        rsync_cmd = 'rsync -ahv -e "ssh -i %s" %s/ %s' % \
+            (rsync_key_path, self.config.path, remote_dir)
+
+        self.logger.info('Sync...')
+
         args = shlex.split(str(rsync_cmd))  # make sure that rsync_cmd
                                             # is not unicoded
-        proc = subprocess.Popen(args, shell=False)
+
+        # Go rsync
+        proc = subprocess.Popen(args,
+                                stdin=subprocess.PIPE,
+                                stdout=subprocess.PIPE,
+                                stderr=subprocess.STDOUT,
+                                shell=False)
         proc.communicate()
+
+        self.logger.info('Sync finished')
 
         # Stops the transaction
         self.stop_rsync_transaction(req_id)
@@ -137,7 +161,10 @@ class Transport(sleekxmpp.ClientXMPP):
                               msg['pubsub_event'])
 
             items = msg['pubsub_event']['items']['substanzas']
-            self._verify(items)
+
+            for item in items:
+                self.logger.info(item['payload'].text)
+
         else:
             self.logger.debug("Received pubsub event: \n%s" %
                               msg['pubsub_event'])
@@ -163,4 +190,6 @@ class TransportUrl(object):
             return self.make_url('%s/%s' % (self.RSYNC_REQUEST, req_id))
 
     def make_url(self, path):
-        return urlunparse(('http', self.config.baboonsrv, path, '', '', ''))
+        host = '%s:%s' % (self.config.baboonsrv_host,
+                          self.config.baboonsrv_port)
+        return urlunparse(('http', host, path, '', '', ''))
