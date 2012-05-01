@@ -7,7 +7,6 @@ from watchdog.events import FileSystemEventHandler
 from errors.baboon_exception import BaboonException
 from logger import logger
 from config import Config
-from transport import Item
 
 
 @logger
@@ -20,15 +19,13 @@ class EventHandler(FileSystemEventHandler):
 
     __metaclass__ = ABCMeta
 
-    def __init__(self, transport, diffman):
-        """ Take the diffman to generate a patch when a change is
-        detected and a transport to send it to other people.
+    def __init__(self, transport):
+        """ Take the transport to rsync the changes on baboon server.
         """
 
         super(EventHandler, self).__init__()
         self.config = Config()
         self.transport = transport
-        self.diffman = diffman
 
     @abstractproperty
     def scm_name(self):
@@ -58,15 +55,11 @@ class EventHandler(FileSystemEventHandler):
         if self.exclude(rel_path):
             self.logger.debug("Ignore the modification on %s" % rel_path)
         else:
-            # Computes the changes on the rel_path
-            thediff = self.diffman.diff(rel_path)
-            payload = {
-                'filepath': rel_path,
-                'diff': thediff,
-                'author': self.config.jid,
-                }
-            self.transport.broadcast(Item(payload))
-            return
+            # Rsync...
+            self.transport.rsync()
+
+            # Asks to baboon to verify if there's a conflict or not.
+            self.transport.merge_verification()
 
     def on_deleted(self, event):
         """ Trigered when a file is deleted in the watched project.
@@ -77,21 +70,20 @@ class EventHandler(FileSystemEventHandler):
 
 @logger
 class Monitor(object):
-    def __init__(self, transport, diffman):
+    def __init__(self, transport):
         """ Watches file change events (creation, modification) in the
         watched project.
         """
 
         self.config = Config()
         self.transport = transport
-        self.diffman = diffman
 
         # Initialize the event handler class to use depending on the SCM to use
         handler = None
         scm_classes = EventHandler.__subclasses__()
 
         for cls in scm_classes:
-            tmp_inst = cls(self.transport, self.diffman)
+            tmp_inst = cls(self.transport)
             if tmp_inst.scm_name == self.config.scm:
                 self.logger.debug("Uses the %s class for the monitoring of FS "
                                   "changes" % tmp_inst.scm_name)

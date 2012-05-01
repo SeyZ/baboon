@@ -1,27 +1,29 @@
+import os
+import urllib
+import urllib2
+import json
+import subprocess
+import shlex
 import sleekxmpp
 
-from sleekxmpp.xmlstream import ET
 from logger import logger
 from config import Config
 
 
 @logger
 class Transport(sleekxmpp.ClientXMPP):
-    """ The transport has the responsability to communicate with the
-    sleekxmpp library via XMPP protocol.
+    """ The transport has the responsability to communicate via HTTP
+    with the baboon server and to subscribe with XMPP 0060 with the
+    Baboon XMPP server.
     """
 
-    def __init__(self, mediator):
-        """ Takes a mediator in order to verify if the received
-        messages can be applied or not. During the init, Transport
-        initializes all SleekXMPP stuff like plugins, events and more.
+    def __init__(self):
+        """ Transport initializes all SleekXMPP stuff like plugins,
+        events and more.
         """
 
         self.config = Config()
         self.logger.debug("Loaded baboon configuration")
-
-        # Store the mediator class
-        self.mediator = mediator
 
         sleekxmpp.ClientXMPP.__init__(self, self.config.jid,
                                       self.config.password)
@@ -34,9 +36,6 @@ class Transport(sleekxmpp.ClientXMPP):
         self.add_event_handler("session_start", self.start)
         self.logger.debug("Listening 'session_start' sleekxmpp event")
 
-        self.add_event_handler("message", self.message)
-        self.logger.debug("Listening 'message' sleekxmpp event")
-
         self.register_handler(
             sleekxmpp.xmlstream.handler.Callback(
                 'Pubsub event',
@@ -44,6 +43,9 @@ class Transport(sleekxmpp.ClientXMPP):
                     'message/pubsub_event'),
                 self._pubsub_event))
         self.logger.debug("Listening 'message/pubsub_event' sleekxmpp event")
+
+        # Instanciates a TransportUrl
+        self.url = TransportUrl()
 
     def open(self):
         """ Connects to the XMPP server.
@@ -59,7 +61,6 @@ class Transport(sleekxmpp.ClientXMPP):
     def start(self, event):
         """ Handler for the session_start sleekxmpp event.
         """
-
         self.send_presence()
         self.get_roster()
 
@@ -67,57 +68,86 @@ class Transport(sleekxmpp.ClientXMPP):
         self.pubsub = self.plugin["xep_0060"]
 
         self.logger.info('Connected')
-        self.retreive_messages()
-
-    def retreive_messages(self):
-        """ Retreives the last message on the pubsub xmpp node.
-        """
-
-        result = self.pubsub.get_item(self.config.server_host,
-                                      self.config.node_name,
-                                      '')
-        items = result['pubsub']['items']['substanzas']
-        self.logger.info('Retreived %s items' % len(items))
-
-        self._verify(items)
 
     def close(self):
+        """ Closes the XMPP connection.
+        """
+
         self.disconnect()
         self.logger.debug('Closed the XMPP connection')
 
-    def broadcast(self, payload):
-        """ Broadcasts via XMPP the payload. The payload can be a list
-        of Item or a single item.
+    def start_rsync_transaction(self):
+        """ Starts a rsync transaction and return its id.
         """
 
-        # Transforms all Item objects to a single XML string
-        xmls = ""
-        if isinstance(payload, dict):
-            xmls = payload.to_xml()
-        elif isinstance(payload, list):
-            for elem in payload:
-                xmls += elem.to_xml()
+        opener = urllib2.build_opener(urllib2.HTTPHandler)
 
-        # Transforms the XML string to a valid sleekxmpp XML element
-        xml_element = ET.fromstring(xmls)
+        data = {'project_name': self.config.node,
+                'username': self.config.jid,
+                'server_host': self.config.baboonsrv_host,
+                }
 
-        try:
-            result = self.pubsub.publish(self.config.server_host,
-                                         self.config.node_name,
-                                         payload=xml_element)
-            id = result['pubsub']['publish']['item']['id']
-            self.logger.debug('Published at item id: %s' % id)
-        except:
-            self.logger.error('Could not publish to: %s' %
-                              self.config.node_name)
+        request = urllib2.Request(self.url.rsync_request(),
+                                  data=urllib.urlencode(data))
 
-    def message(self, msg):
-        """ Processes incoming message stanzas. Also includes MUC messages and
-        error messages.
+        request.get_method = lambda: 'POST'
+        result = opener.open(request)
+
+        json_data = result.readline()
+        return json.loads(json_data)
+
+    def rsync(self):
+        """ Starts a rsync transaction, rsync and stop the
+        transaction.
         """
 
-        if msg['type'] in ('chat', 'normal'):
-            self.logger.debug("Received the message %(body)s:" % msg)
+        # Starts the transaction
+        trans_data = self.start_rsync_transaction()
+        req_id = trans_data['req_id']
+        remote_dir = trans_data['remote_dir']
+
+        # Assumes that there's a rsync_key in the ~/.ssh/ folder.
+        rsync_key_path = os.path.expanduser('~/.ssh/rsync_key')
+
+        # Builds the rsync command
+        rsync_cmd = 'rsync -ahv -e "ssh -i %s" %s/ %s' % \
+            (rsync_key_path, self.config.path, remote_dir)
+
+        print rsync_cmd
+
+        args = shlex.split(str(rsync_cmd))  # make sure that rsync_cmd
+                                            # is not unicoded
+
+        # Go rsync
+        proc = subprocess.Popen(args, shell=False)
+        proc.communicate()
+
+        # Stops the transaction
+        self.stop_rsync_transaction(req_id)
+
+    def stop_rsync_transaction(self, req_id):
+        """ Stops the rsync transaction identified by req_id.
+        """
+
+        opener = urllib2.build_opener(urllib2.HTTPHandler)
+        request = urllib2.Request(self.url.rsync_request(req_id))
+        request.get_method = lambda: 'DELETE'
+        opener.open(request)
+
+    def merge_verification(self):
+        """ Calls baboon server in order to verify if there's a
+        conflict or not.
+        """
+
+        opener = urllib2.build_opener(urllib2.HTTPHandler)
+        data = {'project_name': self.config.node,
+                'username': self.config.jid,
+                }
+
+        request = urllib2.Request(self.url.task(),
+                                  data=urllib.urlencode(data))
+        request.get_method = lambda: 'POST'
+        opener.open(request)
 
     def _pubsub_event(self, msg):
         if msg['type'] in ('normal', 'headline'):
@@ -130,55 +160,27 @@ class Transport(sleekxmpp.ClientXMPP):
             self.logger.debug("Received pubsub event: \n%s" %
                               msg['pubsub_event'])
 
-    def _verify(self, items):
-        """ Parses the items and ask to the mediator if there're
-        conflicts or not.
-        """
-
-        # Transforms a list of sleekxmpp stanzas to a list of
-        # dicts
-        payloads = [Item(self._transform(x['payload'])) for x in items]
-
-        # Verifies if there's a conflict in the payloads
-        self.mediator.verify_msg(payloads)
-
-    def _transform(self, xmpp_payload):
-        """ Transforms a XmppEventItem to a human readable dict
-        """
-        return {
-            'filepath': xmpp_payload[0].text,
-            'diff': xmpp_payload[1].text,
-            'author': xmpp_payload[2].text,
-            }
+from urlparse import urlunparse
 
 
-class Item(dict):
-    """ Represents all information needed by a diff :
-    - file path
-    - author of the diff
-    - diff
-    """
+class TransportUrl(object):
 
-    TEMPLATE = """
-<patch>
-  <file><![CDATA[{0}]]></file>
-  <diff><![CDATA[{1}]]></diff>
-  <author><![CDATA[{2}]]></author>
-</patch>"""
+    TASK = 'tasks'
+    RSYNC_REQUEST = '{0}/rsync_request'.format(TASK)
 
-    def __init__(self, payload, *args):
-        """ Registers the useful information from the payload dict to
-        the item dict.
-        """
+    def __init__(self):
+        self.config = Config()
 
-        dict.__init__(self, args)
-        self.__setitem__('filepath', payload['filepath'])
-        self.__setitem__('author', payload['author'])
-        self.__setitem__('diff', payload['diff'])
+    def task(self):
+        return self.make_url(self.TASK)
 
-    def to_xml(self):
-        """ Exports an Item to a xml string.
-        """
-        return self.TEMPLATE.format(self['filepath'],
-                                    self['diff'],
-                                    self['author'])
+    def rsync_request(self, req_id=None):
+        if req_id is None:
+            return self.make_url(self.RSYNC_REQUEST)
+        else:
+            return self.make_url('%s/%s' % (self.RSYNC_REQUEST, req_id))
+
+    def make_url(self, path):
+        host = '%s:%s' % (self.config.baboonsrv_host,
+                          self.config.baboonsrv_port)
+        return urlunparse(('http', host, path, '', '', ''))

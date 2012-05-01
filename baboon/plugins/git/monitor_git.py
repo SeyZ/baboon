@@ -7,8 +7,8 @@ from errors.baboon_exception import BaboonException
 
 
 class EventHandlerGit(EventHandler):
-    def __init__(self, transport, diffman):
-        super(EventHandlerGit, self).__init__(transport, diffman)
+    def __init__(self, transport):
+        super(EventHandlerGit, self).__init__(transport)
 
         # My ignore file name is...
         self.gitignore_path = os.path.join(self.config.path, '.gitignore')

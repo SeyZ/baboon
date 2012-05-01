@@ -7,8 +7,8 @@ from errors.baboon_exception import BaboonException
 
 
 class EventHandlerHg(EventHandler):
-    def __init__(self, transport, diffman):
-        super(EventHandlerHg, self).__init__(transport, diffman)
+    def __init__(self, transport):
+        super(EventHandlerHg, self).__init__(transport)
         # My ignore file name is...
         self.hgignore_path = os.path.join(self.config.path, '.hgignore')
 
@@ -81,7 +81,7 @@ class EventHandlerHg(EventHandler):
             #     Regular expression, Python/Perl syntax.
             # glob
             #     Shell-style glob.
-            
+
             # Ignore commented and empty lines
             if line.startswith('#') or not line:
                 continue
