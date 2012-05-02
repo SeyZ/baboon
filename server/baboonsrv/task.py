@@ -147,12 +147,12 @@ class MergeTask(Task):
 
         self._exec_cmd('git reset HEAD~1')
 
-        # Remove the baboon-tmp branch of the master user.
-        # self._exec_cmd('git branch -D baboon-tmp')
-
     def _user_side(self, user):
+
         user_cwd = os.path.join(self.project_cwd, user)
 
+        self._exec_cmd('git remote add %s %s' %
+                       (self.username, self.master_cwd), user_cwd)
         self._exec_cmd('git add *', user_cwd)
         self._exec_cmd('git commit -am "Baboon commit"', user_cwd)
         self._exec_cmd('git fetch %s' % self.username, user_cwd)
@@ -184,7 +184,7 @@ class MergeTask(Task):
             folder_fullpath = os.path.join(self.project_cwd, folder_name)
             if folder_fullpath != self.master_cwd and \
                     os.path.isdir(folder_fullpath):
-                yield folder_fullpath
+                yield folder_name
 
     def _exec_cmd(self, cmd, cwd=None):
         """ Execute the cmd command in a subprocess. Returns the
@@ -197,9 +197,9 @@ class MergeTask(Task):
 
         # Open a subprocess
         proc = subprocess.Popen(cmd,
-                                # stdin=subprocess.PIPE,
-                                # stdout=subprocess.PIPE,
-                                # stderr=subprocess.STDOUT,
+                                stdin=subprocess.PIPE,
+                                stdout=subprocess.PIPE,
+                                stderr=subprocess.STDOUT,
                                 shell=True,
                                 cwd=cwd
                                 )
