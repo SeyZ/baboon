@@ -138,35 +138,28 @@ class MergeTask(Task):
         """
 
         # Master user
-        self._exec_cmd('git add .')
-        self._exec_cmd('git stash')
-        self._exec_cmd('git checkout -b baboon-tmp')
-        self._exec_cmd('git stash apply')
+        self._exec_cmd('git add *')
         self._exec_cmd('git commit -am "Baboon commit"')
-        self._exec_cmd('git checkout master')
-        self._exec_cmd('git stash pop')
 
         # All users
         for user in self._get_user_dirs():
             self._user_side(user)
 
+        self._exec_cmd('git reset HEAD~1')
+
         # Remove the baboon-tmp branch of the master user.
-        self._exec_cmd('git branch -D baboon-tmp')
+        # self._exec_cmd('git branch -D baboon-tmp')
 
     def _user_side(self, user):
         user_cwd = os.path.join(self.project_cwd, user)
 
-        self._exec_cmd('git stash', user_cwd)
-        self._exec_cmd('git checkout -b baboon-tmp', user_cwd)
-        self._exec_cmd('git stash apply', user_cwd)
+        self._exec_cmd('git add *', user_cwd)
         self._exec_cmd('git commit -am "Baboon commit"', user_cwd)
         self._exec_cmd('git fetch %s' % self.username, user_cwd)
-        ret = self._exec_cmd('git merge %s/baboon-tmp --no-commit --no-ff' %
+        ret = self._exec_cmd('git merge %s/master --no-commit --no-ff' %
                              self.username, user_cwd)
         self._exec_cmd('git merge --abort', user_cwd)
-        self._exec_cmd('git checkout master', user_cwd)
-        self._exec_cmd('git stash pop', user_cwd)
-        self._exec_cmd('git branch -D baboon-tmp', user_cwd)
+        self._exec_cmd('git reset HEAD~1', user_cwd)
 
         if ret != 0:
             self._alert(True)
@@ -204,9 +197,9 @@ class MergeTask(Task):
 
         # Open a subprocess
         proc = subprocess.Popen(cmd,
-                                stdin=subprocess.PIPE,
-                                stdout=subprocess.PIPE,
-                                stderr=subprocess.STDOUT,
+                                # stdin=subprocess.PIPE,
+                                # stdout=subprocess.PIPE,
+                                # stderr=subprocess.STDOUT,
                                 shell=True,
                                 cwd=cwd
                                 )
