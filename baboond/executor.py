@@ -1,7 +1,12 @@
+import uuid
+
 from threading import Thread
 from Queue import PriorityQueue
-from task import EndTask
-from errors.baboon_exception import BaboonException
+
+from task import EndTask, RsyncTask
+from config import config
+from common.logger import logger
+from common.errors.baboon_exception import BaboonException
 
 # A priority queue to store all tasks. The priority is important in
 # order to have an endtask with high priority. When someone puts an
@@ -10,7 +15,8 @@ from errors.baboon_exception import BaboonException
 tasks = PriorityQueue()
 
 
-class Executor(Thread):
+@logger
+class Scheduler(Thread):
     """ This class applies the baboonsrv workflow task by task.
     """
 
@@ -42,7 +48,44 @@ class Executor(Thread):
             try:
                 task.run()
             except BaboonException as err:
-                print err
+                self.logger.error(err)
 
             # Mark the task finished
             tasks.task_done()
+
+
+class Preparator():
+    """
+    """
+
+    rsync_tasks = {}
+
+    def prepare_rsync_start(self):
+        # Create the rsync task.
+        rsync_task = RsyncTask()
+        tasks.put(rsync_task)
+
+        # Associate a uuid to the rsync task and store it into
+        # rsync_tasks dict.
+        req_id = str(uuid.uuid4())
+        self.rsync_tasks[req_id] = rsync_task
+
+        # TODO - Remove hard coded information
+        # Return all the necessary information to the baboon client.
+        ret = {'req_id': req_id,
+               'remote_dir': 'root@%s:/tmp/%s/%s/' % \
+                   (config.baboonsrv_host, config.node, config.jid)
+               }
+
+        # Return the dict
+        return ret
+
+    def prepare_rsync_stop(self, req_id):
+        rsync_task = self.rsync_tasks[req_id]
+
+        # Throw the event.
+        rsync_task.ready.set()
+
+        return True
+
+preparator = Preparator()

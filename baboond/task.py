@@ -3,8 +3,10 @@ import subprocess
 import executor
 
 from threading import Event
-from alert import Xmpp
-from errors.baboon_exception import BaboonException
+
+from transport import transport
+from common.logger import logger
+from common.errors.baboon_exception import BaboonException
 
 WORKING_DIR = '/tmp'
 
@@ -31,6 +33,7 @@ class Task(object):
                                   " task subclass.")
 
 
+@logger
 class EndTask(Task):
     """ A high priority task to exit BaboonSrv.
     """
@@ -47,15 +50,13 @@ class EndTask(Task):
         # Nothing to do. This class is just a sort of flag with high
         # priority.
 
-        pass
+        self.logger.info('Bye !')
 
 
 class AlertTask(Task):
     """ A high priority task to alert baboon client the state of the
     merge.
     """
-
-    xmpp = Xmpp()
 
     def __init__(self, merge_conflict=False):
         """ Initialize the AlertTask. By default, there's no merge
@@ -71,9 +72,10 @@ class AlertTask(Task):
     def run(self):
         msg = 'Conflict detected' if self.merge_conflict else \
             'Everything seems to be perfect'
-        self.xmpp.alert(msg)
+        transport.alert(msg)
 
 
+@logger
 class RsyncTask(Task):
     """ A task to rsync the local repository of the baboon client and
     the server.
@@ -90,9 +92,9 @@ class RsyncTask(Task):
         self.ready = Event()
 
     def run(self):
-        print 'Wait rsync... !'
+        self.logger.info('Wait rsync... !')
         self.ready.wait()
-        print 'The rsync is finished !'
+        self.logger.info('The rsync is finished !')
 
 
 class MergeTask(Task):

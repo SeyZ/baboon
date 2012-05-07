@@ -1,13 +1,15 @@
 import os
 import urllib
 import urllib2
-import json
 import subprocess
 import shlex
 import sleekxmpp
 
-from logger import logger
-from config import Config
+from urlparse import urlunparse
+
+from config import config
+from common.stanza.rsync import RsyncStart, RsyncStop
+from common.logger import logger
 
 
 @logger
@@ -17,16 +19,14 @@ class Transport(sleekxmpp.ClientXMPP):
     Baboon XMPP server.
     """
 
-    def __init__(self):
+    def __init__(self, config):
         """ Transport initializes all SleekXMPP stuff like plugins,
         events and more.
         """
 
-        self.config = Config()
         self.logger.debug("Loaded baboon configuration")
 
-        sleekxmpp.ClientXMPP.__init__(self, self.config.jid,
-                                      self.config.password)
+        sleekxmpp.ClientXMPP.__init__(self, config.jid, config.password)
         self.logger.debug("Configured SleekXMPP library")
 
         # Register plugins
@@ -80,21 +80,18 @@ class Transport(sleekxmpp.ClientXMPP):
         """ Starts a rsync transaction and return its id.
         """
 
-        opener = urllib2.build_opener(urllib2.HTTPHandler)
+        msg = RsyncStart()
+        msg['node'] = config.node
 
-        data = {'project_name': self.config.node,
-                'username': self.config.jid,
-                'server_host': self.config.baboonsrv_host,
-                }
+        iq = self.make_iq_set(
+            ifrom=config.jid,
+            ito='admin@baboon-project.org/baboond',
+            sub=msg)
 
-        request = urllib2.Request(self.url.rsync_request(),
-                                  data=urllib.urlencode(data))
+        # TODO: catch the possible exception
+        raw_ret = iq.send()
 
-        request.get_method = lambda: 'POST'
-        result = opener.open(request)
-
-        json_data = result.readline()
-        return json.loads(json_data)
+        return raw_ret['rsync_ok'].values
 
     def rsync(self):
         """ Starts a rsync transaction, rsync and stop the
@@ -111,7 +108,7 @@ class Transport(sleekxmpp.ClientXMPP):
 
         # Builds the rsync command
         rsync_cmd = 'rsync -ahv -e "ssh -i %s" %s/ %s' % \
-            (rsync_key_path, self.config.path, remote_dir)
+            (rsync_key_path, config.path, remote_dir)
 
         self.logger.info('Sync...')
 
@@ -135,10 +132,17 @@ class Transport(sleekxmpp.ClientXMPP):
         """ Stops the rsync transaction identified by req_id.
         """
 
-        opener = urllib2.build_opener(urllib2.HTTPHandler)
-        request = urllib2.Request(self.url.rsync_request(req_id))
-        request.get_method = lambda: 'DELETE'
-        opener.open(request)
+        msg = RsyncStop()
+        msg['node'] = config.node
+        msg['req_id'] = req_id
+
+        iq = self.make_iq_set(
+            ifrom=config.jid,
+            ito='admin@baboon-project.org/baboond',
+            sub=msg)
+
+        # TODO: catch the possible exception
+        iq.send()
 
     def merge_verification(self):
         """ Calls baboon server in order to verify if there's a
@@ -146,8 +150,8 @@ class Transport(sleekxmpp.ClientXMPP):
         """
 
         opener = urllib2.build_opener(urllib2.HTTPHandler)
-        data = {'project_name': self.config.node,
-                'username': self.config.jid,
+        data = {'project_name': config.node,
+                'username': config.jid,
                 }
 
         request = urllib2.Request(self.url.task(),
@@ -163,22 +167,17 @@ class Transport(sleekxmpp.ClientXMPP):
             items = msg['pubsub_event']['items']['substanzas']
 
             for item in items:
-                self.logger.info(item['payload'].text)
+                self.logger.info(item['payload'].get('status'))
 
         else:
             self.logger.debug("Received pubsub event: \n%s" %
                               msg['pubsub_event'])
-
-from urlparse import urlunparse
 
 
 class TransportUrl(object):
 
     TASK = 'tasks'
     RSYNC_REQUEST = '{0}/rsync_request'.format(TASK)
-
-    def __init__(self):
-        self.config = Config()
 
     def task(self):
         return self.make_url(self.TASK)
@@ -190,6 +189,6 @@ class TransportUrl(object):
             return self.make_url('%s/%s' % (self.RSYNC_REQUEST, req_id))
 
     def make_url(self, path):
-        host = '%s:%s' % (self.config.baboonsrv_host,
-                          self.config.baboonsrv_port)
+        host = '%s:%s' % (config.baboonsrv_host,
+                          config.baboonsrv_port)
         return urlunparse(('http', host, path, '', '', ''))

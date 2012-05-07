@@ -3,7 +3,8 @@ import re
 import fnmatch
 
 from monitor import EventHandler
-from errors.baboon_exception import BaboonException
+from config import config
+from common.errors.baboon_exception import BaboonException
 
 
 class EventHandlerGit(EventHandler):
@@ -11,7 +12,7 @@ class EventHandlerGit(EventHandler):
         super(EventHandlerGit, self).__init__(transport)
 
         # My ignore file name is...
-        self.gitignore_path = os.path.join(self.config.path, '.gitignore')
+        self.gitignore_path = os.path.join(config.path, '.gitignore')
 
         # Lists of compiled RegExp objects
         self.include_regexps = []
@@ -80,7 +81,7 @@ class EventHandlerGit(EventHandler):
         1st elem: negative regexps (regexps to not match)
         2nd elem: regexps
         """
-        gitignore_path = os.path.join(self.config.path, '.gitignore')
+        gitignore_path = os.path.join(config.path, '.gitignore')
         lines = []  # contains each line of the .gitignore file
         results = []  # contains the result regexp patterns
         neg_results = []  # contains the result negative regexp patterns

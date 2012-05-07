@@ -2,11 +2,11 @@ import sys
 import signal
 
 from plugins import *
-from logger import logger
-from config import Config
-from errors.baboon_exception import BaboonException
+from config import config
 from transport import Transport
 from monitor import Monitor
+from common.logger import logger
+from common.errors.baboon_exception import BaboonException
 
 
 @logger
@@ -15,13 +15,10 @@ class Main(object):
         self.monitor = None
 
         try:
-            # instanciates the config
-            self.config = Config()
-
             # exists baboon when receiving a sigint signal
             signal.signal(signal.SIGINT, self.sigint_handler)
 
-            self.transport = Transport()
+            self.transport = Transport(config)
             self.transport.open()
 
             self.monitor = Monitor(self.transport)

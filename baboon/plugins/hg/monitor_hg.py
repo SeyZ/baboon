@@ -3,14 +3,15 @@ import re
 import fnmatch
 
 from monitor import EventHandler
-from errors.baboon_exception import BaboonException
+from config import config
+from common.errors.baboon_exception import BaboonException
 
 
 class EventHandlerHg(EventHandler):
     def __init__(self, transport):
         super(EventHandlerHg, self).__init__(transport)
         # My ignore file name is...
-        self.hgignore_path = os.path.join(self.config.path, '.hgignore')
+        self.hgignore_path = os.path.join(config.path, '.hgignore')
 
         # List of compiled RegExp objects
 

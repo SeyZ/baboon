@@ -3,16 +3,18 @@ import sys
 import logging
 import logging.config
 
-from utils import singleton
 from ConfigParser import RawConfigParser
 
 
-@singleton
 class Config(object):
     """ Singleton configuration class
     """
 
-    def __init__(self):
+    def __init__(self, arg_parser, logconf):
+
+        self.arg_parser = arg_parser
+        self.logconf = logconf
+
         # configures the default path
         self.path = os.path.abspath(".")
 
@@ -27,6 +29,10 @@ class Config(object):
 
         and puts all configurations in the config dict
         """
+
+        if self.arg_parser:
+            self._init_config_arg()
+
         self._init_logging()
         self._init_config_file()
 
@@ -52,8 +58,20 @@ class Config(object):
                 return loc
 
         # if there's no good path, use the global environment
-        # elsewhere, return None
+        # elsewhere, return None.
         return os.environ.get("BABOONRC")
+
+    def _init_config_arg(self):
+        try:
+            args = self.arg_parser.args
+
+            # Iterates on all args items and store them into self.
+            for arg in args.__dict__.iteritems():
+                setattr(self, arg[0], arg[1])
+
+        except AttributeError:
+            sys.stderr.write("Failed to parse arguments\n")
+            exit(1)
 
     def _init_logging(self):
         """ configures the logger level setted in the logging args
@@ -67,11 +85,9 @@ class Config(object):
             exit(1)
 
         try:
-            from logconf import LOGGING
-            #LOGGING['loggers']['baboon']['level'] = self.loglevel
-            logging.config.dictConfig(LOGGING)
-        except Exception as err:
-            print err
+            self.logconf['loggers']['baboon']['level'] = self.loglevel
+            logging.config.dictConfig(self.logconf)
+        except:
             sys.stderr.write("Failed to parse the logging config file\n")
             exit(1)
 

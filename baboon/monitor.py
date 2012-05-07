@@ -4,9 +4,9 @@ from abc import ABCMeta, abstractmethod, abstractproperty
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 
-from errors.baboon_exception import BaboonException
-from logger import logger
-from config import Config
+from config import config
+from common.logger import logger
+from common.errors.baboon_exception import BaboonException
 
 
 @logger
@@ -24,7 +24,6 @@ class EventHandler(FileSystemEventHandler):
         """
 
         super(EventHandler, self).__init__()
-        self.config = Config()
         self.transport = transport
 
     @abstractproperty
@@ -51,7 +50,7 @@ class EventHandler(FileSystemEventHandler):
 
         fullpath = event.src_path
         self.logger.debug('Detected a modification on [{0}]'.format(fullpath))
-        rel_path = os.path.relpath(fullpath, self.config.path)
+        rel_path = os.path.relpath(fullpath, config.path)
         if self.exclude(rel_path):
             self.logger.debug("Ignore the modification on %s" % rel_path)
         else:
@@ -75,7 +74,6 @@ class Monitor(object):
         watched project.
         """
 
-        self.config = Config()
         self.transport = transport
 
         # Initialize the event handler class to use depending on the SCM to use
@@ -84,7 +82,7 @@ class Monitor(object):
 
         for cls in scm_classes:
             tmp_inst = cls(self.transport)
-            if tmp_inst.scm_name == self.config.scm:
+            if tmp_inst.scm_name == config.scm:
                 self.logger.debug("Uses the %s class for the monitoring of FS "
                                   "changes" % tmp_inst.scm_name)
                 handler = tmp_inst
@@ -98,7 +96,7 @@ class Monitor(object):
 
         self.monitor = Observer()
         try:
-            self.monitor.schedule(handler, self.config.path, recursive=True)
+            self.monitor.schedule(handler, config.path, recursive=True)
         except OSError, err:
             self.logger.error(err)
             raise BaboonException(err)
@@ -109,7 +107,7 @@ class Monitor(object):
 
         self.monitor.start()
         self.logger.debug("Started to monitor the %s directory"
-                         % self.config.path)
+                         % config.path)
 
     def close(self):
         """ Stops the monitoring on the watched project

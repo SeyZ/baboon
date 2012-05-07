@@ -1,6 +1,5 @@
-import uuid
-from task import RsyncTask, MergeTask
-from executor import tasks
+from task import MergeTask
+from executor import tasks, preparator
 from bottle import route, request, HTTPError
 
 
@@ -17,28 +16,7 @@ def rsync_request():
     """ Create a rsync task and wait until the DELETE http method is
     called on the same url to continue.
     """
-
-    project_name = request.params.project_name
-    username = request.params.username
-    server_host = request.params.server_host
-
-    # Create the rsync task.
-    rsync_task = RsyncTask()
-    tasks.put(rsync_task)
-
-    # Associate a uuid to the rsync task and store it into rsync_tasks
-    # dict.
-    req_id = str(uuid.uuid4())
-    rsync_tasks[req_id] = rsync_task
-
-    # Return all the necessary information to the baboon client.
-    ret = {'req_id': req_id,
-           'remote_dir': 'root@%s:/tmp/%s/%s/' % \
-               (server_host, project_name, username)
-           }
-
-    # Return the dict
-    return ret
+    preparator.prepare_rsync_start()
 
 
 @route('/tasks/rsync_request/:req_id', method='DELETE')
