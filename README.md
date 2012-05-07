@@ -1,11 +1,8 @@
 ### What is Baboon ?
 
-After installing Baboon, each developer has a baboon on top of the
-shoulder. After each file save, Baboon shouts to other baboons the
-changes of the file. The other Baboons try to apply the changes to
-their sides and reply if a conflict is detected.
+Baboon is a tool to detect merge conflicts in realtime.
 
-Baboon **never** changes your code. He just shouts !
+Baboon **never** changes your code. It's just a alerting system !
 
 ### How to install it ?
 
