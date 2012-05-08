@@ -1,9 +1,7 @@
 import sys
 import signal
 
-from bottle import run
 from executor import Scheduler, tasks
-from routes import *
 from task import EndTask
 
 
@@ -15,10 +13,7 @@ def main():
     """
 
     signal.signal(signal.SIGINT, signal_handler)
-
     e.start()
-    run(host='localhost', port=8080)
-
     signal.pause()
 
 

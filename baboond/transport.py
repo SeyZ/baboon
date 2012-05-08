@@ -33,6 +33,11 @@ class Transport(sleekxmpp.ClientXMPP):
                 StanzaPath('iq@type=set/rsync_stop'),
                 self._handle_rsync_stop))
 
+        self.register_handler(Callback(
+                'MergeVerification Handler',
+                StanzaPath('iq@type=set/verification'),
+                self._handle_merge_verification))
+
         if self.connect():
             self.process()
 
@@ -50,6 +55,13 @@ class Transport(sleekxmpp.ClientXMPP):
         executor.preparator.prepare_rsync_stop(
             iq['rsync_stop'].values['req_id'])
         iq.reply().setPayload(ok_msg).send()
+
+    def _handle_merge_verification(self, iq):
+        # TODO - Deal with errors
+
+        executor.preparator.prepare_merge_verification(
+            iq['verification'].values)
+        iq.reply().send()
 
     def start(self, event):
         """ Handler for the session_start sleekxmpp event.
@@ -85,4 +97,4 @@ class Transport(sleekxmpp.ClientXMPP):
 
 
 transport = Transport()
-2
+

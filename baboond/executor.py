@@ -3,7 +3,7 @@ import uuid
 from threading import Thread
 from Queue import PriorityQueue
 
-from task import EndTask, RsyncTask
+from task import EndTask, RsyncTask, MergeTask
 from config import config
 from common.logger import logger
 from common.errors.baboon_exception import BaboonException
@@ -87,5 +87,9 @@ class Preparator():
         rsync_task.ready.set()
 
         return True
+
+    def prepare_merge_verification(self, data):
+        new_task = MergeTask(data['node'], data['username'])
+        tasks.put(new_task)
 
 preparator = Preparator()

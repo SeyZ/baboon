@@ -1,6 +1,4 @@
 import os
-import urllib
-import urllib2
 import subprocess
 import shlex
 import sleekxmpp
@@ -8,7 +6,7 @@ import sleekxmpp
 from urlparse import urlunparse
 
 from config import config
-from common.stanza.rsync import RsyncStart, RsyncStop
+from common.stanza.rsync import RsyncStart, RsyncStop, MergeVerification
 from common.logger import logger
 
 
@@ -149,15 +147,21 @@ class Transport(sleekxmpp.ClientXMPP):
         conflict or not.
         """
 
-        opener = urllib2.build_opener(urllib2.HTTPHandler)
-        data = {'project_name': config.node,
-                'username': config.jid,
-                }
+        msg = MergeVerification()
+        msg['node'] = config.node
+        msg['username'] = config.jid
 
-        request = urllib2.Request(self.url.task(),
-                                  data=urllib.urlencode(data))
-        request.get_method = lambda: 'POST'
-        opener.open(request)
+        iq = self.make_iq_set(
+            ifrom=config.jid,
+            ito='admin@baboon-project.org/baboond',
+            sub=msg)
+
+        # TODO: catch the possible exception
+        try:
+            iq.send()
+        except Exception, e:
+            import pdb
+            pdb.set_trace()
 
     def _pubsub_event(self, msg):
         if msg['type'] in ('normal', 'headline'):

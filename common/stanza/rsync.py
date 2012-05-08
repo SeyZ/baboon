@@ -28,6 +28,13 @@ class RsyncFinished(ElementBase):
     namespace = 'baboon'
 
 
+class MergeVerification(ElementBase):
+    name = 'merge_verification'
+    namespace = 'baboon'
+    interfaces = set(('node', 'username'))
+    plugin_attrib = 'verification'
+
+
 class MergeStatus(ElementBase):
     name = 'merge_status'
     namespace = 'baboon'
@@ -37,4 +44,5 @@ class MergeStatus(ElementBase):
 register_stanza_plugin(Iq, RsyncStart)
 register_stanza_plugin(Iq, RsyncOk)
 register_stanza_plugin(Iq, RsyncStop)
+register_stanza_plugin(Iq, MergeVerification)
 register_stanza_plugin(Iq, MergeStatus)
