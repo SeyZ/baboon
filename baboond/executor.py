@@ -33,6 +33,10 @@ class Scheduler(Thread):
         endtask.
         """
 
+        self.logger.info('Running')
+
+        # The endtask is a flag to indicate if it's the end of life of
+        # the server or not.
         endtask = False
 
         # While the endtask is False, continue to consume on the
@@ -53,14 +57,22 @@ class Scheduler(Thread):
             # Mark the task finished
             tasks.task_done()
 
+        self.logger.info('Ending')
+
 
 class Preparator():
-    """
+    """ The preparator builds the task and put it in the tasks queue.
     """
 
+    # Stores the rsync task in a dict:
+    # Key: req_id
+    # Value: RsyncTask
     rsync_tasks = {}
 
     def prepare_rsync_start(self):
+        """ Prepares the beginning of a new rsync task.
+        """
+
         # Create the rsync task.
         rsync_task = RsyncTask()
         tasks.put(rsync_task)
@@ -70,7 +82,7 @@ class Preparator():
         req_id = str(uuid.uuid4())
         self.rsync_tasks[req_id] = rsync_task
 
-        # TODO - Remove hard coded information
+        # TODO - Permission !
         # Return all the necessary information to the baboon client.
         ret = {'req_id': req_id,
                'remote_dir': 'root@%s:/tmp/%s/%s/' % \
@@ -81,15 +93,45 @@ class Preparator():
         return ret
 
     def prepare_rsync_stop(self, req_id):
-        rsync_task = self.rsync_tasks[req_id]
+        """ The rsync transaction with the req_id and prepares a new
+        rsync stop task to warn the associated rsync_task it's
+        completed.
+        """
 
-        # Throw the event.
-        rsync_task.ready.set()
+        try:
+            # Gets the rsync task in the rsync_tasks dict with the
+            # req_id key.
+            rsync_task = self.rsync_tasks.pop(req_id)
 
-        return True
+            # Throws the event to warn the rsync is now completed.
+            rsync_task.ready.set()
 
-    def prepare_merge_verification(self, data):
-        new_task = MergeTask(data['node'], data['username'])
-        tasks.put(new_task)
+            # Returns True to say the request is correctly completed.
+            return True
+        except KeyError:
+            self.logger.debug("Cannot find the rsync transaction with the key"
+                              " %s" % req_id)
+
+            # Returns False because the request cannot be completed
+            # due to the bad req_id.
+            return False
+
+    def prepare_merge_verification(self, **kwargs):
+        """ Prepares a new merge verification task.
+        """
+
+        try:
+            # Gets useful data from kwargs
+            node = kwargs.get('node')
+            username = kwargs.get('username')
+
+            # Creates the new merge task
+            new_task = MergeTask(node, username)
+            tasks.put(new_task)
+
+            return True
+
+        except KeyError:
+            return False
 
 preparator = Preparator()

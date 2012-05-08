@@ -20,4 +20,3 @@ def main():
 def signal_handler(signal, frame):
     tasks.put(EndTask())
     e.join()
-    sys.exit(0)

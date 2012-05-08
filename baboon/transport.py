@@ -157,11 +157,7 @@ class Transport(sleekxmpp.ClientXMPP):
             sub=msg)
 
         # TODO: catch the possible exception
-        try:
-            iq.send()
-        except Exception, e:
-            import pdb
-            pdb.set_trace()
+        iq.send()
 
     def _pubsub_event(self, msg):
         if msg['type'] in ('normal', 'headline'):

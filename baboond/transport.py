@@ -59,8 +59,13 @@ class Transport(sleekxmpp.ClientXMPP):
     def _handle_merge_verification(self, iq):
         # TODO - Deal with errors
 
-        executor.preparator.prepare_merge_verification(
-            iq['verification'].values)
+        # Gets the dict of values associated to the stanza.
+        data = iq['verification'].values
+
+        # Prepares the merge verification with this data.
+        executor.preparator.prepare_merge_verification(**data)
+
+        # Replies to the request.
         iq.reply().send()
 
     def start(self, event):
