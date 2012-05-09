@@ -3,7 +3,10 @@ LOGGING = {
     'version': 1,
     'formatters': {
         'verbose': {
-            'format': '%(levelname)s %(asctime)s %(module)s %(message)s'
+            'format': '%(asctime)-20s%(levelname)-18s %(message)s'\
+                ' (%(threadName)s/%(funcName)s:%(lineno)s)',
+            'datefmt': '%Y/%m/%d %H:%M:%S'
+
         },
         'simple': {
             'format': '%(levelname)s %(message)s'
@@ -13,7 +16,7 @@ LOGGING = {
         'rootfile': {
             'level': 'DEBUG',
             'class': 'logging.FileHandler',
-            'formatter': 'simple',
+            'formatter': 'verbose',
             'filename': 'logs/root.log',
             'mode': 'a',
         },
@@ -29,7 +32,7 @@ LOGGING = {
         'console': {
             'level': 'DEBUG',
             'class': 'common.logconf.ConsoleUnixColoredHandler',
-            'formatter': 'simple',
+            'formatter': 'verbose',
             'stream': 'ext://sys.stdout',
         }
     },
