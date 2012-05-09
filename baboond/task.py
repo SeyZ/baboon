@@ -83,7 +83,7 @@ class RsyncTask(Task):
     the server.
     """
 
-    def __init__(self):
+    def __init__(self, project_name, username):
         """ Initialize the RsyncTask
         """
 
@@ -91,14 +91,74 @@ class RsyncTask(Task):
         # higher priority.
         super(RsyncTask, self).__init__(3)
 
+        self.project_name = project_name
+        self.username = username
+
         self.ready = Event()
 
     def run(self):
-        self.logger.info('Wait rsync... !')
-        self.ready.wait()
-        self.logger.info('The rsync is finished !')
+        self.logger.info("Wait rsync... !")
+
+        # Times out after the <arg> second(s).
+        no_timeout = self.ready.wait(30)
+
+        # If the no_timeout is False, it means the request was too
+        # long.
+        if no_timeout is False:
+            # The user's repository on the server can be
+            # corrupted. So, marks the repository to be in corrupted
+            # mode.
+            executor.preparator.prepare_corrupted(self.project_name,
+                                                  self.username)
+            raise BaboonException('The rsync request takes too long time.')
+        else:
+            self.logger.info("The rsync is finished !")
+
+            # If the repository was corrupted, remove the .lock file
+            # to say it's now good.
+            cwd = os.path.join(WORKING_DIR, self.project_name, self.username)
+            cwd_lock = os.path.join(cwd, '.lock')
+            if os.path.exists(cwd_lock):
+                os.remove(cwd_lock)
+                self.logger.debug("The %s directory was corrupted. It's now"
+                                  " fixed." % cwd)
 
 
+@logger
+class CorruptedTask(Task):
+    """ A task to mark a repository in corrupted mode.
+    """
+
+    def __init__(self, project_name, username):
+        """ Initializes the corrupted task with the higher possible
+        priority.
+        """
+
+        super(CorruptedTask, self).__init__(0)
+
+        self.project_name = project_name
+        self.username = username
+
+    def run(self):
+        """ Marks the directory of the project_name/username as
+        corrupted.
+        """
+
+        # Gets the project directory
+        project_dir = os.path.join(WORKING_DIR,
+                                   self.project_name,
+                                   self.username)
+
+        # Writes a .lock file in the directory to say the directory is
+        # corrupted.
+        with open(os.path.join(project_dir, '.lock'), 'w'):
+            pass
+
+        self.logger.error('The repository %s is mark as corrupted.' %
+                          project_dir)
+
+
+@logger
 class MergeTask(Task):
     """ A task to test if there's a conflict or not.
     """
@@ -137,6 +197,12 @@ class MergeTask(Task):
             raise BaboonException('Cannot find the master user on the %s'
                                   ' project.' % self.project_name)
 
+        # If the project cwd is mark as corrupted, stop this task.
+        if os.path.exists(os.path.join(self.master_cwd, '.lock')):
+            # The path exists -> the master_cwd is corrupted.
+            raise BaboonException('The %s is corrupted. The merge task is'
+                                  ' cancelled.' % self.master_cwd)
+
     def run(self):
         """ Test if there's a merge conflict or not.
         """
@@ -147,13 +213,21 @@ class MergeTask(Task):
 
         # All users
         for user in self._get_user_dirs():
-            self._user_side(user)
+            try:
+                self._user_side(user)
+            except BaboonException, e:
+                self.logger.error(e)
 
         self._exec_cmd('git reset HEAD~1')
 
     def _user_side(self, user):
 
         user_cwd = os.path.join(self.project_cwd, user)
+
+        # If the user cwd is mark as corrupted, stop the process.
+        if os.path.exists(os.path.join(user_cwd, '.lock')):
+            # The path exists -> the user_cwd is corrupted.
+            raise BaboonException('The %s is corrupted. Ignore it' % user_cwd)
 
         self._exec_cmd('git remote add %s %s' %
                        (self.username, self.master_cwd), user_cwd)

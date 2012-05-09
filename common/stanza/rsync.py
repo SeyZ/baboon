@@ -5,7 +5,7 @@ from sleekxmpp import Iq
 class RsyncStart(ElementBase):
     name = 'rsync_start'
     namespace = 'baboon'
-    interfaces = set(('node',))
+    interfaces = set(('node', 'username'))
     plugin_attrib = 'rsync_start'
 
 

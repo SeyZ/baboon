@@ -2,7 +2,7 @@ import uuid
 from threading import Thread
 from Queue import PriorityQueue
 
-from task import EndTask, RsyncTask, MergeTask, AlertTask
+from task import EndTask, RsyncTask, MergeTask, AlertTask, CorruptedTask
 from config import config
 from common.logger import logger
 from common.errors.baboon_exception import BaboonException
@@ -59,6 +59,7 @@ class Scheduler(Thread):
         self.logger.debug('The executor thread is now finished.')
 
 
+@logger
 class Preparator():
     """ The preparator builds the task and put it in the tasks queue.
     """
@@ -68,12 +69,12 @@ class Preparator():
     # Value: RsyncTask
     rsync_tasks = {}
 
-    def prepare_rsync_start(self):
+    def prepare_rsync_start(self, project_name, username):
         """ Prepares the beginning of a new rsync task.
         """
 
         # Create the rsync task.
-        rsync_task = RsyncTask()
+        rsync_task = RsyncTask(project_name, username)
         tasks.put(rsync_task)
 
         # Associate a uuid to the rsync task and store it into
@@ -133,6 +134,9 @@ class Preparator():
         except KeyError, e:
             self.logger.error(e)
             return False
+        except BaboonException, e:
+            self.logger.error(e)
+            return False
 
     def prepare_alert(self, merge_conflict):
         """ Prepares a new alert task.
@@ -142,5 +146,9 @@ class Preparator():
 
         alertTask = AlertTask(merge_conflict)
         tasks.put(alertTask)
+
+    def prepare_corrupted(self, project_name, username):
+        corruptedTask = CorruptedTask(project_name, username)
+        tasks.put(corruptedTask)
 
 preparator = Preparator()

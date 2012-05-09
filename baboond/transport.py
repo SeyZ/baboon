@@ -47,7 +47,9 @@ class Transport(sleekxmpp.ClientXMPP):
 
         try:
             ok_msg = RsyncOk()
-            ok_msg.values = executor.preparator.prepare_rsync_start()
+            ok_msg.values = executor.preparator.prepare_rsync_start(
+                iq['rsync_start']['node'],
+                iq['rsync_start']['username'])
             iq.reply().setPayload(ok_msg).send()
         except IqError, e:
             self.logger.error(e['error']['condition'])
@@ -107,4 +109,3 @@ class Transport(sleekxmpp.ClientXMPP):
 
 
 transport = Transport()
-

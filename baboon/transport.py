@@ -81,6 +81,7 @@ class Transport(sleekxmpp.ClientXMPP):
 
         msg = RsyncStart()
         msg['node'] = config.node
+        msg['username'] = config.jid
 
         iq = self.make_iq_set(
             ifrom=config.jid,
@@ -90,6 +91,8 @@ class Transport(sleekxmpp.ClientXMPP):
         # TODO: catch the possible exception
         try:
             raw_ret = iq.send()
+            import time
+            time.sleep(2)
             return raw_ret['rsync_ok'].values
         except sleekxmpp.exceptions.IqError, e:
             raise BaboonException(e.iq['error']['condition'])
