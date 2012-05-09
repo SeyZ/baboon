@@ -47,6 +47,9 @@ class Config(object):
         elsewhere : return None
         """
 
+        if hasattr(self, 'configpath') and self.configpath:
+            return self.configpath
+
         config_name = 'baboonrc'
 
         etc_path = '/etc/baboonrc/%s' % config_name
