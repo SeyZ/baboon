@@ -54,11 +54,14 @@ class EventHandler(FileSystemEventHandler):
         if self.exclude(rel_path):
             self.logger.debug("Ignore the modification on %s" % rel_path)
         else:
-            # Rsync...
-            self.transport.rsync()
+            try:
+                # Rsync...
+                self.transport.rsync()
 
-            # Asks to baboon to verify if there's a conflict or not.
-            self.transport.merge_verification()
+                # Asks to baboon to verify if there's a conflict or not.
+                self.transport.merge_verification()
+            except BaboonException, e:
+                self.logger.error(e)
 
     def on_deleted(self, event):
         """ Trigered when a file is deleted in the watched project.

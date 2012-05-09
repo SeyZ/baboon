@@ -8,6 +8,7 @@ from urlparse import urlunparse
 from config import config
 from common.stanza.rsync import RsyncStart, RsyncStop, MergeVerification
 from common.logger import logger
+from common.errors.baboon_exception import BaboonException
 
 
 @logger
@@ -87,13 +88,17 @@ class Transport(sleekxmpp.ClientXMPP):
             sub=msg)
 
         # TODO: catch the possible exception
-        raw_ret = iq.send()
-
-        return raw_ret['rsync_ok'].values
+        try:
+            raw_ret = iq.send()
+            return raw_ret['rsync_ok'].values
+        except sleekxmpp.exceptions.IqError, e:
+            raise BaboonException(e.iq['error']['condition'])
 
     def rsync(self):
         """ Starts a rsync transaction, rsync and stop the
         transaction.
+
+        Raises a BaboonException if there's a problem.
         """
 
         # Starts the transaction

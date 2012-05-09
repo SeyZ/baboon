@@ -3,6 +3,7 @@ import executor
 
 from sleekxmpp.xmlstream.handler.callback import Callback
 from sleekxmpp.xmlstream.matcher import StanzaPath
+from sleekxmpp.exceptions import IqError
 
 from config import config
 from common.stanza.rsync import RsyncOk, RsyncFinished, MergeStatus
@@ -44,9 +45,12 @@ class Transport(sleekxmpp.ClientXMPP):
     def _handle_rsync_start(self, iq):
         # TODO - Deal with errors
 
-        ok_msg = RsyncOk()
-        ok_msg.values = executor.preparator.prepare_rsync_start()
-        iq.reply().setPayload(ok_msg).send()
+        try:
+            ok_msg = RsyncOk()
+            ok_msg.values = executor.preparator.prepare_rsync_start()
+            iq.reply().setPayload(ok_msg).send()
+        except IqError, e:
+            self.logger.error(e['error']['condition'])
 
     def _handle_rsync_stop(self, iq):
         # TODO - Deal with errors
@@ -100,9 +104,6 @@ class Transport(sleekxmpp.ClientXMPP):
         except:
             self.logger.debug('Could not publish to: %s' %
                               'Baboon')
-
-    def close(self):
-        self.disconnect()
 
 
 transport = Transport()
