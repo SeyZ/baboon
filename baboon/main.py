@@ -11,6 +11,7 @@ from common.errors.baboon_exception import BaboonException
 
 @logger
 class Main(object):
+
     def __init__(self):
         self.monitor = None
 

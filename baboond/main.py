@@ -1,22 +1,24 @@
-import sys
 import signal
 
 from executor import Scheduler, tasks
 from task import EndTask
+from common.logger import logger
 
 
-e = Scheduler()
+@logger
+class Main(object):
 
+    def __init__(self):
+        """ Initializes baboonsrv
+        """
 
-def main():
-    """ Initializes baboonsrv
-    """
+        signal.signal(signal.SIGINT, self.signal_handler)
 
-    signal.signal(signal.SIGINT, signal_handler)
-    e.start()
-    signal.pause()
+        e = Scheduler()
+        e.start()
 
+        signal.pause()
+        e.join()
 
-def signal_handler(signal, frame):
-    tasks.put(EndTask())
-    e.join()
+    def signal_handler(self, signal, frame):
+        tasks.put(EndTask())

@@ -78,6 +78,10 @@ class Transport(sleekxmpp.ClientXMPP):
         # register the pubsub plugin
         self.pubsub = self.plugin['xep_0060']
 
+    def close(self):
+        self.disconnect()
+        self.logger.debug('Closed the XMPP connection.')
+
     def alert(self, msg):
         """ Broadcast the msg on the pubsub node (written in the
         config file).

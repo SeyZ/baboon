@@ -1,9 +1,8 @@
 import uuid
-
 from threading import Thread
 from Queue import PriorityQueue
 
-from task import EndTask, RsyncTask, MergeTask
+from task import EndTask, RsyncTask, MergeTask, AlertTask
 from config import config
 from common.logger import logger
 from common.errors.baboon_exception import BaboonException
@@ -57,7 +56,7 @@ class Scheduler(Thread):
             # Mark the task finished
             tasks.task_done()
 
-        self.logger.info('Ending')
+        self.logger.debug('The executor thread is now finished.')
 
 
 class Preparator():
@@ -131,7 +130,17 @@ class Preparator():
 
             return True
 
-        except KeyError:
+        except KeyError, e:
+            self.logger.error(e)
             return False
+
+    def prepare_alert(self, merge_conflict):
+        """ Prepares a new alert task.
+        merge_conflict is a bool to define if there's a conflict or
+        not.
+        """
+
+        alertTask = AlertTask(merge_conflict)
+        tasks.put(alertTask)
 
 preparator = Preparator()

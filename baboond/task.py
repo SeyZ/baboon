@@ -3,7 +3,6 @@ import subprocess
 import executor
 
 from threading import Event
-
 from transport import transport
 from common.logger import logger
 from common.errors.baboon_exception import BaboonException
@@ -47,9 +46,12 @@ class EndTask(Task):
         super(EndTask, self).__init__(1)
 
     def run(self):
-        # Nothing to do. This class is just a sort of flag with high
-        # priority.
+        # Shutdowns Baboond.
 
+        # Closes the transport
+        transport.close()
+
+        # Bye !
         self.logger.info('Bye !')
 
 
@@ -174,8 +176,7 @@ class MergeTask(Task):
         merge.
         """
 
-        alertTask = AlertTask(merge_conflict)
-        executor.tasks.put(alertTask)
+        executor.preparator.prepare_alert(merge_conflict)
 
     def _get_user_dirs(self):
         """ A generator that returns the next user directory in the
