@@ -210,7 +210,7 @@ class MergeTask(Task):
         """
 
         # Master user
-        self._exec_cmd('git add *')
+        self._exec_cmd('git add -A')
         self._exec_cmd('git commit -am "Baboon commit"')
 
         # All users
@@ -233,7 +233,7 @@ class MergeTask(Task):
 
         self._exec_cmd('git remote add %s %s' %
                        (self.username, self.master_cwd), user_cwd)
-        self._exec_cmd('git add *', user_cwd)
+        self._exec_cmd('git add -A', user_cwd)
         self._exec_cmd('git commit -am "Baboon commit"', user_cwd)
         self._exec_cmd('git fetch %s' % self.username, user_cwd)
         ret = self._exec_cmd('git merge %s/master --no-commit --no-ff' %

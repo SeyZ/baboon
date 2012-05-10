@@ -85,8 +85,8 @@ class Preparator():
         # TODO - Permission !
         # Return all the necessary information to the baboon client.
         ret = {'req_id': req_id,
-               'remote_dir': 'root@%s:/tmp/%s/%s/' % \
-                   (config.baboonsrv_host, project_name, username)
+               'remote_dir': 'seyz@%s:/tmp/%s/%s/' % \
+                   (self.config.baboonsrv_host, project_name, username)
                }
 
         # Return the dict

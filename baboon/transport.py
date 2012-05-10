@@ -23,6 +23,7 @@ class Transport(sleekxmpp.ClientXMPP):
         events and more.
         """
 
+        self.config = config
         self.logger.debug("Loaded baboon configuration")
 
         sleekxmpp.ClientXMPP.__init__(self, config.jid, config.password)
@@ -42,9 +43,6 @@ class Transport(sleekxmpp.ClientXMPP):
                     'message/pubsub_event'),
                 self._pubsub_event))
         self.logger.debug("Listening 'message/pubsub_event' sleekxmpp event")
-
-        # Instanciates a TransportUrl
-        self.url = TransportUrl()
 
     def open(self):
         """ Connects to the XMPP server.
@@ -178,23 +176,3 @@ class Transport(sleekxmpp.ClientXMPP):
         else:
             self.logger.debug("Received pubsub event: \n%s" %
                               msg['pubsub_event'])
-
-
-class TransportUrl(object):
-
-    TASK = 'tasks'
-    RSYNC_REQUEST = '{0}/rsync_request'.format(TASK)
-
-    def task(self):
-        return self.make_url(self.TASK)
-
-    def rsync_request(self, req_id=None):
-        if req_id is None:
-            return self.make_url(self.RSYNC_REQUEST)
-        else:
-            return self.make_url('%s/%s' % (self.RSYNC_REQUEST, req_id))
-
-    def make_url(self, path):
-        host = '%s:%s' % (config.baboonsrv_host,
-                          config.baboonsrv_port)
-        return urlunparse(('http', host, path, '', '', ''))
