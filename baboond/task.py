@@ -60,7 +60,7 @@ class AlertTask(Task):
     merge.
     """
 
-    def __init__(self, merge_conflict=False):
+    def __init__(self, project_name, username, merge_conflict=False):
         """ Initialize the AlertTask. By default, there's no merge
         conflict.
         """
@@ -69,12 +69,14 @@ class AlertTask(Task):
         # priority for baboonsrv except the EndTask.
         super(AlertTask, self).__init__(2)
 
+        self.project_name = project_name
+        self.username = username
         self.merge_conflict = merge_conflict
 
     def run(self):
         msg = 'Conflict detected' if self.merge_conflict else \
             'Everything seems to be perfect'
-        transport.alert(msg)
+        transport.alert(self.project_name, self.username, msg)
 
 
 @logger
@@ -240,17 +242,19 @@ class MergeTask(Task):
         self._exec_cmd('git reset HEAD~1', user_cwd)
 
         if ret != 0:
-            self._alert(True)
+            self._alert(self.project_name, self.username, True)
         else:
             # merge_conflict = False
-            self._alert()
+            self._alert(self.project_name, self.username)
 
-    def _alert(self, merge_conflict=False):
+    def _alert(self, project_name, username, merge_conflict=False):
         """ Creates a alert task to warn to the user the state of the
         merge.
         """
 
-        executor.preparator.prepare_alert(merge_conflict)
+        executor.preparator.prepare_alert(project_name,
+                                          username,
+                                          merge_conflict)
 
     def _get_user_dirs(self):
         """ A generator that returns the next user directory in the

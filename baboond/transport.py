@@ -88,24 +88,23 @@ class Transport(sleekxmpp.ClientXMPP):
         self.disconnect()
         self.logger.debug('Closed the XMPP connection.')
 
-    def alert(self, msg):
+    def alert(self, project_name, username, msg):
         """ Broadcast the msg on the pubsub node (written in the
         config file).
         """
 
         status_msg = MergeStatus()
-        status_msg['node'] = config.node
+        status_msg['node'] = project_name
         status_msg['status'] = msg
 
         try:
             result = self.pubsub.publish(config.pubsub,
-                                         config.node,
+                                         project_name,
                                          payload=status_msg)
             id = result['pubsub']['publish']['item']['id']
             self.logger.debug('Published at item id: %s' % id)
         except:
             self.logger.debug('Could not publish to: %s' %
-                              'Baboon')
-
+                              project_name)
 
 transport = Transport()

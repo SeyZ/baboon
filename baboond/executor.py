@@ -86,7 +86,7 @@ class Preparator():
         # Return all the necessary information to the baboon client.
         ret = {'req_id': req_id,
                'remote_dir': 'root@%s:/tmp/%s/%s/' % \
-                   (config.baboonsrv_host, config.node, config.jid)
+                   (config.baboonsrv_host, project_name, username)
                }
 
         # Return the dict
@@ -138,13 +138,13 @@ class Preparator():
             self.logger.error(e)
             return False
 
-    def prepare_alert(self, merge_conflict):
+    def prepare_alert(self, project_name, username, merge_conflict):
         """ Prepares a new alert task.
         merge_conflict is a bool to define if there's a conflict or
         not.
         """
 
-        alertTask = AlertTask(merge_conflict)
+        alertTask = AlertTask(project_name, username, merge_conflict)
         tasks.put(alertTask)
 
     def prepare_corrupted(self, project_name, username):
