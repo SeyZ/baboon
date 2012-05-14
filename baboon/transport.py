@@ -3,8 +3,6 @@ import subprocess
 import shlex
 import sleekxmpp
 
-from urlparse import urlunparse
-
 from config import config
 from common.stanza.rsync import RsyncStart, RsyncStop, MergeVerification
 from common.logger import logger
