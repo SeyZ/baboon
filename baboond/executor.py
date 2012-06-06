@@ -3,7 +3,6 @@ from threading import Thread
 from Queue import PriorityQueue
 
 from task import EndTask, RsyncTask, MergeTask, AlertTask, CorruptedTask
-from config import config
 from common.logger import logger
 from common.errors.baboon_exception import BaboonException
 
@@ -116,17 +115,12 @@ class Preparator():
             # due to the bad req_id.
             return False
 
-    def prepare_merge_verification(self, **kwargs):
+    def prepare_merge_verification(self, node, jid):
         """ Prepares a new merge verification task.
         """
-
         try:
-            # Gets useful data from kwargs
-            node = kwargs.get('node')
-            username = kwargs.get('username')
-
             # Creates the new merge task
-            new_task = MergeTask(node, username)
+            new_task = MergeTask(node, jid)
             tasks.put(new_task)
 
             return True

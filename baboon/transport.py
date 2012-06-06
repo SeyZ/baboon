@@ -1,12 +1,12 @@
 import os
-import subprocess
-import shlex
+import pickle
+import struct
 import sleekxmpp
 
 from config import config
-from common.stanza.rsync import RsyncStart, RsyncStop, MergeVerification
 from common.logger import logger
-from common.errors.baboon_exception import BaboonException
+from common import pyrsync
+from common.stanza import rsync
 
 
 @logger
@@ -29,10 +29,11 @@ class Transport(sleekxmpp.ClientXMPP):
 
         # Register plugins
         self.register_plugin('xep_0060')  # PubSub
+        self.register_plugin('xep_0065')  # Socks5 Bytestreams
 
         # Register events
-        self.add_event_handler("session_start", self.start)
-        self.logger.debug("Listening 'session_start' sleekxmpp event")
+        self.add_event_handler('socks_recv', self.on_recv)
+        self.add_event_handler('session_start', self.start)
 
         self.register_handler(
             sleekxmpp.xmlstream.handler.Callback(
@@ -56,11 +57,21 @@ class Transport(sleekxmpp.ClientXMPP):
     def start(self, event):
         """ Handler for the session_start sleekxmpp event.
         """
+
         self.send_presence()
         self.get_roster()
 
-        # register the pubsub plugin
+        # Registers xep plugins
         self.pubsub = self.plugin["xep_0060"]
+        self.streamer = self.plugin["xep_0065"]
+
+        # Negotiates the bytestream
+        streamhost_used = self.streamer.handshake(config.server,
+                                                  config.streamer)
+
+        # Registers the SID to retrieve later to send/recv data to the
+        # good socket stored in self.streamer.proxy_threads dict.
+        self.sid = streamhost_used['q']['sid']
 
         self.logger.info('Connected')
 
@@ -68,28 +79,9 @@ class Transport(sleekxmpp.ClientXMPP):
         """ Closes the XMPP connection.
         """
 
+        self.streamer.close()
         self.disconnect()
         self.logger.debug('Closed the XMPP connection')
-
-    def start_rsync_transaction(self):
-        """ Starts a rsync transaction and return its id.
-        """
-
-        msg = RsyncStart()
-        msg['node'] = config.node
-        msg['username'] = config.jid
-
-        iq = self.make_iq_set(
-            ifrom=config.jid,
-            ito='admin@baboon-project.org/baboond',
-            sub=msg)
-
-        # TODO: catch the possible exception
-        try:
-            raw_ret = iq.send()
-            return raw_ret['rsync_ok'].values
-        except sleekxmpp.exceptions.IqError, e:
-            raise BaboonException(e.iq['error']['condition'])
 
     def rsync(self):
         """ Starts a rsync transaction, rsync and stop the
@@ -98,65 +90,74 @@ class Transport(sleekxmpp.ClientXMPP):
         Raises a BaboonException if there's a problem.
         """
 
-        # Starts the transaction
-        trans_data = self.start_rsync_transaction()
-        req_id = trans_data['req_id']
-        remote_dir = trans_data['remote_dir']
+        iq = self.Iq(sto=config.server, stype='set')
+        iq['rsync']['sid'] = self.sid
+        iq['rsync']['node'] = 'synapse'
 
-        # Assumes that there's a rsync_key in the ~/.ssh/ folder.
-        rsync_key_path = os.path.expanduser('~/.ssh/rsync_key')
-
-        # Builds the rsync command
-        rsync_cmd = 'rsync -ahv -e "ssh -i %s" %s/ %s' % \
-            (rsync_key_path, config.path, remote_dir)
-
-        self.logger.info('Sync...')
-
-        args = shlex.split(str(rsync_cmd))  # make sure that rsync_cmd
-                                            # is not unicoded
-
-        # Go rsync
-        proc = subprocess.Popen(args,
-                                stdin=subprocess.PIPE,
-                                stdout=subprocess.PIPE,
-                                stderr=subprocess.STDOUT,
-                                shell=False)
-        proc.communicate()
-
-        self.logger.info('Sync finished')
-
-        # Stops the transaction
-        self.stop_rsync_transaction(req_id)
-
-    def stop_rsync_transaction(self, req_id):
-        """ Stops the rsync transaction identified by req_id.
-        """
-
-        msg = RsyncStop()
-        msg['node'] = config.node
-        msg['req_id'] = req_id
-
-        iq = self.make_iq_set(
-            ifrom=config.jid,
-            ito='admin@baboon-project.org/baboond',
-            sub=msg)
-
-        # TODO: catch the possible exception
         iq.send()
 
-    def merge_verification(self):
-        """ Calls baboon server in order to verify if there's a
-        conflict or not.
+    def on_recv(self, recv):
+        """ Called when receiving data over the socks5 socket (xep
+        0065).
         """
 
-        msg = MergeVerification()
-        msg['node'] = config.node
-        msg['username'] = config.jid
+        deltas = []  # The list of delta.
 
-        iq = self.make_iq_set(
-            ifrom=config.jid,
-            ito='admin@baboon-project.org/baboond',
-            sub=msg)
+        # Sets the future socket response dict.
+        ret = {'from': self.boundjid.bare,
+               'node': self.config.node,
+               }
+
+        # Unpacks the recv data.
+        data = self._unpack(recv)
+
+        # Gets the SID and put it in the ret response dict.
+        sid = data['sid']
+        ret['sid'] = sid
+
+        # Gets the list of hashes.
+        all_hashes = data['hashes']
+
+        for elem in all_hashes:
+            # 'elem' is a tuple. The first element is the relative
+            # path to the current file. The second is the server-side
+            # hashes associated to this path.
+            relpath = elem[0]
+            hashes = elem[1]
+
+            fullpath = os.path.join(self.config.path, relpath)
+            if os.path.exists(fullpath):
+                # Computes the local delta of the current file.
+                patchedfile = open(fullpath, 'rb')
+                delta = pyrsync.rsyncdelta(patchedfile, hashes)
+                delta = (relpath, delta)
+
+                # Appends the result to the list of delta.
+                deltas.append(delta)
+            else:
+                # TODO: Handle this error ?
+                pass
+
+        # Adds the list of deltas in the response dict.
+        ret['delta'] = deltas
+
+        # Sends the result over the socket.
+        self.streamer.send(self.sid, self._pack(ret))
+
+    def _pack(self, data):
+        data = pickle.dumps(data)
+        return struct.pack('>i', len(data)) + data
+
+    def _unpack(self, data):
+        data = pickle.loads(data)
+        return data
+
+    def merge_verification(self):
+        """ Sends an IQ to verify if there's a conflict or not.
+        """
+
+        iq = self.Iq(sto=config.server, stype='set')
+        iq['merge']['node'] = 'synapse'
 
         # TODO: catch the possible exception
         iq.send()
@@ -169,7 +170,10 @@ class Transport(sleekxmpp.ClientXMPP):
             items = msg['pubsub_event']['items']['substanzas']
 
             for item in items:
-                self.logger.info(item['payload'].get('status'))
+                if isinstance(
+                    item,
+                    sleekxmpp.plugins.xep_0060.stanza.pubsub_event.EventItem):
+                    self.logger.info(item['payload'].get('status'))
 
         else:
             self.logger.debug("Received pubsub event: \n%s" %

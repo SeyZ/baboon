@@ -1,11 +1,8 @@
 [project]
-baboonsrv_host=localhost
-baboonsrv_port=8080
-pubsub=pubsub.localhost
-node = node1
-jid=seyz@localhost
-password=secret
-
-[log]
-sleekxmpp=logs/sleekxmpp.log
-baboon=console
+pubsub=pubsub.baboon-project.org
+streamer=streamer.baboon-project.org
+server=admin@baboon-project.org/dogwood
+node=<your_project_name>
+jid=<your_full_jid>
+password=<your_password>
+scm=git
