@@ -1,8 +1,7 @@
-import uuid
 from threading import Thread
 from Queue import PriorityQueue
 
-from task import EndTask, RsyncTask, MergeTask, AlertTask, CorruptedTask
+from task import EndTask, MergeTask, AlertTask, CorruptedTask
 from common.logger import logger
 from common.errors.baboon_exception import BaboonException
 
@@ -62,58 +61,6 @@ class Scheduler(Thread):
 class Preparator():
     """ The preparator builds the task and put it in the tasks queue.
     """
-
-    # Stores the rsync task in a dict:
-    # Key: req_id
-    # Value: RsyncTask
-    rsync_tasks = {}
-
-    def prepare_rsync_start(self, project_name, username):
-        """ Prepares the beginning of a new rsync task.
-        """
-
-        # Create the rsync task.
-        rsync_task = RsyncTask(project_name, username)
-        tasks.put(rsync_task)
-
-        # Associate a uuid to the rsync task and store it into
-        # rsync_tasks dict.
-        req_id = str(uuid.uuid4())
-        self.rsync_tasks[req_id] = rsync_task
-
-        # TODO - Permission !
-        # Return all the necessary information to the baboon client.
-        ret = {'req_id': req_id,
-               'remote_dir': 'seyz@%s:/tmp/%s/%s/' % \
-                   (self.config.baboonsrv_host, project_name, username)
-               }
-
-        # Return the dict
-        return ret
-
-    def prepare_rsync_stop(self, req_id):
-        """ The rsync transaction with the req_id and prepares a new
-        rsync stop task to warn the associated rsync_task it's
-        completed.
-        """
-
-        try:
-            # Gets the rsync task in the rsync_tasks dict with the
-            # req_id key.
-            rsync_task = self.rsync_tasks.pop(req_id)
-
-            # Throws the event to warn the rsync is now completed.
-            rsync_task.ready.set()
-
-            # Returns True to say the request is correctly completed.
-            return True
-        except KeyError:
-            self.logger.debug("Cannot find the rsync transaction with the key"
-                              " %s" % req_id)
-
-            # Returns False because the request cannot be completed
-            # due to the bad req_id.
-            return False
 
     def prepare_merge_verification(self, node, jid):
         """ Prepares a new merge verification task.

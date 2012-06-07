@@ -15,10 +15,6 @@ from common.logger import logger
 from common import pyrsync
 
 
-# Registers pending rsyncs.
-rsyncs = {}
-
-
 @logger
 class Transport(sleekxmpp.ClientXMPP):
     """ The transport has the responsability to communicate with the
@@ -45,6 +41,9 @@ class Transport(sleekxmpp.ClientXMPP):
                 StanzaPath('iq@type=set/merge'),
                 self._handle_merge_verification))
 
+        # Registers pending rsyncs.
+        self.rsyncs = {}
+
         if self.connect():
             self.process()
 
@@ -63,7 +62,7 @@ class Transport(sleekxmpp.ClientXMPP):
 
         # Registers the reply iq to the rsyncs dict. This result IQ
         # will be sent when the rsync is completely finished.
-        rsyncs[sid] = reply
+        self.rsyncs[sid] = reply
 
         # Sets the future socket response dict.
         ret = {'sid': sid}
@@ -164,14 +163,14 @@ class Transport(sleekxmpp.ClientXMPP):
             os.remove(save_fd.name)
 
         # Gets the reply IQ associated to the SID.
-        reply_iq = rsyncs.get(sid)
+        reply_iq = self.rsyncs.get(sid)
         if reply_iq:
             # The rsync is completely finished. It's time to send the
             # reply IQ to warn the client-side.
             reply_iq.send()
 
             # Removes the pending rsync from the rsyncs dict.
-            del rsyncs[sid]
+            del self.rsyncs[sid]
         else:
             # TODO: Handle this error.
             pass

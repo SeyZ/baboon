@@ -2,7 +2,6 @@ import os
 import subprocess
 import executor
 
-from threading import Event
 from transport import transport
 from common.logger import logger
 from common.errors.baboon_exception import BaboonException
@@ -76,54 +75,6 @@ class AlertTask(Task):
         msg = 'Conflict detected' if self.merge_conflict else \
             'Everything seems to be perfect'
         transport.alert(self.project_name, self.username, msg)
-
-
-@logger
-class RsyncTask(Task):
-    """ A task to rsync the local repository of the baboon client and
-    the server.
-    """
-
-    def __init__(self, project_name, username):
-        """ Initialize the RsyncTask
-        """
-
-        # The priority is lower than MergeTask in order to have a
-        # higher priority.
-        super(RsyncTask, self).__init__(3)
-
-        self.project_name = project_name
-        self.username = username
-
-        self.ready = Event()
-
-    def run(self):
-        self.logger.info("Wait rsync... !")
-
-        # Times out after the <arg> second(s).
-        no_timeout = self.ready.wait(30)
-
-        # If the no_timeout is False, it means the request was too
-        # long.
-        if no_timeout is False:
-            # The user's repository on the server can be
-            # corrupted. So, marks the repository to be in corrupted
-            # mode.
-            executor.preparator.prepare_corrupted(self.project_name,
-                                                  self.username)
-            raise BaboonException('The rsync request takes too long time.')
-        else:
-            self.logger.info("The rsync is finished !")
-
-            # If the repository was corrupted, remove the .lock file
-            # to say it's now good.
-            cwd = os.path.join(config.working_dir, self.project_name,
-                               self.username)
-            cwd_lock = os.path.join(cwd, '.lock')
-            if os.path.exists(cwd_lock):
-                os.remove(cwd_lock)
-                self.logger.debug("The %s directory was corrupted. It's now"
-                                  " fixed." % cwd)
 
 
 @logger
