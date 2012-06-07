@@ -19,4 +19,4 @@ class ArgumentParser(object):
 
         self.args = parser.parse_args()
 
-config = Config(ArgumentParser(), LOGGING)
+config = Config(ArgumentParser(), LOGGING, 'baboondrc')

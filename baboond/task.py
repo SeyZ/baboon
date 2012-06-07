@@ -6,8 +6,7 @@ from threading import Event
 from transport import transport
 from common.logger import logger
 from common.errors.baboon_exception import BaboonException
-
-WORKING_DIR = '/tmp'
+from config import config
 
 
 class Task(object):
@@ -118,7 +117,8 @@ class RsyncTask(Task):
 
             # If the repository was corrupted, remove the .lock file
             # to say it's now good.
-            cwd = os.path.join(WORKING_DIR, self.project_name, self.username)
+            cwd = os.path.join(config.working_dir, self.project_name,
+                               self.username)
             cwd_lock = os.path.join(cwd, '.lock')
             if os.path.exists(cwd_lock):
                 os.remove(cwd_lock)
@@ -147,7 +147,7 @@ class CorruptedTask(Task):
         """
 
         # Gets the project directory
-        project_dir = os.path.join(WORKING_DIR,
+        project_dir = os.path.join(config.working_dir,
                                    self.project_name,
                                    self.username)
 
@@ -183,7 +183,7 @@ class MergeTask(Task):
         self.username = username
 
         # Set the project cwd.
-        self.project_cwd = os.path.join(WORKING_DIR, self.project_name)
+        self.project_cwd = os.path.join(config.working_dir, self.project_name)
 
         # Raise an error if the project cwd does not exist.
         if not os.path.exists(self.project_cwd):

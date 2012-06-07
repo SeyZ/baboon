@@ -1,0 +1,3 @@
+[project]
+pubsub=pubsub.baboon-project.org
+working_dir=/tmp

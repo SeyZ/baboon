@@ -10,10 +10,11 @@ class Config(object):
     """ Singleton configuration class
     """
 
-    def __init__(self, arg_parser, logconf):
+    def __init__(self, arg_parser, logconf, config_name='baboonrc'):
 
         self.arg_parser = arg_parser
         self.logconf = logconf
+        self.config_name = config_name
 
         # configures the default path
         self.path = os.path.abspath(".")
@@ -50,11 +51,9 @@ class Config(object):
         if hasattr(self, 'configpath') and self.configpath:
             return self.configpath
 
-        config_name = 'baboonrc'
-
-        etc_path = '/etc/baboonrc/%s' % config_name
-        user_path = '%s/.%s' % (os.path.expanduser('~'), config_name)
-        curdir_path = '%s/conf/%s' % (os.curdir, config_name)
+        etc_path = '/etc/baboonrc/%s' % self.config_name
+        user_path = '%s/.%s' % (os.path.expanduser('~'), self.config_name)
+        curdir_path = '%s/conf/%s' % (os.curdir, self.config_name)
 
         for loc in etc_path, user_path, curdir_path:
             if os.path.isfile(loc):

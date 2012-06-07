@@ -15,9 +15,6 @@ from common.logger import logger
 from common import pyrsync
 
 
-# TODO: Remove this, use the config instead.
-WORKING_DIR = '/tmp'
-
 # Registers pending rsyncs.
 rsyncs = {}
 
@@ -57,7 +54,8 @@ class Transport(sleekxmpp.ClientXMPP):
         sfrom = '%s' % iq['from'].bare  # Takes only the bare part of
                                         # the JID.
         project_name = iq['rsync']['node']
-        project_path = os.path.join(WORKING_DIR, project_name, sfrom)
+        project_path = os.path.join(config.working_dir, project_name,
+                                    sfrom)
 
         # Replies to the IQ
         reply = iq.reply()
@@ -134,7 +132,7 @@ class Transport(sleekxmpp.ClientXMPP):
         deltas = recv['delta']  # A list of delta tuple.
 
         # Sets the current working directory.
-        project_path = os.path.join(WORKING_DIR, node, sfrom)
+        project_path = os.path.join(config.working_dir, node, sfrom)
 
         for elem in deltas:
             # Unpacks the tuple.
