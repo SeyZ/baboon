@@ -71,7 +71,7 @@ class Transport(sleekxmpp.ClientXMPP):
 
         # Registers the SID to retrieve later to send/recv data to the
         # good socket stored in self.streamer.proxy_threads dict.
-        self.sid = streamhost_used['q']['sid']
+        self.sid = streamhost_used['socks']['sid']
 
         self.logger.info('Connected')
 
@@ -96,7 +96,7 @@ class Transport(sleekxmpp.ClientXMPP):
 
         iq.send()
 
-    def on_recv(self, recv):
+    def on_recv(self, payload):
         """ Called when receiving data over the socks5 socket (xep
         0065).
         """
@@ -109,11 +109,8 @@ class Transport(sleekxmpp.ClientXMPP):
                }
 
         # Unpacks the recv data.
+        recv = payload['data']
         data = self._unpack(recv)
-
-        # Gets the SID and put it in the ret response dict.
-        sid = data['sid']
-        ret['sid'] = sid
 
         # Gets the list of hashes.
         all_hashes = data['hashes']

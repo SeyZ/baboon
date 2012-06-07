@@ -116,10 +116,13 @@ class Transport(sleekxmpp.ClientXMPP):
         self.disconnect()
         self.logger.debug('Closed the XMPP connection.')
 
-    def on_recv(self, recv):
+    def on_recv(self, payload):
         """ Called when receiving data over the socks5 socket (xep
         0065).
         """
+
+        sid = payload['sid']
+        recv = payload['data']
 
         # Unpacks the recv.
         recv = self._unpack(recv)
@@ -127,7 +130,6 @@ class Transport(sleekxmpp.ClientXMPP):
         # Shortcuts to useful data in recv.
         sfrom = recv['from']  # The bare jid of the requester.
         node = recv['node']  # The project name.
-        sid = recv['sid']  # The SID.
         deltas = recv['delta']  # A list of delta tuple.
 
         # Sets the current working directory.
