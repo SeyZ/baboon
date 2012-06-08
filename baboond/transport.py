@@ -48,13 +48,15 @@ class Transport(sleekxmpp.ClientXMPP):
             self.process()
 
     def _handle_rsync(self, iq):
-        # Registers the SID.
-        sid = iq['rsync']['sid']
-        sfrom = '%s' % iq['from'].bare  # Takes only the bare part of
-                                        # the JID.
+        sid = iq['rsync']['sid']  # Registers the SID.
+        sfrom = '%s' % iq['from'].bare  # Registers the bare JID.
+        files = iq['rsync']['files']
         project_name = iq['rsync']['node']
         project_path = os.path.join(config.working_dir, project_name,
                                     sfrom)
+
+        self.logger.info('[%s] - Need to sync %s from %s.' %
+                         (project_name, files, sfrom))
 
         # Replies to the IQ
         reply = iq.reply()
@@ -70,16 +72,14 @@ class Transport(sleekxmpp.ClientXMPP):
         # A list of hashes.
         all_hashes = []
 
-        for path, dirs, files in os.walk(project_path):
-            for filename in files:
-                fullpath = os.path.join(path, filename)
-                # Computes the block checksums.
-                unpatched = open(fullpath, "rb")
-                hashes = pyrsync.blockchecksums(unpatched)
+        for relpath in files:
+            fullpath = os.path.join(project_path, relpath)
+            # Computes the block checksums.
+            unpatched = open(fullpath, "rb")
+            hashes = pyrsync.blockchecksums(unpatched)
 
-                relpath = os.path.relpath(fullpath, project_path)
-                data = (relpath, hashes)
-                all_hashes.append(data)
+            data = (relpath, hashes)
+            all_hashes.append(data)
 
         # Adds the hashes list in the ret dict.
         ret['hashes'] = all_hashes

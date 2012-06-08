@@ -1,4 +1,5 @@
 import os
+import time
 
 from abc import ABCMeta, abstractmethod, abstractproperty
 from watchdog.observers import Observer
@@ -56,10 +57,11 @@ class EventHandler(FileSystemEventHandler):
         else:
             try:
                 # Rsync...
-                self.transport.rsync()
+                self.transport.rsync([rel_path])
 
                 # Asks to baboon to verify if there's a conflict or not.
                 self.transport.merge_verification()
+
             except BaboonException, e:
                 self.logger.error(e)
 

@@ -83,7 +83,7 @@ class Transport(sleekxmpp.ClientXMPP):
         self.disconnect()
         self.logger.debug('Closed the XMPP connection')
 
-    def rsync(self):
+    def rsync(self, files):
         """ Starts a rsync transaction, rsync and stop the
         transaction.
 
@@ -91,8 +91,10 @@ class Transport(sleekxmpp.ClientXMPP):
         """
 
         iq = self.Iq(sto=config.server, stype='set')
+
         iq['rsync']['sid'] = self.sid
         iq['rsync']['node'] = 'synapse'
+        iq['rsync']['files'] = files
 
         iq.send()
 
