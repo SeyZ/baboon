@@ -70,8 +70,9 @@ class Transport(ClientXMPP):
 
         for relpath in files:
             fullpath = os.path.join(project_path, relpath)
-            # Computes the block checksums.
-            unpatched = open(fullpath, "rb")
+            # Computes the block checksums. If the file does not
+            # exist, create it.
+            unpatched = open(fullpath, 'w+b')
             hashes = pyrsync.blockchecksums(unpatched)
 
             data = (relpath, hashes)
