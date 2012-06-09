@@ -159,7 +159,7 @@ class Monitor(object):
                                   " baboonrc file")
 
         self.monitor = Observer()
-        self.dancer = Dancer(self.transport, sleeptime=3)
+        self.dancer = Dancer(self.transport)
         try:
             self.monitor.schedule(handler, config.path, recursive=True)
         except OSError, err:
