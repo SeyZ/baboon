@@ -22,9 +22,7 @@ class Transport(sleekxmpp.ClientXMPP):
     """
 
     def __init__(self):
-        sleekxmpp.ClientXMPP.__init__(self,
-                                      'admin@baboon-project.org/dogwood',
-                                      'secret')
+        sleekxmpp.ClientXMPP.__init__(self, config.jid, config.password)
         self.register_plugin('xep_0060')  # PubSub
         self.register_plugin('xep_0065')  # Socks5 Bytestreams
 

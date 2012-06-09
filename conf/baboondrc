@@ -1,3 +1,5 @@
 [project]
 pubsub=pubsub.baboon-project.org
+jid=admin@baboon-project.org/dogwood
+password=secret
 working_dir=/tmp
