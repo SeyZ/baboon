@@ -1,13 +1,24 @@
 import os
-import time
 
+from time import sleep
+from threading import Thread, Lock
 from abc import ABCMeta, abstractmethod, abstractproperty
+
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 
 from config import config
 from common.logger import logger
 from common.errors.baboon_exception import BaboonException
+
+# Stores the list of changed files in the pending set(). The Dancer
+# thread will be sync the file when it's necessary. Then this pending
+# set() will be cleared.
+pending = set()
+
+# A thread lock object in order to access to the pending object thread
+# safety.
+lock = Lock()
 
 
 @logger
@@ -55,21 +66,69 @@ class EventHandler(FileSystemEventHandler):
         if self.exclude(rel_path):
             self.logger.debug("Ignore the modification on %s" % rel_path)
         else:
-            try:
-                # Rsync...
-                self.transport.rsync([rel_path])
+            # Acquire the thread lock and add the rel_path of the
+            # changed file in the pending set().
+            lock.acquire()
+            pending.add(rel_path)
 
-                # Asks to baboon to verify if there's a conflict or not.
-                self.transport.merge_verification()
-
-            except BaboonException, e:
-                self.logger.error(e)
+            # Releases the lock.
+            lock.release()
 
     def on_deleted(self, event):
         """ Trigered when a file is deleted in the watched project.
         """
 
         self.on_modified(event)
+
+
+class Dancer(Thread):
+    """ A thread that wakes up every <sleeptime> secs and starts a
+    rsync + merge verification if pending set() is not empty.
+    """
+
+    def __init__(self, transport, sleeptime=1):
+        """ Initializes the thread.
+        """
+
+        Thread.__init__(self)
+
+        self.transport = transport
+        self.sleeptime = sleeptime
+        self.stop = False
+
+    def run(self):
+        """ Runs the thread.
+        """
+
+        while not self.stop:
+            # Sleeps during sleeptime secs.
+            sleep(self.sleeptime)
+
+            try:
+                # Acquires the lock in order to manipulate the pending
+                # changed file in the pending set().
+                lock.acquire()
+
+                # If there's at least 1 element in the pending set()...
+                if pending:
+                    # Starts the rsync.
+                    self.transport.rsync(pending)
+
+                    # Clears the pending set().
+                    pending.clear()
+
+                    # Asks to baboon to verify if there's a conflict
+                    # or not.
+                    self.transport.merge_verification()
+
+            except BaboonException, e:
+                self.logger.error(e)
+            finally:
+                # Be sure that the lock is always release.
+                lock.release()
+
+    def close(self):
+        self.stop = True
 
 
 @logger
@@ -100,6 +159,7 @@ class Monitor(object):
                                   " baboonrc file")
 
         self.monitor = Observer()
+        self.dancer = Dancer(self.transport, sleeptime=3)
         try:
             self.monitor.schedule(handler, config.path, recursive=True)
         except OSError, err:
@@ -111,6 +171,7 @@ class Monitor(object):
         """
 
         self.monitor.start()
+        self.dancer.start()
         self.logger.debug("Started to monitor the %s directory"
                          % config.path)
 
@@ -120,3 +181,6 @@ class Monitor(object):
 
         self.monitor.stop()
         self.monitor.join()
+
+        self.dancer.close()
+        self.dancer.join()
