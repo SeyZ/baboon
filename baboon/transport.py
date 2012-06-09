@@ -1,7 +1,12 @@
 import os
 import pickle
 import struct
-import sleekxmpp
+
+from sleekxmpp import ClientXMPP
+from sleekxmpp.xmlstream.handler import Callback
+from sleekxmpp.xmlstream.matcher import StanzaPath
+from sleekxmpp.exceptions import IqError
+from sleekxmpp.plugins.xep_0060.stanza.pubsub_event import EventItem
 
 from config import config
 from common.logger import logger
@@ -10,7 +15,7 @@ from common.stanza import rsync
 
 
 @logger
-class Transport(sleekxmpp.ClientXMPP):
+class Transport(ClientXMPP):
     """ The transport has the responsability to communicate via HTTP
     with the baboon server and to subscribe with XMPP 0060 with the
     Baboon XMPP server.
@@ -24,7 +29,7 @@ class Transport(sleekxmpp.ClientXMPP):
         self.config = config
         self.logger.debug("Loaded baboon configuration")
 
-        sleekxmpp.ClientXMPP.__init__(self, config.jid, config.password)
+        ClientXMPP.__init__(self, config.jid, config.password)
         self.logger.debug("Configured SleekXMPP library")
 
         # Register plugins
@@ -35,12 +40,8 @@ class Transport(sleekxmpp.ClientXMPP):
         self.add_event_handler('socks_recv', self.on_recv)
         self.add_event_handler('session_start', self.start)
 
-        self.register_handler(
-            sleekxmpp.xmlstream.handler.Callback(
-                'Pubsub event',
-                sleekxmpp.xmlstream.matcher.StanzaPath(
-                    'message/pubsub_event'),
-                self._pubsub_event))
+        self.register_handler(Callback('Pubsub event', StanzaPath(
+                    'message/pubsub_event'), self._pubsub_event))
         self.logger.debug("Listening 'message/pubsub_event' sleekxmpp event")
 
     def open(self):
@@ -96,7 +97,10 @@ class Transport(sleekxmpp.ClientXMPP):
         iq['rsync']['node'] = 'synapse'
         iq['rsync']['files'] = files
 
-        iq.send()
+        try:
+            iq.send()
+        except IqError, e:
+            self.logger.error(e.iq)
 
     def on_recv(self, payload):
         """ Called when receiving data over the socks5 socket (xep
@@ -169,9 +173,7 @@ class Transport(sleekxmpp.ClientXMPP):
             items = msg['pubsub_event']['items']['substanzas']
 
             for item in items:
-                if isinstance(
-                    item,
-                    sleekxmpp.plugins.xep_0060.stanza.pubsub_event.EventItem):
+                if isinstance(item, EventItem):
                     self.logger.info(item['payload'].get('status'))
 
         else:
