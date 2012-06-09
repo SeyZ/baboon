@@ -68,11 +68,8 @@ class EventHandler(FileSystemEventHandler):
         else:
             # Acquire the thread lock and add the rel_path of the
             # changed file in the pending set().
-            lock.acquire()
-            pending.add(rel_path)
-
-            # Releases the lock.
-            lock.release()
+            with lock:
+                pending.add(rel_path)
 
     def on_deleted(self, event):
         """ Trigered when a file is deleted in the watched project.
@@ -104,30 +101,29 @@ class Dancer(Thread):
             # Sleeps during sleeptime secs.
             sleep(self.sleeptime)
 
-            try:
-                # Acquires the lock in order to manipulate the pending
-                # changed file in the pending set().
-                lock.acquire()
-
+            # Acquires the lock in order to manipulate the pending
+            # changed file in the pending set().
+            with lock:
                 # If there's at least 1 element in the pending set()...
                 if pending:
-                    # Starts the rsync.
-                    self.transport.rsync(pending)
+                    try:
+                        # Starts the rsync.
+                        self.transport.rsync(pending)
 
-                    # Clears the pending set().
-                    pending.clear()
+                        # Clears the pending set().
+                        pending.clear()
 
-                    # Asks to baboon to verify if there's a conflict
-                    # or not.
-                    self.transport.merge_verification()
+                        # Asks to baboon to verify if there's a conflict
+                        # or not.
+                        self.transport.merge_verification()
 
-            except BaboonException, e:
-                self.logger.error(e)
-            finally:
-                # Be sure that the lock is always release.
-                lock.release()
+                    except BaboonException, e:
+                        self.logger.error(e)
 
     def close(self):
+        """ Sets the stop flag to True.
+        """
+
         self.stop = True
 
 
