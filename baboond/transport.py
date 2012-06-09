@@ -3,9 +3,9 @@ import shutil
 import struct
 import tempfile
 import pickle
-import sleekxmpp
 import executor
 
+from sleekxmpp import ClientXMPP
 from sleekxmpp.xmlstream.handler.callback import Callback
 from sleekxmpp.xmlstream.matcher import StanzaPath
 
@@ -16,28 +16,26 @@ from common import pyrsync
 
 
 @logger
-class Transport(sleekxmpp.ClientXMPP):
+class Transport(ClientXMPP):
     """ The transport has the responsability to communicate with the
     sleekxmpp library via XMPP protocol.
     """
 
     def __init__(self):
-        sleekxmpp.ClientXMPP.__init__(self, config.jid, config.password)
+        ClientXMPP.__init__(self, config.jid, config.password)
         self.register_plugin('xep_0060')  # PubSub
         self.register_plugin('xep_0065')  # Socks5 Bytestreams
 
         self.add_event_handler('socks_recv', self.on_recv)
         self.add_event_handler('session_start', self.start)
 
-        self.register_handler(Callback(
-                'RsyncStart Handler',
-                StanzaPath('iq@type=set/rsync'),
-                self._handle_rsync))
+        self.register_handler(Callback('RsyncStart Handler',
+                                       StanzaPath('iq@type=set/rsync'),
+                                       self._handle_rsync))
 
-        self.register_handler(Callback(
-                'MergeVerification Handler',
-                StanzaPath('iq@type=set/merge'),
-                self._handle_merge_verification))
+        self.register_handler(Callback('MergeVerification Handler',
+                                       StanzaPath('iq@type=set/merge'),
+                                       self._handle_merge_verification))
 
         # Registers pending rsyncs.
         self.rsyncs = {}
