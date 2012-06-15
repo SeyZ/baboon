@@ -8,10 +8,13 @@ with open('requirements.txt', 'r') as f:
 
 setup(name='baboon',
       version='0.1',
-      description='Realtime conflicts detector',
+      description='Detect merge conflict in realtime.',
       author='Sandro Munda, Raphael De Giusti',
       author_email='munda.sandro@gmail.com',
       url='http://baboon-project.org',
       packages=find_packages(),
-      install_requires=[requires]
+      install_requires=[requires],
+
+      # Take the latest develop version of SleekXMPP
+      dependency_links = ['https://github.com/fritzy/SleekXMPP/tarball/develop#egg=sleekxmpp-1.1.5beta']
       )
