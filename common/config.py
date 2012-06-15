@@ -1,7 +1,10 @@
 import os
 import sys
-import logging
-import logging.config
+
+if sys.version_info < (2, 7):
+    from common.thirdparty.dictconfig import dictConfig
+else:
+    from logging.config import dictConfig
 
 from ConfigParser import RawConfigParser
 
@@ -88,7 +91,7 @@ class Config(object):
 
         try:
             self.logconf['loggers']['baboon']['level'] = self.loglevel
-            logging.config.dictConfig(self.logconf)
+            dictConfig(self.logconf)
         except:
             sys.stderr.write("Failed to parse the logging config file\n")
             exit(1)
