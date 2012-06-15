@@ -2,8 +2,8 @@ import os
 import re
 import fnmatch
 
-from monitor import EventHandler
-from config import config
+from baboon.monitor import EventHandler
+from baboon.config import config
 from common.errors.baboon_exception import BaboonException
 
 

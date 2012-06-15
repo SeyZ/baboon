@@ -16,7 +16,7 @@ else:
     raw_input = input
 
 
-from main import Main
+from baboond.main import Main
 
 if __name__ == "__main__":
     Main()

@@ -3,20 +3,7 @@
 import os
 import sys
 
-bin_path = os.path.dirname(os.path.abspath(__file__))
-baboon_path = bin_path + "/../baboon/"
-if os.path.exists(baboon_path):
-    sys.path.insert(0, baboon_path)
-
-
-if sys.version_info < (3, 0):
-    reload(sys)
-    sys.setdefaultencoding('utf8')
-else:
-    raw_input = input
-
-
-from main import Main
+from baboon.main import Main
 
 if __name__ == "__main__":
     Main()
