@@ -16,7 +16,7 @@ class EventHandlerGit(EventHandler):
 
         # Lists of compiled RegExp objects
         self.include_regexps = []
-        self.exclude_regexps = [re.compile('.*\.git.*')]
+        self.exclude_regexps = [re.compile('.*\.git/.*\.lock')]
 
         # Update those lists
         if os.path.exists(self.gitignore_path):
