@@ -128,6 +128,15 @@ class Transport(ClientXMPP):
         self.disconnect()
         self.logger.debug('Closed the XMPP connection.')
 
+    def get_nodes(self):
+        return self.pubsub.get_nodes(config.pubsub)
+
+    def create_node(self, node):
+        self.pubsub.create_node(config.pubsub, node)
+
+    def delete_node(self, node):
+        return self.pubsub.delete_node(config.pubsub, node)
+
     def on_recv(self, payload):
         """ Called when receiving data over the socks5 socket (xep
         0065).
