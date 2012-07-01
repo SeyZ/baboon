@@ -129,9 +129,6 @@ class Dancer(Thread):
                     try:
                         pending -= del_pending
 
-                        print "Files: %s" % pending
-                        print "Delete files: %s" % del_pending
-
                         # Starts the rsync.
                         self.transport.rsync(files=pending,
                                              del_files=del_pending)
