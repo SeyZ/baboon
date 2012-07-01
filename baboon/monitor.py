@@ -127,6 +127,8 @@ class Dancer(Thread):
                 # del_pending set()...
                 if pending or del_pending:
                     try:
+                        # Avoid to sync a file that needs to be delete
+                        # after.
                         pending -= del_pending
 
                         # Starts the rsync.
