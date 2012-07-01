@@ -40,7 +40,8 @@ class Transport(ClientXMPP):
         # Registers pending rsyncs.
         self.rsyncs = {}
 
-        if self.connect():
+        self.use_ipv6 = False
+        if self.connect(use_ssl=False, use_tls=False):
             self.process()
 
     def _handle_rsync(self, iq):

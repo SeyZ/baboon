@@ -49,7 +49,8 @@ class Transport(ClientXMPP):
         """
 
         self.logger.debug("Connecting to XMPP...")
-        if self.connect():
+        self.use_ipv6 = False
+        if self.connect(use_ssl=False, use_tls=False):
             self.logger.debug("Connected to XMPP")
             self.process()
         else:
