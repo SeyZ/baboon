@@ -182,13 +182,29 @@ class MergeTask(Task):
             # The path exists -> the user_cwd is corrupted.
             raise BaboonException('The %s is corrupted. Ignore it' % user_cwd)
 
+        # Add the master_cwd remote.
         self._exec_cmd('git remote add %s %s' %
                        (self.username, self.master_cwd), user_cwd)
+
+        # Stage all the working directory.
         self._exec_cmd('git add -A', user_cwd)
+
+        # Do a Baboon commit.
         self._exec_cmd('git commit -am "Baboon commit"', user_cwd)
+
+        # Fetch the master_cwd repository.
         self._exec_cmd('git fetch %s' % self.username, user_cwd)
-        ret = self._exec_cmd('git merge %s/master --no-commit --no-ff' %
-                             self.username, user_cwd)
+
+        # Get the current user branch
+        out = self._exec_cmd('git symbolic-ref -q HEAD')[1]
+        cur_branch = os.path.basename(out)
+
+        # Merge the master branch in the current user repository. If
+        # the merge is well, ret equals 0.
+        ret = self._exec_cmd('git merge %s/%s --no-commit --no-ff' % \
+                                 (self.username, cur_branch), user_cwd)[0]
+
+        # Go to the normal situation.
         self._exec_cmd('git merge --abort', user_cwd)
         self._exec_cmd('git reset HEAD~1', user_cwd)
 
@@ -236,10 +252,10 @@ class MergeTask(Task):
                                 cwd=cwd
                                 )
         # Run the command
-        proc.communicate()
+        output, errors = proc.communicate()
 
         if proc.returncode != 0:
             # TODO: raise an error !
             pass
 
-        return proc.returncode
+        return (proc.returncode, output, errors)
