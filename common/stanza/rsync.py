@@ -6,8 +6,8 @@ class Rsync(ElementBase):
     name = 'rsync'
     namespace = 'baboon'
     plugin_attrib = 'rsync'
-    interfaces = set(('sid', 'node', 'files'))
-    sub_interfaces = set(('files', ))
+    interfaces = set(('sid', 'node', 'files', 'delete_files'))
+    sub_interfaces = set(('files', 'delete_files'))
 
     def get_files(self):
         results = []
@@ -27,6 +27,25 @@ class Rsync(ElementBase):
     def set_files(self, files):
         for f in files:
             self.add_file(f)
+
+    def get_delete_files(self):
+        results = []
+        del_files = self.xml.findall('{%s}delete_file' % self.namespace)
+
+        if del_files is not None:
+            for f in del_files:
+                results.append(f.text)
+
+        return results
+
+    def add_delete_file(self, f):
+        file_xml = ET.Element('{%s}delete_file' % self.namespace)
+        file_xml.text = f
+        self.xml.append(file_xml)
+
+    def set_delete_files(self, files):
+        for f in files:
+            self.add_delete_file(f)
 
 
 class MergeVerification(ElementBase):

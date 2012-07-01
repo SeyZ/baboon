@@ -16,6 +16,8 @@ from common.errors.baboon_exception import BaboonException
 # set() will be cleared.
 pending = set()
 
+del_pending = set()
+
 # A thread lock object in order to access to the pending object thread
 # safety.
 lock = Lock()
@@ -60,12 +62,8 @@ class EventHandler(FileSystemEventHandler):
         @raise BaboonException: if cannot retrieve the relative project path
         """
 
-        fullpath = event.src_path
-        self.logger.debug('Detected a modification on [{0}]'.format(fullpath))
-        rel_path = os.path.relpath(fullpath, config.path)
-        if self.exclude(rel_path):
-            self.logger.debug("Ignore the modification on %s" % rel_path)
-        else:
+        rel_path = self._verify_exclude(event)
+        if rel_path:
             # Acquire the thread lock and add the rel_path of the
             # changed file in the pending set().
             with lock:
@@ -75,7 +73,27 @@ class EventHandler(FileSystemEventHandler):
         """ Trigered when a file is deleted in the watched project.
         """
 
-        self.on_modified(event)
+        rel_path = self._verify_exclude(event)
+        if rel_path:
+            # Acquire the thread lock and add the rel_path of the
+            # changed file in the pending_del_files set().
+            with lock:
+                del_pending.add(rel_path)
+
+    def _verify_exclude(self, event):
+        """ Verifies if the event correspond to an exclude
+        file. Returns the relative path of the file if the file is not
+        excluded. Returns None if the file need to be ignored.
+        """
+
+        fullpath = event.src_path
+        self.logger.debug('Detected file deletion: [{0}]'.format(fullpath))
+        rel_path = os.path.relpath(fullpath, config.path)
+        if self.exclude(rel_path):
+            self.logger.debug("Ignore the deletion file: %s" % rel_path)
+            return
+
+        return rel_path
 
 
 class Dancer(Thread):
@@ -96,6 +114,7 @@ class Dancer(Thread):
     def run(self):
         """ Runs the thread.
         """
+        global pending, del_pending
 
         while not self.stop:
             # Sleeps during sleeptime secs.
@@ -104,14 +123,22 @@ class Dancer(Thread):
             # Acquires the lock in order to manipulate the pending
             # changed file in the pending set().
             with lock:
-                # If there's at least 1 element in the pending set()...
-                if pending:
+                # If there's at least 1 element in the pending or
+                # del_pending set()...
+                if pending or del_pending:
                     try:
+                        pending -= del_pending
+
+                        print "Files: %s" % pending
+                        print "Delete files: %s" % del_pending
+
                         # Starts the rsync.
-                        self.transport.rsync(pending)
+                        self.transport.rsync(files=pending,
+                                             del_files=del_pending)
 
                         # Clears the pending set().
                         pending.clear()
+                        del_pending.clear()
 
                         # Asks to baboon to verify if there's a conflict
                         # or not.

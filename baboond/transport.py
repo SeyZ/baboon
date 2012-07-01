@@ -48,12 +48,26 @@ class Transport(ClientXMPP):
         sid = iq['rsync']['sid']  # Registers the SID.
         sfrom = '%s' % iq['from'].bare  # Registers the bare JID.
         files = iq['rsync']['files']
+        del_files = iq['rsync']['delete_files']
         project_name = iq['rsync']['node']
         project_path = os.path.join(config.working_dir, project_name,
                                     sfrom)
 
-        self.logger.info('[%s] - Need to sync %s from %s.' %
-                         (project_name, files, sfrom))
+        # Delete the files if there're filepaths in del_files.
+        if del_files:
+            for f in del_files:
+                try:
+                    full_del_path = os.path.join(project_path, f)
+                    os.unlink(full_del_path)
+                    self.logger.info('File deleted: %s' % full_del_path)
+                except OSError:
+                    # There's no problem if the file does not exists.
+                    pass
+
+        # Log a info message if there're files to sync.
+        if files:
+            self.logger.info('[%s] - Need to sync %s from %s.' %
+                             (project_name, files, sfrom))
 
         # Replies to the IQ
         reply = iq.reply()

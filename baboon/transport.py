@@ -85,7 +85,7 @@ class Transport(ClientXMPP):
         self.disconnect()
         self.logger.debug('Closed the XMPP connection')
 
-    def rsync(self, files):
+    def rsync(self, files=None, del_files=None):
         """ Starts a rsync transaction, rsync and stop the
         transaction.
 
@@ -96,7 +96,12 @@ class Transport(ClientXMPP):
 
         iq['rsync']['sid'] = self.sid
         iq['rsync']['node'] = 'synapse'
-        iq['rsync']['files'] = files
+
+        if files:
+            iq['rsync']['files'] = files
+
+        if del_files:
+            iq['rsync']['delete_files'] = del_files
 
         try:
             iq.send()
