@@ -1,5 +1,6 @@
 import os
 import subprocess
+import shlex
 import executor
 
 from transport import transport
@@ -58,7 +59,8 @@ class AlertTask(Task):
     merge.
     """
 
-    def __init__(self, project_name, username, merge_conflict=False):
+    def __init__(self, project_name, username, merge_conflict=False,
+                 conflict_files=[]):
         """ Initialize the AlertTask. By default, there's no merge
         conflict.
         """
@@ -70,10 +72,16 @@ class AlertTask(Task):
         self.project_name = project_name
         self.username = username
         self.merge_conflict = merge_conflict
+        self.conflict_files = conflict_files
 
     def run(self):
-        msg = 'Conflict detected' if self.merge_conflict else \
-            'Everything seems to be perfect'
+        msg = 'Everything seems to be perfect'
+
+        if self.merge_conflict:
+            msg = 'Conflict detected in: '
+            for f in self.conflict_files:
+                msg += f + ', '
+
         transport.alert(self.project_name, self.username, msg)
 
 
@@ -196,32 +204,56 @@ class MergeTask(Task):
         self._exec_cmd('git fetch %s' % self.username, user_cwd)
 
         # Get the current user branch
-        out = self._exec_cmd('git symbolic-ref -q HEAD')[1]
-        cur_branch = os.path.basename(out)
+        out_branch = self._exec_cmd('git symbolic-ref -q HEAD')[1]
+
+        # out_branch looks like something like :
+        # refs/head/master\n. Parse it to only retrieve the branch
+        # name.
+        cur_branch = os.path.basename(out_branch).replace('\n', '')
 
         # Merge the master branch in the current user repository. If
         # the merge is well, ret equals 0.
         ret = self._exec_cmd('git merge %s/%s --no-commit --no-ff' % \
                                  (self.username, cur_branch), user_cwd)[0]
 
+        # Build the *args for the _alert method.
+        alert_args = (self.project_name, self.username)
+
+        # Build the **kwargs for the _alert method if there's no
+        # conflict.
+        alert_kwargs = {'merge_conflict': False, }
+
+        if ret:
+            # There's a merge conflict. Get the list of conflict
+            # files.
+            conflict_files = self._exec_cmd('git ls-files -u | cut -f 2 | '
+                                            'sort -u', user_cwd)[1].split()
+
+            # Build the **kwargs for the _alert method if there's a
+            # merge conflict.x
+            alert_kwargs = {
+                'merge_conflict': True,
+                'conflict_files': conflict_files
+                }
+
         # Go to the normal situation.
         self._exec_cmd('git merge --abort', user_cwd)
         self._exec_cmd('git reset HEAD~1', user_cwd)
 
-        if ret != 0:
-            self._alert(self.project_name, self.username, True)
-        else:
-            # merge_conflict = False
-            self._alert(self.project_name, self.username)
+        # Call the _alert method with alert_args tuple as *args
+        # argument and alert_kwargs dict as **kwargs.
+        self._alert(*alert_args, **alert_kwargs)
 
-    def _alert(self, project_name, username, merge_conflict=False):
+    def _alert(self, project_name, username, merge_conflict=False,
+               conflict_files=[]):
         """ Creates a alert task to warn to the user the state of the
         merge.
         """
 
         executor.preparator.prepare_alert(project_name,
                                           username,
-                                          merge_conflict)
+                                          merge_conflict,
+                                          conflict_files)
 
     def _get_user_dirs(self):
         """ A generator that returns the next user directory in the
@@ -238,6 +270,9 @@ class MergeTask(Task):
         """ Execute the cmd command in a subprocess. Returns the
         returncode.
         """
+
+        # Shlex the cmd.
+        #cmd = shlex.split(cmd)
 
         # If cwd is None, set cwd to self.master_cwd.
         if cwd is None:

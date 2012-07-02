@@ -79,13 +79,15 @@ class Preparator():
             self.logger.error(e)
             return False
 
-    def prepare_alert(self, project_name, username, merge_conflict):
+    def prepare_alert(self, project_name, username, merge_conflict,
+                      conflict_files=[]):
         """ Prepares a new alert task.
         merge_conflict is a bool to define if there's a conflict or
         not.
         """
 
-        alertTask = AlertTask(project_name, username, merge_conflict)
+        alertTask = AlertTask(project_name, username, merge_conflict,
+                              conflict_files=conflict_files)
         tasks.put(alertTask)
 
     def prepare_corrupted(self, project_name, username):
