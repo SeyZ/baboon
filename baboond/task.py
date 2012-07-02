@@ -1,6 +1,6 @@
 import os
 import subprocess
-import shlex
+import threading
 import executor
 
 from transport import transport
@@ -172,13 +172,25 @@ class MergeTask(Task):
         self._exec_cmd('git add -A')
         self._exec_cmd('git commit -am "Baboon commit"')
 
+        merge_threads = []
+
         # All users
         for user in self._get_user_dirs():
             try:
-                self._user_side(user)
+                # Create a thread by user to merge with the master
+                # user repository.
+                merge_thread = threading.Thread(target=self._user_side,
+                                                args=(user, ))
+                merge_thread.start()
+                merge_threads.append(merge_thread)
             except BaboonException, e:
                 self.logger.error(e)
 
+        # Wait all merge threads are finished.
+        for thread in merge_threads:
+            thread.join()
+
+        # Reset the master user repository.
         self._exec_cmd('git reset HEAD~1')
 
     def _user_side(self, user):
