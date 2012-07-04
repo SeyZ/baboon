@@ -56,41 +56,87 @@ class EventHandler(FileSystemEventHandler):
         '''
         return
 
+    def on_moved(self, event):
+        rel_path = self._verify_exclude(event, event.dest_path)
+        if rel_path:
+            # Acquire the thread lock and add the rel_path of the
+            # changed file in the pending set().
+            with lock:
+                # Add the src path to the del_pending set() to remove
+                # the file remotely.
+                src_rel_path = os.path.relpath(event.src_path, config.path)
+                del_pending.add(src_rel_path)
+
+                # Add the dest path to the pending set() to add the
+                # file remotely.
+                pending.add(rel_path)
+
+    def on_created(self, event):
+        self.on_modified(event)
+
     def on_modified(self, event):
         """ Triggered when a file is modified in the watched project.
         @param event: the watchdog event
         @raise BaboonException: if cannot retrieve the relative project path
         """
 
-        rel_path = self._verify_exclude(event)
+        rel_path = self._verify_exclude(event, event.src_path)
         if rel_path:
-            # Acquire the thread lock and add the rel_path of the
-            # changed file in the pending set().
-            with lock:
-                pending.add(rel_path)
+            # Here, we are sure that the rel_path is a file. The check
+            # is done if the _verify_exclude method.
+
+            # If the file was a file and is now a directory, we need
+            # to delete absolutely the file. Otherwise, the server
+            # will not create the directory (OSError).
+            if os.path.isdir(event.src_path):
+                self.logger.info('The file %s is now a directory.' % rel_path)
+                # Acquire the thread lock and add the file to the
+                # del_pending set().
+                with lock:
+                    del_pending.add(rel_path)
+            else:
+                # Acquire the thread lock and add the rel_path of the
+                # changed file in the pending set().
+                with lock:
+                    pending.add(rel_path)
 
     def on_deleted(self, event):
         """ Trigered when a file is deleted in the watched project.
         """
 
-        rel_path = self._verify_exclude(event)
-        if rel_path:
-            # Acquire the thread lock and add the rel_path of the
-            # changed file in the pending_del_files set().
-            with lock:
-                del_pending.add(rel_path)
+        # Check if the event path does not exist anymore. For example,
+        # when you do a 'git checkout .' in the watched directory, the
+        # on_deleted watchdog event is triggered but the file is not
+        # really deleted. In this case, redirect the event to the
+        # on_modified handler.
+        if not os.path.exists(event.src_path):
+            rel_path = self._verify_exclude(event, event.src_path)
+            if rel_path:
+                # Acquire the thread lock and add the rel_path of the
+                # changed file in the pending_del_files set().
+                with lock:
+                    del_pending.add(rel_path)
+        else:
+            self.on_modified(event)
 
-    def _verify_exclude(self, event):
-        """ Verifies if the event correspond to an exclude
+    def _verify_exclude(self, event, fullpath):
+        """ Verifies if the full path correspond to an exclude
         file. Returns the relative path of the file if the file is not
         excluded. Returns None if the file need to be ignored.
         """
 
-        fullpath = event.src_path
-        self.logger.debug('Detected file deletion: [{0}]'.format(fullpath))
+        # Use the event is_directory attribute instead of
+        # os.path.isdir. Suppose a file 'foo' is deleted and a
+        # directory named 'foo' is created. The on_deleted is
+        # triggered after the file is deleted and maybe after the
+        # directory is created too. So if we do a os.path.isdir, the
+        # return value will be True. We want False.
+        if event.is_directory:
+            return None
+
         rel_path = os.path.relpath(fullpath, config.path)
         if self.exclude(rel_path):
-            self.logger.debug("Ignore the deletion file: %s" % rel_path)
+            self.logger.debug("Ignore the file: %s" % rel_path)
             return
 
         return rel_path
@@ -181,7 +227,7 @@ class Monitor(object):
                                   " baboonrc file")
 
         self.monitor = Observer()
-        self.dancer = Dancer(self.transport)
+        self.dancer = Dancer(self.transport, sleeptime=1)
         try:
             self.monitor.schedule(handler, config.path, recursive=True)
         except OSError, err:

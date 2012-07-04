@@ -1,6 +1,11 @@
 import os
+import errno
+import stat
 import subprocess
 import threading
+import shutil
+
+import pyrsync
 import executor
 
 from transport import transport
@@ -86,6 +91,150 @@ class AlertTask(Task):
 
 
 @logger
+class RsyncTask(Task):
+    """ A rsync task to sync the baboon client repository with
+    relative repository server-side.
+    """
+
+    def __init__(self, sid, sfrom, node, files, del_files):
+
+        super(RsyncTask, self).__init__(3)
+
+        self.sid = sid
+        self.sfrom = sfrom
+        self.node = node
+        self.files = files
+        self.del_files = del_files
+
+    def run(self):
+
+        self.logger.debug('RsyncTask %s started' % self.sid)
+
+        # Delete the files if there're filepaths in del_files.
+        if self.del_files:
+            self.logger.info('[%s] - Need to delete %s from %s.' %
+                             (self.node, self.del_files, self.sfrom))
+            self._del_files()
+
+        # Log a info message if there're files to sync.
+        if self.files:
+            self.logger.info('[%s] - Need to sync %s from %s.' %
+                             (self.node, self.files, self.sfrom))
+
+        # Computes the delta between files to sync.
+        ret = self._get_hashes()
+
+        # Sends over the streamer.
+        transport.streamer.send(self.sid, transport._pack(ret))
+
+    def _del_files(self):
+        """ Delete the list of files or directories (recursively) in
+        the project directory.
+        """
+
+        for f in self.del_files:
+            fullpath = os.path.join(self.node, f)
+
+            # Verifies if the current file exists on the filesystem
+            # before delete it. For example, it can be already deleted
+            # by a recursive deleted parent directory (with
+            # shutil.rmtree below).
+            if os.path.exists(fullpath):
+                try:
+                    if os.path.isfile(fullpath):
+                        # Remove the file.
+                        os.remove(fullpath)
+
+                        # Delete recursively all parent directories of
+                        # the fullpath is they are empty.
+                        self._clean_directory(self.node,
+                                              os.path.dirname(fullpath))
+
+                    elif os.path.isdir(f):
+                        shutil.rmtree(f)
+                        self.logger.info('Directory recursively deleted: %s' \
+                                             % f)
+                except OSError:
+                    # There's no problem if the file/dir does not
+                    # exists.
+                    pass
+
+    def _get_hashes(self):
+        """ Computes the delta hashes for each file in the files list
+        and return the future rsync payload to send.
+        """
+
+        # Sets the future socket response dict.
+        ret = {'sid': self.sid}
+
+        # A list of hashes.
+        all_hashes = []
+
+        for relpath in self.files:
+            fullpath = os.path.join(self.node, relpath)
+
+            # If the file has no write permission, set it.
+            self._add_perm(fullpath, stat.S_IWUSR)
+
+            # Verifies if all parent directories of the fullpath is
+            # created.
+            self._create_missing_dirs(fullpath)
+
+            # If the file does not exist, create it
+            if not os.path.exists(fullpath):
+                open(fullpath, 'w+b').close()
+
+            if os.path.isfile(fullpath):
+                # Computes the block checksums and add the result to the
+                # all_hashes list.
+                with open(fullpath, 'rb') as unpatched:
+                    hashes = pyrsync.blockchecksums(unpatched)
+                    data = (relpath, hashes)
+                    all_hashes.append(data)
+
+        # Adds the hashes list in the ret dict.
+        ret['hashes'] = all_hashes
+
+        return ret
+
+    def _add_perm(self, fullpath, perm):
+        """ Add the permission (the list of available permissions is
+        in the Python stat module) to the fullpath. If the fullpath
+        does not exists, do nothing.
+        """
+
+        if os.path.exists(fullpath) and not os.access(fullpath, os.W_OK):
+            cur_perm = stat.S_IMODE(os.stat(fullpath).st_mode)
+            os.chmod(fullpath, cur_perm | stat.S_IWUSR)
+
+    def _create_missing_dirs(self, fullpath):
+        """ Creates all missing parent directories of the fullpath.
+        """
+
+        if not os.path.exists(os.path.dirname(fullpath)):
+            try:
+                # Creates all the parent directories.
+                os.makedirs(os.path.dirname(fullpath))
+            except OSError:
+                pass
+
+    def _clean_directory(self, basepath, destpath):
+        """ Deletes all empty directories from the destpath to
+        basepath.
+        """
+
+        cur_dir = destpath
+        while not cur_dir == basepath:
+            try:
+                os.rmdir(cur_dir)
+                cur_dir = os.path.dirname(cur_dir)
+            except OSError as e:
+                if e.errno == errno.ENOTEMPTY:
+                    # The directory is not empty. Return now.
+                    return
+
+
+@logger
 class CorruptedTask(Task):
     """ A task to mark a repository in corrupted mode.
     """
@@ -168,9 +317,14 @@ class MergeTask(Task):
         """ Test if there's a merge conflict or not.
         """
 
+        gitdir = os.path.join(self.master_cwd, '.git')
+        import uuid
+        destdir = "/tmp/%s" % uuid.uuid4()
+        shutil.copytree(gitdir, destdir)
+
         # Master user
         self._exec_cmd('git add -A')
-        self._exec_cmd('git commit -am "Baboon commit"')
+        ret_code = self._exec_cmd('git commit -am "Baboon commit"')[0]
 
         merge_threads = []
 
@@ -190,8 +344,11 @@ class MergeTask(Task):
         for thread in merge_threads:
             thread.join()
 
-        # Reset the master user repository.
-        self._exec_cmd('git reset HEAD~1')
+        if not ret_code:
+            # Reset the master user repository.
+            self._exec_cmd('git reset HEAD~1')
+            shutil.rmtree(gitdir)
+            shutil.move(destdir, gitdir)
 
     def _user_side(self, user):
 

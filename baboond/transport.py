@@ -37,9 +37,8 @@ class Transport(ClientXMPP):
                                        StanzaPath('iq@type=set/merge'),
                                        self._handle_merge_verification))
 
-        # Registers pending rsyncs.
-        self.rsyncs = {}
-
+        # Connect to the XMPP server using IPv4 only and without
+        # SSL/TLS support for now.
         self.use_ipv6 = False
         if self.connect(use_ssl=False, use_tls=False):
             self.process()
@@ -47,57 +46,26 @@ class Transport(ClientXMPP):
     def _handle_rsync(self, iq):
         sid = iq['rsync']['sid']  # Registers the SID.
         sfrom = '%s' % iq['from'].bare  # Registers the bare JID.
-        files = iq['rsync']['files']
-        del_files = iq['rsync']['delete_files']
-        project_name = iq['rsync']['node']
-        project_path = os.path.join(config.working_dir, project_name,
-                                    sfrom)
+        files = iq['rsync']['files']  # Get the files list to sync.
+        del_files = iq['rsync']['delete_files']  # Get the file list to delete.
+        node = iq['rsync']['node']  # Get the current project name.
 
-        # Delete the files if there're filepaths in del_files.
-        if del_files:
-            for f in del_files:
-                try:
-                    full_del_path = os.path.join(project_path, f)
-                    os.unlink(full_del_path)
-                    self.logger.info('File deleted: %s' % full_del_path)
-                except OSError:
-                    # There's no problem if the file does not exists.
-                    pass
+        # Prepare the **kwargs argument for the prepare_rsync method.
+        kwargs = {
+            'sid': sid,
+            'sfrom': sfrom,
+            'node': node,
+            'files': files,
+            'del_files': del_files,
+        }
 
-        # Log a info message if there're files to sync.
-        if files:
-            self.logger.info('[%s] - Need to sync %s from %s.' %
-                             (project_name, files, sfrom))
+        # Prepares the merge verification with **kwargs argument.
+        executor.preparator.prepare_rsync(**kwargs)
 
         # Replies to the IQ
         reply = iq.reply()
         reply['rsync']
-
-        # Registers the reply iq to the rsyncs dict. This result IQ
-        # will be sent when the rsync is completely finished.
-        self.rsyncs[sid] = reply
-
-        # Sets the future socket response dict.
-        ret = {'sid': sid}
-
-        # A list of hashes.
-        all_hashes = []
-
-        for relpath in files:
-            fullpath = os.path.join(project_path, relpath)
-            # Computes the block checksums. If the file does not
-            # exist, create it.
-            unpatched = open(fullpath, 'w+b')
-            hashes = pyrsync.blockchecksums(unpatched)
-
-            data = (relpath, hashes)
-            all_hashes.append(data)
-
-        # Adds the hashes list in the ret dict.
-        ret['hashes'] = all_hashes
-
-        # Sends over the streamer.
-        self.streamer.send(sid, self._pack(ret))
+        reply.send()
 
     def _handle_merge_verification(self, iq):
         """ Creates a merge verification task.
@@ -128,21 +96,11 @@ class Transport(ClientXMPP):
         self.disconnect()
         self.logger.debug('Closed the XMPP connection.')
 
-    def get_nodes(self):
-        return self.pubsub.get_nodes(config.pubsub)
-
-    def create_node(self, node):
-        self.pubsub.create_node(config.pubsub, node)
-
-    def delete_node(self, node):
-        return self.pubsub.delete_node(config.pubsub, node)
-
     def on_recv(self, payload):
         """ Called when receiving data over the socks5 socket (xep
         0065).
         """
 
-        sid = payload['sid']
         recv = payload['data']
 
         # Unpacks the recv.
@@ -180,23 +138,9 @@ class Transport(ClientXMPP):
             save_fd.close()
 
             # Renames the temporary file to the good file path.
-            shutil.copy(save_fd.name, path)
+            shutil.move(save_fd.name, path)
 
-            # Deletes the file.
-            os.remove(save_fd.name)
-
-        # Gets the reply IQ associated to the SID.
-        reply_iq = self.rsyncs.get(sid)
-        if reply_iq:
-            # The rsync is completely finished. It's time to send the
-            # reply IQ to warn the client-side.
-            reply_iq.send()
-
-            # Removes the pending rsync from the rsyncs dict.
-            del self.rsyncs[sid]
-        else:
-            # TODO: Handle this error.
-            pass
+        self.logger.debug('Rsync task finished')
 
     def _pack(self, data):
         data = pickle.dumps(data)

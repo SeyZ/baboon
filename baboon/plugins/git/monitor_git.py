@@ -16,11 +16,10 @@ class EventHandlerGit(EventHandler):
 
         # Lists of compiled RegExp objects
         self.include_regexps = []
-        self.exclude_regexps = [re.compile('.*\.git/.*\.lock')]
+        self.exclude_regexps = []
 
         # Update those lists
-        if os.path.exists(self.gitignore_path):
-            self._populate_gitignore_items()
+        self._populate_gitignore_items()
 
     @property
     def scm_name(self):
@@ -40,19 +39,39 @@ class EventHandlerGit(EventHandler):
 
         return False
 
-    def _populate_gitignore_items(self):
-        '''This method populates include and exclude lists with compiled regexps
-        objects.'''
+    def on_modified(self, event):
+        """
+        """
 
-        gitignore_items = self._parse_gitignore()
-        if gitignore_items != None:
-            # Let's compile them already :)
-            self.include_regexps += [re.compile(x) for x in gitignore_items[0]]
-            self.exclude_regexps += [re.compile(x) for x in gitignore_items[1]]
+        rel_path = os.path.relpath(event.src_path, config.path)
+        if rel_path == '.gitignore':
+            # Reparse the gitignore.
+            self._populate_gitignore_items()
+
+        super(EventHandlerGit, self).on_modified(event)
+
+    def _populate_gitignore_items(self):
+        """ This method populates include and exclude lists with
+        compiled regexps objects.
+        """
+
+        # Reset the include_regexps and exclude_regexps.
+        self.include_regexps = []
+        self.exclude_regexps = [re.compile('.*\.git/.*\.lock')]
+
+        # If there's a .gitignore file in the watched directory.
+        if os.path.exists(self.gitignore_path):
+            # Parse the gitignore.
+            ignores = self._parse_gitignore()
+            if ignores != None:
+                # Populate the regexps list with the ignores result.
+                self.include_regexps += [re.compile(x) for x in ignores[0]]
+                self.exclude_regexps += [re.compile(x) for x in ignores[1]]
 
     def _match_excl_regexp(self, rel_path):
-        '''Returns True if rel_path matches any item in exclude_regexp list.
-        '''
+        """ Returns True if rel_path matches any item in
+        exclude_regexp list.
+        """
 
         for regexp in self.exclude_regexps:
             if regexp.search(rel_path) is not None:
@@ -63,8 +82,9 @@ class EventHandlerGit(EventHandler):
         return False
 
     def _match_incl_regexp(self, rel_path):
-        '''Returns True if rel_path matches any item in include_regexp list.
-        '''
+        """ Returns True if rel_path matches any item in
+        include_regexp list.
+        """
 
         for neg_regexp in self.include_regexps:
             if neg_regexp.search(rel_path) is not None:

@@ -135,7 +135,7 @@ class Transport(ClientXMPP):
             hashes = elem[1]
 
             fullpath = os.path.join(self.config.path, relpath)
-            if os.path.exists(fullpath):
+            if os.path.exists(fullpath) and os.path.isfile(fullpath):
                 # Computes the local delta of the current file.
                 patchedfile = open(fullpath, 'rb')
                 delta = pyrsync.rsyncdelta(patchedfile, hashes)

@@ -1,7 +1,10 @@
+import os
+
 from threading import Thread
 from Queue import PriorityQueue
 
-from task import EndTask, MergeTask, AlertTask, CorruptedTask
+from task import EndTask, RsyncTask, MergeTask, AlertTask, CorruptedTask
+from config import config
 from common.logger import logger
 from common.errors.baboon_exception import BaboonException
 
@@ -78,6 +81,17 @@ class Preparator():
         except BaboonException, e:
             self.logger.error(e)
             return False
+
+    def prepare_rsync(self, sid, sfrom, node, files, del_files):
+        """ Prepares a rsync task.
+        """
+
+        # Get the project path.
+        project_path = os.path.join(config.working_dir, node, sfrom)
+        rsyncTask = RsyncTask(sid, sfrom, project_path, files, del_files)
+        self.logger.info('Prepared rsync task %s' % sid)
+
+        tasks.put(rsyncTask)
 
     def prepare_alert(self, project_name, username, merge_conflict,
                       conflict_files=[]):
