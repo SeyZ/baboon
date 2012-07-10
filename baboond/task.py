@@ -96,15 +96,19 @@ class RsyncTask(Task):
     relative repository server-side.
     """
 
-    def __init__(self, sid, sfrom, node, files, del_files):
+    def __init__(self, sid, sfrom, project_path, files, del_files):
 
         super(RsyncTask, self).__init__(3)
 
         self.sid = sid
         self.sfrom = sfrom
-        self.node = node
+        self.project_path = project_path
         self.files = files
         self.del_files = del_files
+
+        # Declare a thread Event to wait until the rsync is completely
+        # finished.
+        self.rsync_finished = threading.Event()
 
     def run(self):
 
@@ -113,13 +117,13 @@ class RsyncTask(Task):
         # Delete the files if there're filepaths in del_files.
         if self.del_files:
             self.logger.info('[%s] - Need to delete %s from %s.' %
-                             (self.node, self.del_files, self.sfrom))
+                             (self.project_path, self.del_files, self.sfrom))
             self._del_files()
 
         # Log a info message if there're files to sync.
         if self.files:
             self.logger.info('[%s] - Need to sync %s from %s.' %
-                             (self.node, self.files, self.sfrom))
+                             (self.project_path, self.files, self.sfrom))
 
         # Computes the delta between files to sync.
         ret = self._get_hashes()
@@ -127,13 +131,18 @@ class RsyncTask(Task):
         # Sends over the streamer.
         transport.streamer.send(self.sid, transport._pack(ret))
 
+        # Wait until the rsync is finished.
+        self.rsync_finished.wait()
+
+        self.logger.debug('Rsync task %s finished', self.sid)
+
     def _del_files(self):
         """ Delete the list of files or directories (recursively) in
         the project directory.
         """
 
         for f in self.del_files:
-            fullpath = os.path.join(self.node, f)
+            fullpath = os.path.join(self.project_path, f)
 
             # Verifies if the current file exists on the filesystem
             # before delete it. For example, it can be already deleted
@@ -147,7 +156,7 @@ class RsyncTask(Task):
 
                         # Delete recursively all parent directories of
                         # the fullpath is they are empty.
-                        self._clean_directory(self.node,
+                        self._clean_directory(self.project_path,
                                               os.path.dirname(fullpath))
 
                     elif os.path.isdir(f):
@@ -171,7 +180,7 @@ class RsyncTask(Task):
         all_hashes = []
 
         for relpath in self.files:
-            fullpath = os.path.join(self.node, relpath)
+            fullpath = os.path.join(self.project_path, relpath)
 
             # If the file has no write permission, set it.
             self._add_perm(fullpath, stat.S_IWUSR)

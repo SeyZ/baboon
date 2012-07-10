@@ -5,6 +5,9 @@ import tempfile
 import pickle
 import executor
 
+import executor
+import task
+
 from sleekxmpp import ClientXMPP
 from sleekxmpp.xmlstream.handler.callback import Callback
 from sleekxmpp.xmlstream.matcher import StanzaPath
@@ -22,7 +25,9 @@ class Transport(ClientXMPP):
     """
 
     def __init__(self):
+
         ClientXMPP.__init__(self, config.jid, config.password)
+
         self.register_plugin('xep_0060')  # PubSub
         self.register_plugin('xep_0065')  # Socks5 Bytestreams
 
@@ -50,17 +55,27 @@ class Transport(ClientXMPP):
         del_files = iq['rsync']['delete_files']  # Get the file list to delete.
         node = iq['rsync']['node']  # Get the current project name.
 
-        # Prepare the **kwargs argument for the prepare_rsync method.
+        # Get the project path.
+        project_path = os.path.join(config.working_dir, node, sfrom)
+
+        # Prepare the **kwargs argument for the RsyncTask contructor.
         kwargs = {
             'sid': sid,
             'sfrom': sfrom,
-            'node': node,
+            'project_path': project_path,
             'files': files,
             'del_files': del_files,
         }
 
-        # Prepares the merge verification with **kwargs argument.
-        executor.preparator.prepare_rsync(**kwargs)
+        # Put the rsync task in the tasks queue.
+        self.logger.debug('Prepared rsync task %s' % sid)
+
+        # TODO: Don't register the rsync_task globally to the class.
+        rsync_task = task.RsyncTask(**kwargs)
+        executor.tasks.put(rsync_task)
+
+        # Register the current rsync_task in the pending_rsyncs dict.
+        self.pending_rsyncs[sid] = rsync_task
 
         # Replies to the IQ
         reply = iq.reply()
@@ -91,6 +106,10 @@ class Transport(ClientXMPP):
         self.pubsub = self.plugin['xep_0060']
         self.streamer = self.plugin['xep_0065']
 
+        # Declare a pending_rsyncs dict with key -> SID and value the
+        # rsync_task object.
+        self.pending_rsyncs = {}
+
     def close(self):
         self.streamer.close()
         self.disconnect()
@@ -101,6 +120,7 @@ class Transport(ClientXMPP):
         0065).
         """
 
+        sid = payload['sid']
         recv = payload['data']
 
         # Unpacks the recv.
@@ -140,7 +160,15 @@ class Transport(ClientXMPP):
             # Renames the temporary file to the good file path.
             shutil.move(save_fd.name, path)
 
-        self.logger.debug('Rsync task finished')
+        # Get the rsync task associated to the sid to set() the rsync_finished
+        # Event.
+        cur_rsync_task = self.pending_rsyncs.get(sid)
+        if cur_rsync_task:
+            cur_rsync_task.rsync_finished.set()
+            del self.pending_rsyncs[sid]
+        else:
+            # TODO: Handle this error.
+            pass
 
     def _pack(self, data):
         data = pickle.dumps(data)
