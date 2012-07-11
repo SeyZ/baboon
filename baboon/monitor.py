@@ -15,8 +15,8 @@ from common.errors.baboon_exception import BaboonException
 # thread will be sync the file when it's necessary. Then this pending
 # set() will be cleared.
 pending = set()
-
 del_pending = set()
+mov_pending = set()
 
 # A thread lock object in order to access to the pending object thread
 # safety.
@@ -160,7 +160,7 @@ class Dancer(Thread):
     def run(self):
         """ Runs the thread.
         """
-        global pending, del_pending
+        global pending, mov_pending, del_pending
 
         while not self.stop:
             # Sleeps during sleeptime secs.
@@ -170,8 +170,8 @@ class Dancer(Thread):
             # changed file in the pending set().
             with lock:
                 # If there's at least 1 element in the pending or
-                # del_pending set()...
-                if pending or del_pending:
+                # del_pending  or mov_pending set()...
+                if pending or del_pending or mov_pending:
                     try:
                         # Avoid to sync a file that needs to be delete
                         # after.
@@ -179,10 +179,12 @@ class Dancer(Thread):
 
                         # Starts the rsync.
                         self.transport.rsync(files=pending,
+                                             mov_files=mov_pending,
                                              del_files=del_pending)
 
                         # Clears the pending set().
                         pending.clear()
+                        mov_pending.clear()
                         del_pending.clear()
 
                         # Asks to baboon to verify if there's a conflict

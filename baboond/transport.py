@@ -52,6 +52,7 @@ class Transport(ClientXMPP):
         sid = iq['rsync']['sid']  # Registers the SID.
         sfrom = '%s' % iq['from'].bare  # Registers the bare JID.
         files = iq['rsync']['files']  # Get the files list to sync.
+        mov_files = iq['rsync']['move_files'] # Get the file list to move.
         del_files = iq['rsync']['delete_files']  # Get the file list to delete.
         node = iq['rsync']['node']  # Get the current project name.
 
@@ -64,6 +65,7 @@ class Transport(ClientXMPP):
             'sfrom': sfrom,
             'project_path': project_path,
             'files': files,
+            'mov_files': mov_files,
             'del_files': del_files,
         }
 

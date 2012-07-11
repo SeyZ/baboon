@@ -96,7 +96,7 @@ class RsyncTask(Task):
     relative repository server-side.
     """
 
-    def __init__(self, sid, sfrom, project_path, files, del_files):
+    def __init__(self, sid, sfrom, project_path, files, mov_files, del_files):
 
         super(RsyncTask, self).__init__(3)
 
@@ -104,6 +104,7 @@ class RsyncTask(Task):
         self.sfrom = sfrom
         self.project_path = project_path
         self.files = files
+        self.mov_files = mov_files
         self.del_files = del_files
 
         # Declare a thread Event to wait until the rsync is completely
@@ -131,13 +132,32 @@ class RsyncTask(Task):
         # Sends over the streamer.
         transport.streamer.send(self.sid, transport._pack(ret))
 
+        # Move the files if there're filepaths in mov_files.
+        if self.mov_files:
+            self.logger.info('[%s] - Need to move %s.' %
+                             (self.project_path, self.mov_files))
+            self._mov_files()
+
         # Wait until the rsync is finished.
         self.rsync_finished.wait()
 
         self.logger.debug('Rsync task %s finished', self.sid)
 
+    def _mov_files(self):
+        """ Moves the list of mov_files tuple (src_path, dest_path).
+        """
+
+        for m in self.mov_files:
+            src_path, dest_path = m.split('#')
+
+            src_fullpath = os.path.join(self.project_path, src_path)
+            dest_fullpath = os.path.join(self.project_path, dest_path)
+
+            shutil.move(src_fullpath, dest_fullpath)
+            self.logger.info('Move done !')
+
     def _del_files(self):
-        """ Delete the list of files or directories (recursively) in
+        """ Deletes the list of files or directories (recursively) in
         the project directory.
         """
 
