@@ -492,10 +492,8 @@ class MergeTask(Task):
         merge.
         """
 
-        executor.preparator.prepare_alert(project_name,
-                                          username,
-                                          merge_conflict,
-                                          conflict_files)
+        executor.tasks.put(AlertTask(project_name, username, merge_conflict,
+            conflict_files=conflict_files))
 
     def _get_user_dirs(self):
         """ A generator that returns the next user directory in the

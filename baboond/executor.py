@@ -1,7 +1,7 @@
 from threading import Thread
 from Queue import PriorityQueue
 
-from task import EndTask, MergeTask, AlertTask, CorruptedTask
+from task import EndTask
 from common.logger import logger
 from common.errors.baboon_exception import BaboonException
 
@@ -56,25 +56,3 @@ class Scheduler(Thread):
 
         self.logger.debug('The executor thread is now finished.')
 
-
-@logger
-class Preparator():
-    """ The preparator builds the task and put it in the tasks queue.
-    """
-
-    def prepare_alert(self, project_name, username, merge_conflict,
-                      conflict_files=[]):
-        """ Prepares a new alert task.
-        merge_conflict is a bool to define if there's a conflict or
-        not.
-        """
-
-        alertTask = AlertTask(project_name, username, merge_conflict,
-                              conflict_files=conflict_files)
-        tasks.put(alertTask)
-
-    def prepare_corrupted(self, project_name, username):
-        corruptedTask = CorruptedTask(project_name, username)
-        tasks.put(corruptedTask)
-
-preparator = Preparator()
