@@ -5,7 +5,6 @@ import tempfile
 import pickle
 import executor
 
-import executor
 import task
 
 from sleekxmpp import ClientXMPP
