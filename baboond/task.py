@@ -9,6 +9,7 @@ import pyrsync
 import executor
 
 from transport import transport
+from common.file import FileEvent
 from common.logger import logger
 from common.errors.baboon_exception import BaboonException
 from config import config
@@ -96,16 +97,20 @@ class RsyncTask(Task):
     relative repository server-side.
     """
 
-    def __init__(self, sid, sfrom, project_path, files, mov_files, del_files):
+    def __init__(self, sid, rid, sfrom, project_path, files):
 
         super(RsyncTask, self).__init__(3)
 
         self.sid = sid
+        self.rid = rid
         self.sfrom = sfrom
         self.project_path = project_path
         self.files = files
-        self.mov_files = mov_files
-        self.del_files = del_files
+
+        self.modif_files = []
+        self.create_files = []
+        self.mov_files = []
+        self.del_files = []
 
         # Declare a thread Event to wait until the rsync is completely
         # finished.
@@ -115,78 +120,110 @@ class RsyncTask(Task):
 
         self.logger.debug('RsyncTask %s started' % self.sid)
 
-        # Delete the files if there're filepaths in del_files.
-        if self.del_files:
-            self.logger.info('[%s] - Need to delete %s from %s.' %
-                             (self.project_path, self.del_files, self.sfrom))
-            self._del_files()
+        for f in self.files:
+            if f.event_type == FileEvent.CREATE:
+                self.logger.info('[%s] - Need to create %s.' %
+                    (self.project_path, f.src_path))
+                self._create_file(f.src_path)
+            elif f.event_type == FileEvent.MODIF:
+                self.logger.info('[%s] - Need to sync %s.' %
+                    (self.project_path, f.src_path))
+                new_hash = self._get_hash(f.src_path)
+                self._send_hash(new_hash)
+            elif f.event_type == FileEvent.DELETE:
+                self.logger.info('[%s] - Need to delete %s.' %
+                        (self.project_path, f.src_path))
+                self._delete_file(f.src_path)
+            elif f.event_type == FileEvent.MOVE:
+                self.logger.info('[%s] - Need to move %s to %s.' %
+                    (self.project_path, f.src_path, f.dest_path))
+                self._move_file(f.src_path, f.dest_path)
 
-        # Log a info message if there're files to sync.
-        if self.files:
-            self.logger.info('[%s] - Need to sync %s from %s.' %
-                             (self.project_path, self.files, self.sfrom))
-
-        # Computes the delta between files to sync.
-        ret = self._get_hashes()
-
-        # Sends over the streamer.
-        transport.streamer.send(self.sid, transport._pack(ret))
-
-        # Move the files if there're filepaths in mov_files.
-        if self.mov_files:
-            self.logger.info('[%s] - Need to move %s.' %
-                             (self.project_path, self.mov_files))
-            self._mov_files()
-
-        # Wait until the rsync is finished.
-        self.rsync_finished.wait()
-
+        # TODO: Remove the rsync_task in the pending_rsyncs dict of the
+        # transport.
         self.logger.debug('Rsync task %s finished', self.sid)
 
-    def _mov_files(self):
-        """ Moves the list of mov_files tuple (src_path, dest_path).
+    def _create_file(self, f):
+        """ Create the file f.
         """
 
-        for m in self.mov_files:
-            src_path, dest_path = m.split('#')
+        fullpath = os.path.join(self.project_path, f)
+        self._create_missing_dirs(fullpath)
+        open(fullpath, 'w').close()
 
-            src_fullpath = os.path.join(self.project_path, src_path)
-            dest_fullpath = os.path.join(self.project_path, dest_path)
+    def _move_file(self, src, dest):
+        src_fullpath = os.path.join(self.project_path, src)
+        dest_fullpath = os.path.join(self.project_path, dest)
 
-            shutil.move(src_fullpath, dest_fullpath)
-            self.logger.info('Move done !')
+        shutil.move(src_fullpath, dest_fullpath)
+        self.logger.info('Move done !')
 
-    def _del_files(self):
-        """ Deletes the list of files or directories (recursively) in
-        the project directory.
-        """
+    def _delete_file(self, f):
 
-        for f in self.del_files:
-            fullpath = os.path.join(self.project_path, f)
+        fullpath = os.path.join(self.project_path, f)
 
-            # Verifies if the current file exists on the filesystem
-            # before delete it. For example, it can be already deleted
-            # by a recursive deleted parent directory (with
-            # shutil.rmtree below).
-            if os.path.exists(fullpath):
-                try:
-                    if os.path.isfile(fullpath):
-                        # Remove the file.
-                        os.remove(fullpath)
+        # Verifies if the current file exists on the filesystem
+        # before delete it. For example, it can be already deleted
+        # by a recursive deleted parent directory (with
+        # shutil.rmtree below).
+        if os.path.exists(fullpath):
+            try:
+                if os.path.isfile(fullpath):
+                    # Remove the file.
+                    os.remove(fullpath)
 
-                        # Delete recursively all parent directories of
-                        # the fullpath is they are empty.
-                        self._clean_directory(self.project_path,
-                                              os.path.dirname(fullpath))
+                    # Delete recursively all parent directories of
+                    # the fullpath is they are empty.
+                    self._clean_directory(self.project_path,
+                                          os.path.dirname(fullpath))
 
-                    elif os.path.isdir(f):
-                        shutil.rmtree(f)
-                        self.logger.info('Directory recursively deleted: %s' \
-                                             % f)
-                except OSError:
-                    # There's no problem if the file/dir does not
-                    # exists.
-                    pass
+                elif os.path.isdir(f):
+                    shutil.rmtree(f)
+                    self.logger.info('Directory recursively deleted: %s' \
+                                         % f)
+            except OSError:
+                # There's no problem if the file/dir does not
+                # exists.
+                pass
+
+    def _get_hash(self, f):
+        fullpath = os.path.join(self.project_path, f)
+
+        # If the file has no write permission, set it.
+        self._add_perm(fullpath, stat.S_IWUSR)
+
+        # Verifies if all parent directories of the fullpath is
+        # created.
+        self._create_missing_dirs(fullpath)
+
+        # If the file does not exist, create it
+        if not os.path.exists(fullpath):
+            open(fullpath, 'w+b').close()
+
+        if os.path.isfile(fullpath):
+            # Computes the block checksums and add the result to the
+            # all_hashes list.
+            with open(fullpath, 'rb') as unpatched:
+                return (f, pyrsync.blockchecksums(unpatched))
+
+    def _send_hash(self, h):
+        # Sets the future socket response dict.
+        payload = {
+            'sid': self.sid,
+            'rid': self.rid,
+            'hashes': [h],
+        }
+
+        transport.streamer.send(self.sid, transport._pack(payload))
+
+        # Wait until the rsync is finished.
+        self.rsync_finished.wait(60)
+
+        if not self.rsync_finished.is_set():
+            self.logger.error('Timeout on rsync detected !')
+
+        # Reset the rsync_finished Event.
+        self.rsync_finished.clear()
 
     def _get_hashes(self):
         """ Computes the delta hashes for each file in the files list
@@ -194,7 +231,10 @@ class RsyncTask(Task):
         """
 
         # Sets the future socket response dict.
-        ret = {'sid': self.sid}
+        ret = {
+            'sid': self.sid,
+            'rid': self.rid
+        }
 
         # A list of hashes.
         all_hashes = []
@@ -346,6 +386,8 @@ class MergeTask(Task):
         """ Test if there's a merge conflict or not.
         """
 
+        self.logger.debug('Merge task %s started' % self.master_cwd)
+
         gitdir = os.path.join(self.master_cwd, '.git')
         import uuid
         destdir = "/tmp/%s" % uuid.uuid4()
@@ -378,6 +420,8 @@ class MergeTask(Task):
             self._exec_cmd('git reset HEAD~1')
             shutil.rmtree(gitdir)
             shutil.move(destdir, gitdir)
+
+        self.logger.debug('Merge task %s finished' % self.master_cwd)
 
     def _user_side(self, user):
 

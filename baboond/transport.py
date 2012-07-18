@@ -31,8 +31,8 @@ class Transport(ClientXMPP):
         self.register_plugin('xep_0060')  # PubSub
         self.register_plugin('xep_0065')  # Socks5 Bytestreams
 
-        self.add_event_handler('socks_recv', self.on_recv)
         self.add_event_handler('session_start', self.start)
+        self.add_event_handler('socks_recv', self.on_recv)
 
         self.register_handler(Callback('RsyncStart Handler',
                                        StanzaPath('iq@type=set/rsync'),
@@ -49,11 +49,12 @@ class Transport(ClientXMPP):
             self.process()
 
     def _handle_rsync(self, iq):
+        self.logger.info('Received rsync stanza !')
+
         sid = iq['rsync']['sid']  # Registers the SID.
+        rid = iq['rsync']['rid']  # Register the RID.
         sfrom = '%s' % iq['from'].bare  # Registers the bare JID.
         files = iq['rsync']['files']  # Get the files list to sync.
-        mov_files = iq['rsync']['move_files'] # Get the file list to move.
-        del_files = iq['rsync']['delete_files']  # Get the file list to delete.
         node = iq['rsync']['node']  # Get the current project name.
 
         # Get the project path.
@@ -62,26 +63,26 @@ class Transport(ClientXMPP):
         # Prepare the **kwargs argument for the RsyncTask contructor.
         kwargs = {
             'sid': sid,
+            'rid': rid,
             'sfrom': sfrom,
             'project_path': project_path,
             'files': files,
-            'mov_files': mov_files,
-            'del_files': del_files,
         }
 
         # Put the rsync task in the tasks queue.
-        self.logger.debug('Prepared rsync task %s' % sid)
+        self.logger.debug('Prepared rsync task %s' % rid)
 
         # TODO: Don't register the rsync_task globally to the class.
         rsync_task = task.RsyncTask(**kwargs)
         executor.tasks.put(rsync_task)
 
         # Register the current rsync_task in the pending_rsyncs dict.
-        self.pending_rsyncs[sid] = rsync_task
+        self.pending_rsyncs[rid] = rsync_task
 
         # Replies to the IQ
         reply = iq.reply()
         reply['rsync']
+
         reply.send()
 
     def _handle_merge_verification(self, iq):
@@ -122,7 +123,6 @@ class Transport(ClientXMPP):
         0065).
         """
 
-        sid = payload['sid']
         recv = payload['data']
 
         # Unpacks the recv.
@@ -132,6 +132,7 @@ class Transport(ClientXMPP):
         sfrom = recv['from']  # The bare jid of the requester.
         node = recv['node']  # The project name.
         deltas = recv['delta']  # A list of delta tuple.
+        rid = recv['rid']  # The rsync ID.
 
         # Sets the current working directory.
         project_path = os.path.join(config.working_dir, node, sfrom)
@@ -164,13 +165,12 @@ class Transport(ClientXMPP):
 
         # Get the rsync task associated to the sid to set() the rsync_finished
         # Event.
-        cur_rsync_task = self.pending_rsyncs.get(sid)
+        cur_rsync_task = self.pending_rsyncs.get(rid)
         if cur_rsync_task:
             cur_rsync_task.rsync_finished.set()
-            del self.pending_rsyncs[sid]
         else:
+            self.logger.error('Rsync task %s not found.' % rid)
             # TODO: Handle this error.
-            pass
 
     def _pack(self, data):
         data = pickle.dumps(data)

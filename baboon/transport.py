@@ -1,13 +1,17 @@
 import os
+import sys
 import pickle
 import struct
+import uuid
 
 from sleekxmpp import ClientXMPP
 from sleekxmpp.xmlstream.handler import Callback
 from sleekxmpp.xmlstream.matcher import StanzaPath
+from sleekxmpp.xmlstream.tostring import tostring
 from sleekxmpp.exceptions import IqError
 from sleekxmpp.plugins.xep_0060.stanza.pubsub_event import EventItem
 
+from monitor import FileEvent
 from config import config
 from common.logger import logger
 from common import pyrsync
@@ -37,8 +41,9 @@ class Transport(ClientXMPP):
         self.register_plugin('xep_0065')  # Socks5 Bytestreams
 
         # Register events
-        self.add_event_handler('socks_recv', self.on_recv)
         self.add_event_handler('session_start', self.start)
+        self.add_event_handler('socks_recv', self.on_recv)
+        self.add_event_handler('stream_error', self.stream_err)
 
         self.register_handler(Callback('Pubsub event', StanzaPath(
                     'message/pubsub_event'), self._pubsub_event))
@@ -55,6 +60,9 @@ class Transport(ClientXMPP):
             self.process()
         else:
             self.logger.error("Unable to connect.")
+
+    def stream_err(self, iq):
+        self.logger.error(iq['text'])
 
     def start(self, event):
         """ Handler for the session_start sleekxmpp event.
@@ -75,6 +83,8 @@ class Transport(ClientXMPP):
         # good socket stored in self.streamer.proxy_threads dict.
         self.sid = streamhost_used['socks']['sid']
 
+        self.pending_rsyncs = {}
+
         self.logger.info('Connected')
 
     def close(self):
@@ -85,7 +95,7 @@ class Transport(ClientXMPP):
         self.disconnect()
         self.logger.debug('Closed the XMPP connection')
 
-    def rsync(self, files=None, mov_files=None, del_files=None):
+    def rsync(self, files=None):
         """ Starts a rsync transaction, rsync and stop the
         transaction.
 
@@ -94,26 +104,31 @@ class Transport(ClientXMPP):
 
         iq = self.Iq(sto=config.server, stype='set')
 
+        # Generate a new rsync ID.
         iq['rsync']['sid'] = self.sid
+        iq['rsync']['rid'] = str(uuid.uuid4())
         iq['rsync']['node'] = 'synapse'
 
-        if files:
-            iq['rsync']['files'] = files
-
-        if mov_files:
-            new_mov_files = []
-            for f in mov_files:
-                new_mov_files.append('#'.join(map(str, f)))
-
-            iq['rsync']['move_files'] = new_mov_files
-
-        if del_files:
-            iq['rsync']['delete_files'] = del_files
+        for f in files:
+            if f.event_type == FileEvent.MODIF:
+                iq['rsync'].add_file(f.src_path)
+            elif f.event_type == FileEvent.CREATE:
+                iq['rsync'].add_create_file(f.src_path)
+            elif f.event_type == FileEvent.DELETE:
+                iq['rsync'].add_delete_file(f.src_path)
 
         try:
-            iq.send()
-        except IqError, e:
+            self.logger.info('Sending a rsync stanza !')
+            to_xml = tostring(iq.xml)
+            if sys.getsizeof(to_xml) >= config.max_stanza_size:
+                self.logger.warning('The xml stanza is too big !')
+            else:
+                iq.send(block=False)
+                self.logger.info('Sent !')
+        except IqError as e:
             self.logger.error(e.iq)
+        except Exception as e:
+            self.logger.error(e)
 
     def on_recv(self, payload):
         """ Called when receiving data over the socks5 socket (xep
@@ -130,6 +145,9 @@ class Transport(ClientXMPP):
         # Unpacks the recv data.
         recv = payload['data']
         data = self._unpack(recv)
+
+        # Gets the RID.
+        ret['rid'] = data['rid']
 
         # Gets the list of hashes.
         all_hashes = data['hashes']

@@ -8,18 +8,10 @@ from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 
 from config import config
+from common.file import FileEvent
 from common.logger import logger
 from common.errors.baboon_exception import BaboonException
 
-# Stores the list of changed files in the pending set(). The Dancer
-# thread will be sync the file when it's necessary. Then this pending
-# set() will be cleared.
-pending = set()
-del_pending = set()
-mov_pending = set()
-
-# A thread lock object in order to access to the pending object thread
-# safety.
 lock = Lock()
 
 
@@ -56,23 +48,27 @@ class EventHandler(FileSystemEventHandler):
         '''
         return
 
-    def on_moved(self, event):
-        rel_path = self._verify_exclude(event, event.dest_path)
-        if rel_path:
-            # Acquire the thread lock and add the rel_path of the
-            # changed file in the pending set().
-            with lock:
-                # Add the src path to the del_pending set() to remove
-                # the file remotely.
-                src_rel_path = os.path.relpath(event.src_path, config.path)
-                del_pending.add(src_rel_path)
-
-                # Add the dest path to the pending set() to add the
-                # file remotely.
-                pending.add(rel_path)
-
     def on_created(self, event):
-        self.on_modified(event)
+        self.logger.info('CREATED event %s' % event.src_path)
+
+        with lock:
+            rel_path = self._verify_exclude(event, event.src_path)
+            if rel_path:
+                FileEvent(FileEvent.CREATE, rel_path).register()
+
+    def on_moved(self, event):
+        self.logger.info('MOVED event from %s to %s' % (event.src_path,
+            event.dest_path))
+
+        with lock:
+            src_rel_path = self._verify_exclude(event, event.src_path)
+            dest_rel_path = self._verify_exclude(event, event.dest_path)
+
+            if src_rel_path:
+                FileEvent(FileEvent.DELETE, src_rel_path).register()
+
+            if dest_rel_path:
+                FileEvent(FileEvent.MODIF, dest_rel_path).register()
 
     def on_modified(self, event):
         """ Triggered when a file is modified in the watched project.
@@ -80,44 +76,33 @@ class EventHandler(FileSystemEventHandler):
         @raise BaboonException: if cannot retrieve the relative project path
         """
 
-        rel_path = self._verify_exclude(event, event.src_path)
-        if rel_path:
-            # Here, we are sure that the rel_path is a file. The check
-            # is done if the _verify_exclude method.
+        self.logger.info('MODIFIED event %s' % event.src_path)
 
-            # If the file was a file and is now a directory, we need
-            # to delete absolutely the file. Otherwise, the server
-            # will not create the directory (OSError).
-            if os.path.isdir(event.src_path):
-                self.logger.info('The file %s is now a directory.' % rel_path)
-                # Acquire the thread lock and add the file to the
-                # del_pending set().
-                with lock:
-                    del_pending.add(rel_path)
-            else:
-                # Acquire the thread lock and add the rel_path of the
-                # changed file in the pending set().
-                with lock:
-                    pending.add(rel_path)
+        with lock:
+            rel_path = self._verify_exclude(event, event.src_path)
+            if rel_path:
+                # Here, we are sure that the rel_path is a file. The check is
+                # done if the _verify_exclude method.
+
+                # If the file was a file and is now a directory, we need to
+                # delete absolutely the file. Otherwise, the server will not
+                # create the directory (OSError).
+                if os.path.isdir(event.src_path):
+                    self.logger.info('The file %s is now a directory.' %
+                        rel_path)
+
+                FileEvent(FileEvent.MODIF, rel_path).register()
 
     def on_deleted(self, event):
         """ Trigered when a file is deleted in the watched project.
         """
 
-        # Check if the event path does not exist anymore. For example,
-        # when you do a 'git checkout .' in the watched directory, the
-        # on_deleted watchdog event is triggered but the file is not
-        # really deleted. In this case, redirect the event to the
-        # on_modified handler.
-        if not os.path.exists(event.src_path):
+        self.logger.info('DELETED event %s' % event.src_path)
+
+        with lock:
             rel_path = self._verify_exclude(event, event.src_path)
             if rel_path:
-                # Acquire the thread lock and add the rel_path of the
-                # changed file in the pending_del_files set().
-                with lock:
-                    del_pending.add(rel_path)
-        else:
-            self.on_modified(event)
+                FileEvent(FileEvent.DELETE, rel_path).register()
 
     def _verify_exclude(self, event, fullpath):
         """ Verifies if the full path correspond to an exclude
@@ -142,6 +127,7 @@ class EventHandler(FileSystemEventHandler):
         return rel_path
 
 
+@logger
 class Dancer(Thread):
     """ A thread that wakes up every <sleeptime> secs and starts a
     rsync + merge verification if pending set() is not empty.
@@ -160,32 +146,19 @@ class Dancer(Thread):
     def run(self):
         """ Runs the thread.
         """
-        global pending, mov_pending, del_pending
 
         while not self.stop:
             # Sleeps during sleeptime secs.
             sleep(self.sleeptime)
 
-            # Acquires the lock in order to manipulate the pending
-            # changed file in the pending set().
             with lock:
-                # If there's at least 1 element in the pending or
-                # del_pending  or mov_pending set()...
-                if pending or del_pending or mov_pending:
+                if FileEvent.pending:
                     try:
-                        # Avoid to sync a file that needs to be delete
-                        # after.
-                        pending -= del_pending
-
                         # Starts the rsync.
-                        self.transport.rsync(files=pending,
-                                             mov_files=mov_pending,
-                                             del_files=del_pending)
+                        self.transport.rsync(files=FileEvent.pending)
 
                         # Clears the pending set().
-                        pending.clear()
-                        mov_pending.clear()
-                        del_pending.clear()
+                        FileEvent.pending[:] = []
 
                         # Asks to baboon to verify if there's a conflict
                         # or not.

@@ -1,23 +1,38 @@
 from sleekxmpp.xmlstream import register_stanza_plugin, ElementBase, ET
 from sleekxmpp import Iq
 
+from common.file import FileEvent
 
 class Rsync(ElementBase):
     name = 'rsync'
     namespace = 'baboon'
     plugin_attrib = 'rsync'
-    interfaces = set(('sid', 'node', 'files', 'move_files', 'delete_files'))
-    sub_interfaces = set(('files', 'move_files', 'delete_files'))
+    interfaces = set(('sid', 'rid', 'node', 'files', 'create_files',
+        'move_files', 'delete_files'))
+    sub_interfaces = set(('files', 'create_files', 'move_files',
+        'delete_files'))
 
     def get_files(self):
-        results = []
-        files = self.xml.findall('{%s}file' % self.namespace)
 
-        if files is not None:
-            for f in files:
-                results.append(f.text)
+        files = []
 
-        return results
+        for element in self.xml.getchildren():
+            tag_name = element.tag.split('}', 1)[-1]
+            file_event_type = None
+
+            if tag_name == 'file':
+                file_event_type = FileEvent.MODIF
+            elif tag_name == 'create_file':
+                file_event_type = FileEvent.CREATE
+            elif tag_name == 'move_file':
+                file_event_type = FileEvent.MOVE
+            elif tag_name == 'delete_file':
+                file_event_type = FileEvent.DELETE
+
+            file_event = FileEvent(file_event_type, element.text)
+            files.append(file_event)
+
+        return files
 
     def add_file(self, f):
         file_xml = ET.Element('{%s}file' % self.namespace)
@@ -28,15 +43,14 @@ class Rsync(ElementBase):
         for f in files:
             self.add_file(f)
 
-    def get_delete_files(self):
-        results = []
-        del_files = self.xml.findall('{%s}delete_file' % self.namespace)
+    def add_create_file(self, f):
+        file_xml = ET.Element('{%s}create_file' % self.namespace)
+        file_xml.text = f
+        self.xml.append(file_xml)
 
-        if del_files is not None:
-            for f in del_files:
-                results.append(f.text)
-
-        return results
+    def set_create_files(self, files):
+        for f in files:
+            self.add_create_file(f)
 
     def add_delete_file(self, f):
         file_xml = ET.Element('{%s}delete_file' % self.namespace)
@@ -46,16 +60,6 @@ class Rsync(ElementBase):
     def set_delete_files(self, files):
         for f in files:
             self.add_delete_file(f)
-
-    def get_move_files(self):
-        results = []
-        mov_files = self.xml.findall('{%s}move_file' % self.namespace)
-
-        if mov_files is not None:
-            for f in mov_files:
-                results.append(f.text)
-
-        return results
 
     def add_move_file(self, f):
         file_xml = ET.Element('{%s}move_file' % self.namespace)

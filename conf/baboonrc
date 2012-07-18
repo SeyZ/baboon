@@ -6,3 +6,4 @@ node=<your_project_name>
 jid=<your_full_jid>
 password=<your_password>
 scm=git
+max_stanza_size=65536
