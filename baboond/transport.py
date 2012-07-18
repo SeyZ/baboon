@@ -92,7 +92,7 @@ class Transport(ClientXMPP):
         node = iq['merge']['node']
 
         # Prepares the merge verification with this data.
-        executor.preparator.prepare_merge_verification(node, sfrom)
+        executor.tasks.put(task.MergeTask(node, sfrom))
 
         # Replies to the request.
         iq.reply().send()

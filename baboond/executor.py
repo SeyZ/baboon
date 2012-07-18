@@ -1,10 +1,7 @@
-import os
-
 from threading import Thread
 from Queue import PriorityQueue
 
-from task import EndTask, RsyncTask, MergeTask, AlertTask, CorruptedTask
-from config import config
+from task import EndTask, MergeTask, AlertTask, CorruptedTask
 from common.logger import logger
 from common.errors.baboon_exception import BaboonException
 
@@ -64,23 +61,6 @@ class Scheduler(Thread):
 class Preparator():
     """ The preparator builds the task and put it in the tasks queue.
     """
-
-    def prepare_merge_verification(self, node, jid):
-        """ Prepares a new merge verification task.
-        """
-        try:
-            # Creates the new merge task
-            new_task = MergeTask(node, jid)
-            tasks.put(new_task)
-
-            return True
-
-        except KeyError, e:
-            self.logger.error(e)
-            return False
-        except BaboonException, e:
-            self.logger.error(e)
-            return False
 
     def prepare_alert(self, project_name, username, merge_conflict,
                       conflict_files=[]):
