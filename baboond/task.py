@@ -4,6 +4,7 @@ import stat
 import subprocess
 import threading
 import shutil
+import tempfile
 
 import pyrsync
 import executor
@@ -388,15 +389,6 @@ class MergeTask(Task):
 
         self.logger.debug('Merge task %s started' % self.master_cwd)
 
-        gitdir = os.path.join(self.master_cwd, '.git')
-        import uuid
-        destdir = "/tmp/%s" % uuid.uuid4()
-        shutil.copytree(gitdir, destdir)
-
-        # Master user
-        self._exec_cmd('git add -A')
-        ret_code = self._exec_cmd('git commit -am "Baboon commit"')[0]
-
         merge_threads = []
 
         # All users
@@ -415,12 +407,6 @@ class MergeTask(Task):
         for thread in merge_threads:
             thread.join()
 
-        if not ret_code:
-            # Reset the master user repository.
-            self._exec_cmd('git reset HEAD~1')
-            shutil.rmtree(gitdir)
-            shutil.move(destdir, gitdir)
-
         self.logger.debug('Merge task %s finished' % self.master_cwd)
 
     def _user_side(self, user):
@@ -436,12 +422,6 @@ class MergeTask(Task):
         self._exec_cmd('git remote add %s %s' %
                        (self.username, self.master_cwd), user_cwd)
 
-        # Stage all the working directory.
-        self._exec_cmd('git add -A', user_cwd)
-
-        # Do a Baboon commit.
-        self._exec_cmd('git commit -am "Baboon commit"', user_cwd)
-
         # Fetch the master_cwd repository.
         self._exec_cmd('git fetch %s' % self.username, user_cwd)
 
@@ -451,12 +431,23 @@ class MergeTask(Task):
         # out_branch looks like something like :
         # refs/head/master\n. Parse it to only retrieve the branch
         # name.
-        cur_branch = os.path.basename(out_branch).replace('\n', '')
+        cur_branch = os.path.basename(out_branch).rstrip('\r\n')
 
-        # Merge the master branch in the current user repository. If
-        # the merge is well, ret equals 0.
-        ret = self._exec_cmd('git merge %s/%s --no-commit --no-ff' % \
-                                 (self.username, cur_branch), user_cwd)[0]
+        # Get the merge-base hash commit between the master user and the
+        # current user.
+        mergebase_hash = self._exec_cmd( 'git merge-base -a HEAD %s/%s' %
+                (self.username, cur_branch), user_cwd)[1].rstrip('\r\n')
+
+        # Get the diff between the master_cwd and the mergebase_hash.
+        diff = self._exec_cmd('git diff %s' % mergebase_hash,
+                self.master_cwd)[1]
+        fd, diff_path = tempfile.mkstemp()
+
+        # Write the diff in a temp file.
+        os.fdopen(fd, "w").write(diff)
+
+        # Check if the diff can be applied in the master user.
+        ret = self._exec_cmd('git apply --check %s' % diff_path, user_cwd)[0]
 
         # Build the *args for the _alert method.
         alert_args = (self.project_name, self.username)
@@ -477,10 +468,6 @@ class MergeTask(Task):
                 'merge_conflict': True,
                 'conflict_files': conflict_files
                 }
-
-        # Go to the normal situation.
-        self._exec_cmd('git merge --abort', user_cwd)
-        self._exec_cmd('git reset HEAD~1', user_cwd)
 
         # Call the _alert method with alert_args tuple as *args
         # argument and alert_kwargs dict as **kwargs.
