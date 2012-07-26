@@ -510,9 +510,6 @@ class MergeTask(Task):
         returncode.
         """
 
-        # Shlex the cmd.
-        #cmd = shlex.split(cmd)
-
         # If cwd is None, set cwd to self.master_cwd.
         if cwd is None:
             cwd = self.master_cwd
