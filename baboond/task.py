@@ -441,13 +441,30 @@ class MergeTask(Task):
         # Get the diff between the master_cwd and the mergebase_hash.
         diff = self._exec_cmd('git diff %s' % mergebase_hash,
                 self.master_cwd)[1]
-        fd, diff_path = tempfile.mkstemp()
 
-        # Write the diff in a temp file.
-        os.fdopen(fd, "w").write(diff)
+        # Set the return code of the merge task to 0 by default. It means
+        # there's no conflict.
+        ret = 0
 
-        # Check if the diff can be applied in the master user.
-        ret = self._exec_cmd('git apply --check %s' % diff_path, user_cwd)[0]
+        # If the diff is not empty, check if it can be applied in the user_cwd.
+        # Otherwise, it means that there's no change, so there's no possible
+        # conflict.
+        if diff:
+            # Create a temp file.
+            tmpfile = tempfile.NamedTemporaryFile()
+            try:
+                # Write the diff into a temp file.
+                tmpfile.write(diff)
+                # After writing, rewind the file handle using seek() in order
+                # to read the data back from it.
+                tmpfile.seek(0)
+
+                # Check if the diff can be applied in the master user.
+                ret = self._exec_cmd('git apply --check %s' % tmpfile.name,
+                        user_cwd)[0]
+            finally:
+                # Automatically delete the temp file.
+                tmpfile.close()
 
         # Build the *args for the _alert method.
         alert_args = (self.project_name, self.username)
@@ -457,16 +474,11 @@ class MergeTask(Task):
         alert_kwargs = {'merge_conflict': False, }
 
         if ret:
-            # There's a merge conflict. Get the list of conflict
-            # files.
-            conflict_files = self._exec_cmd('git ls-files -u | cut -f 2 | '
-                                            'sort -u', user_cwd)[1].split()
-
             # Build the **kwargs for the _alert method if there's a
             # merge conflict.x
             alert_kwargs = {
                 'merge_conflict': True,
-                'conflict_files': conflict_files
+                'conflict_files': []
                 }
 
         # Call the _alert method with alert_args tuple as *args
