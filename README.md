@@ -11,9 +11,9 @@ Each contributor has Baboon installed on his computer. Baboon must be
 configured to watch a specific project path (see the documentation, it's done
 in 10 seconds !).
 
-Each Baboon is connected to a *XMPP* server. On each file save in your project
-directory, your baboon wakes up and sync the changes through a Socks5 proxy
-(XEP-0065) between you and a Baboon server.
+Each Baboon is connected to a *XMPP* server. On each file save into your
+project directory, your baboon wakes up and sync the changes through a Socks5
+proxy (XEP-0065) between you and a Baboon server.
 
 When Baboon server detects the end of the sync, it runs a background merge
 task. The result is sent (XEP-0060) to all contributors of your project to warn
@@ -21,6 +21,9 @@ if there's a merge conflict or not.
 
 If there's a merge conflict, don't panic. The conflict is there from a very
 short time (from your last file save action) !
+
+### Quickstart
+*in progress*
 
 ### Contribution
 **Any** contributions are welcome. Fork the project !
