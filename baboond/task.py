@@ -6,10 +6,10 @@ import threading
 import shutil
 import tempfile
 
-import pyrsync
 import executor
 
 from transport import transport
+from common import pyrsync
 from common.file import FileEvent
 from common.logger import logger
 from common.errors.baboon_exception import BaboonException
