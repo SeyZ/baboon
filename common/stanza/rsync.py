@@ -29,7 +29,7 @@ class Rsync(ElementBase):
             elif tag_name == 'delete_file':
                 file_event_type = FileEvent.DELETE
 
-            file_event = FileEvent(file_event_type, element.text)
+            file_event = FileEvent(self['node'], file_event_type, element.text)
             files.append(file_event)
 
         return files

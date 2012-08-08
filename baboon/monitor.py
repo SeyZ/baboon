@@ -8,7 +8,7 @@ from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 
 from config import config
-from common.file import FileEvent
+from common.file import FileEvent, pending
 from common.logger import logger
 from common.errors.baboon_exception import BaboonException
 
@@ -25,12 +25,13 @@ class EventHandler(FileSystemEventHandler):
 
     __metaclass__ = ABCMeta
 
-    def __init__(self, transport):
+    def __init__(self, project_path, transport):
         """ Take the transport to rsync the changes on baboon server.
         """
 
         super(EventHandler, self).__init__()
         self.transport = transport
+        self.project_path = project_path
 
     @abstractproperty
     def scm_name(self):
@@ -52,23 +53,25 @@ class EventHandler(FileSystemEventHandler):
         self.logger.info('CREATED event %s' % event.src_path)
 
         with lock:
+            project = self._get_project(event.src_path)
             rel_path = self._verify_exclude(event, event.src_path)
             if rel_path:
-                FileEvent(FileEvent.CREATE, rel_path).register()
+                FileEvent(project, FileEvent.CREATE, rel_path).register()
 
     def on_moved(self, event):
         self.logger.info('MOVED event from %s to %s' % (event.src_path,
             event.dest_path))
 
         with lock:
+            project = self._get_project(event.src_path)
             src_rel_path = self._verify_exclude(event, event.src_path)
             dest_rel_path = self._verify_exclude(event, event.dest_path)
 
             if src_rel_path:
-                FileEvent(FileEvent.DELETE, src_rel_path).register()
+                FileEvent(project, FileEvent.DELETE, src_rel_path).register()
 
             if dest_rel_path:
-                FileEvent(FileEvent.MODIF, dest_rel_path).register()
+                FileEvent(project, FileEvent.MODIF, dest_rel_path).register()
 
     def on_modified(self, event):
         """ Triggered when a file is modified in the watched project.
@@ -79,6 +82,7 @@ class EventHandler(FileSystemEventHandler):
         self.logger.info('MODIFIED event %s' % event.src_path)
 
         with lock:
+            project = self._get_project(event.src_path)
             rel_path = self._verify_exclude(event, event.src_path)
             if rel_path:
                 # Here, we are sure that the rel_path is a file. The check is
@@ -91,7 +95,7 @@ class EventHandler(FileSystemEventHandler):
                     self.logger.info('The file %s is now a directory.' %
                         rel_path)
 
-                FileEvent(FileEvent.MODIF, rel_path).register()
+                FileEvent(project, FileEvent.MODIF, rel_path).register()
 
     def on_deleted(self, event):
         """ Trigered when a file is deleted in the watched project.
@@ -100,9 +104,10 @@ class EventHandler(FileSystemEventHandler):
         self.logger.info('DELETED event %s' % event.src_path)
 
         with lock:
+            project = self._get_project(event.src_path)
             rel_path = self._verify_exclude(event, event.src_path)
             if rel_path:
-                FileEvent(FileEvent.DELETE, rel_path).register()
+                FileEvent(project, FileEvent.DELETE, rel_path).register()
 
     def _verify_exclude(self, event, fullpath):
         """ Verifies if the full path correspond to an exclude
@@ -119,13 +124,21 @@ class EventHandler(FileSystemEventHandler):
         if event.is_directory:
             return None
 
-        rel_path = os.path.relpath(fullpath, config.path)
+        rel_path = os.path.relpath(fullpath, self.project_path)
         if self.exclude(rel_path):
             self.logger.debug("Ignore the file: %s" % rel_path)
             return
 
         return rel_path
 
+    def _get_project(self, fullpath):
+        """ Get the name of the project of the fullpath file.
+        """
+
+        for project, project_conf in config['projects'].iteritems():
+            path = os.path.expanduser(project_conf['path'])
+            if path == self.project_path:
+                return project
 
 @logger
 class Dancer(Thread):
@@ -152,20 +165,21 @@ class Dancer(Thread):
             sleep(self.sleeptime)
 
             with lock:
-                if FileEvent.pending:
+                for project, files in pending.iteritems():
                     try:
                         # Starts the rsync.
-                        self.transport.rsync(files=FileEvent.pending)
-
-                        # Clears the pending set().
-                        FileEvent.pending[:] = []
+                        self.transport.rsync(project, files=files)
 
                         # Asks to baboon to verify if there's a conflict
                         # or not.
-                        self.transport.merge_verification()
+                        self.transport.merge_verification(project)
 
                     except BaboonException, e:
                         self.logger.error(e)
+
+
+                # Clears the pending dict.
+                pending.clear()
 
     def close(self):
         """ Sets the stop flag to True.
@@ -181,30 +195,24 @@ class Monitor(object):
         watched project.
         """
 
+        from plugins.git.monitor_git import EventHandlerGit
+
         self.transport = transport
-
-        # Initialize the event handler class to use depending on the SCM to use
-        handler = None
-        scm_classes = EventHandler.__subclasses__()
-
-        for cls in scm_classes:
-            tmp_inst = cls(self.transport)
-            if tmp_inst.scm_name == config.scm:
-                self.logger.debug("Uses the %s class for the monitoring of FS "
-                                  "changes" % tmp_inst.scm_name)
-                handler = tmp_inst
-                break
-        else:
-            # Raises this BaboonException if no plugin has found
-            # according to the scm entry in the config file
-            raise BaboonException("Cannot get a valid FS event handler"
-                                  " class for your SCM written in your"
-                                  " baboonrc file")
-
-        self.monitor = Observer()
         self.dancer = Dancer(self.transport, sleeptime=1)
+
+        # All monitor will be stored in this dict. The key is the project name,
+        # the value is the monitor instance.
+        self.monitors = {}
+
         try:
-            self.monitor.schedule(handler, config.path, recursive=True)
+            for project, project_attrs in config['projects'].iteritems():
+                project_path = os.path.expanduser(project_attrs['path'])
+                handler = EventHandlerGit(project_path, transport)
+
+                monitor = Observer()
+                monitor.schedule(handler, project_path, recursive=True)
+
+                self.monitors[project_path] = monitor
         except OSError, err:
             self.logger.error(err)
             raise BaboonException(err)
@@ -213,17 +221,21 @@ class Monitor(object):
         """ Starts to watch the watched project
         """
 
-        self.monitor.start()
+        # Start all monitor instance.
+        for project, monitor in self.monitors.iteritems():
+            monitor.start()
+            self.logger.debug("Started to monitor the %s directory" % project)
+
         self.dancer.start()
-        self.logger.debug("Started to monitor the %s directory"
-                         % config.path)
 
     def close(self):
         """ Stops the monitoring on the watched project
         """
 
-        self.monitor.stop()
-        self.monitor.join()
+        # Stop all monitor instance.
+        for project, monitor in self.monitors.iteritems():
+            monitor.stop()
+            monitor.join()
 
         self.dancer.close()
         self.dancer.join()

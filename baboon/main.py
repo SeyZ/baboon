@@ -3,7 +3,8 @@ import signal
 
 from plugins import *
 from config import config
-from transport import Transport
+from commands import commands
+from transport import WatchTransport
 from monitor import Monitor
 from common.logger import logger
 from common.errors.baboon_exception import BaboonException
@@ -15,11 +16,23 @@ class Main(object):
     def __init__(self):
         self.monitor = None
 
+        self.which = config['parser']['which']
+
+        # The start command is a special command. Call it from this class
+        if self.which == 'start':
+            self.start()
+            return
+
+        # Call the correct method according to the current arg subparser.
+        if hasattr(commands, self.which):
+            getattr(commands, self.which)()
+
+    def start(self):
         try:
             # exists baboon when receiving a sigint signal
             signal.signal(signal.SIGINT, self.sigint_handler)
 
-            self.transport = Transport(config)
+            self.transport = WatchTransport()
             self.transport.open()
 
             self.monitor = Monitor(self.transport)

@@ -19,8 +19,8 @@ class Config(object):
         self.logconf = logconf
         self.config_name = config_name
 
-        # configures the default path
-        self.path = os.path.abspath(".")
+        # The dict of all attributes
+        self.attrs = {}
 
         # init the configuration
         self.init_config()
@@ -67,19 +67,15 @@ class Config(object):
         return os.environ.get("BABOONRC")
 
     def _init_config_arg(self):
-        try:
-            args = self.arg_parser.args
+        """ Parse the command line arguments and inject values into the
+        attrs['parser'] dict.
+        """
 
-            # Iterates on all args items and store them into self.
-            for arg in args.__dict__.iteritems():
-                setattr(self, arg[0], arg[1])
-
-        except AttributeError:
-            sys.stderr.write("Failed to parse arguments\n")
-            exit(1)
+        args = self.arg_parser.args
+        self.attrs['parser'] = args.__dict__
 
     def _init_logging(self):
-        """ configures the logger level setted in the logging args
+        """ Configures the logger level setted in the logging args
         """
         try:
             log_dir = os.path.join(os.getcwd(), 'logs')
@@ -90,7 +86,8 @@ class Config(object):
             exit(1)
 
         try:
-            self.logconf['loggers']['baboon']['level'] = self.loglevel
+            self.logconf['loggers']['baboon']['level'] = \
+                    self.attrs['parser']['loglevel']
             dictConfig(self.logconf)
         except:
             sys.stderr.write("Failed to parse the logging config file\n")
@@ -101,7 +98,4 @@ class Config(object):
         parser = RawConfigParser()
         parser.read(filename)
 
-        for section in parser.sections():
-            for item in parser.items(section):
-                if not hasattr(self, item[0]):
-                    setattr(self, item[0], item[1])
+        self.attrs.update(parser._sections)

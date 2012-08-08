@@ -9,6 +9,7 @@ import tempfile
 import executor
 
 from transport import transport
+from common import pyrsync
 from common.file import FileEvent
 from common.logger import logger
 from common.errors.baboon_exception import BaboonException
@@ -98,13 +99,14 @@ class RsyncTask(Task):
     relative repository server-side.
     """
 
-    def __init__(self, sid, rid, sfrom, project_path, files):
+    def __init__(self, sid, rid, sfrom, project, project_path, files):
 
         super(RsyncTask, self).__init__(3)
 
         self.sid = sid
         self.rid = rid
         self.sfrom = sfrom
+        self.project = project
         self.project_path = project_path
         self.files = files
 
@@ -212,6 +214,7 @@ class RsyncTask(Task):
         payload = {
             'sid': self.sid,
             'rid': self.rid,
+            'node': self.project,
             'hashes': [h],
         }
 
@@ -325,7 +328,7 @@ class CorruptedTask(Task):
         """
 
         # Gets the project directory
-        project_dir = os.path.join(config.working_dir,
+        project_dir = os.path.join(config['server']['working_dir'],
                                    self.project_name,
                                    self.username)
 
@@ -361,7 +364,8 @@ class MergeTask(Task):
         self.username = username
 
         # Set the project cwd.
-        self.project_cwd = os.path.join(config.working_dir, self.project_name)
+        self.project_cwd = os.path.join(config['server']['working_dir'],
+                self.project_name)
 
         # Raise an error if the project cwd does not exist.
         if not os.path.exists(self.project_cwd):
