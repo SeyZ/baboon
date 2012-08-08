@@ -16,14 +16,16 @@ class Main(object):
     def __init__(self):
         self.monitor = None
 
+        self.which = config['parser']['which']
+
         # The start command is a special command. Call it from this class
-        if config['which'] == 'start':
+        if self.which == 'start':
             self.start()
             return
 
         # Call the correct method according to the current arg subparser.
-        if hasattr(commands, config['which']):
-            getattr(commands, config['which'])()
+        if hasattr(commands, self.which):
+            getattr(commands, self.which)()
 
     def start(self):
         try:

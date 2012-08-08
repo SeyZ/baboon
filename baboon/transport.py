@@ -151,7 +151,7 @@ class WatchTransport(CommonTransport):
         super(WatchTransport, self).close()
 
 
-    def rsync(self, files=None):
+    def rsync(self, project, files=None):
         """ Starts a rsync transaction, rsync and stop the
         transaction.
 
@@ -163,7 +163,7 @@ class WatchTransport(CommonTransport):
         # Generate a new rsync ID.
         iq['rsync']['sid'] = self.sid
         iq['rsync']['rid'] = str(uuid.uuid4())
-        iq['rsync']['node'] = config.node
+        iq['rsync']['node'] = project
 
         for f in files:
             if f.event_type == FileEvent.MODIF:
@@ -176,7 +176,7 @@ class WatchTransport(CommonTransport):
         try:
             self.logger.info('Sending a rsync stanza !')
             to_xml = tostring(iq.xml)
-            if sys.getsizeof(to_xml) >= config.max_stanza_size:
+            if sys.getsizeof(to_xml) >= config['server']['max_stanza_size']:
                 self.logger.warning('The xml stanza is too big !')
             else:
                 iq.send(block=False)
@@ -195,12 +195,14 @@ class WatchTransport(CommonTransport):
 
         # Sets the future socket response dict.
         ret = {'from': self.boundjid.bare,
-               'node': config.node,
                }
 
         # Unpacks the recv data.
         recv = payload['data']
         data = self._unpack(recv)
+
+        # Gets the current project.
+        ret['node'] = data['node']
 
         # Gets the RID.
         ret['rid'] = data['rid']
@@ -215,7 +217,11 @@ class WatchTransport(CommonTransport):
             relpath = elem[0]
             hashes = elem[1]
 
-            fullpath = os.path.join(config.path, relpath)
+            # TODO: Handle the possible AttributeError.
+            project_path = config['projects'][data['node']]['path']
+            project_path = os.path.expanduser(project_path)
+
+            fullpath = os.path.join(project_path, relpath)
             if os.path.exists(fullpath) and os.path.isfile(fullpath):
                 # Computes the local delta of the current file.
                 patchedfile = open(fullpath, 'rb')
@@ -242,12 +248,12 @@ class WatchTransport(CommonTransport):
         data = pickle.loads(data)
         return data
 
-    def merge_verification(self):
+    def merge_verification(self, project):
         """ Sends an IQ to verify if there's a conflict or not.
         """
 
         iq = self.Iq(sto=self.server_addr, stype='set')
-        iq['merge']['node'] = config.node
+        iq['merge']['node'] = project
 
         # TODO: catch the possible exception
         iq.send()

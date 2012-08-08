@@ -13,33 +13,34 @@ def register():
     """
 
     transport = None
+    username = config['parser'].get('username')
+    passwd = None
+
     try:
         # Ask the user from stdin if username is None or empty.
-        if not config.get('username'):
-            config['username'] = cinput('Username: ', validations=[('^\w+$',
-                'Username can only contains alphanumeric and underscore '
-                'characters')])
+        if not username:
+            username = cinput('Username: ', validations=[('^\w+$', 'Username '
+            'can only contains alphanumeric and underscore characters')])
 
         # Transform the username to a baboon-project JID.
-        config['username'] += '@baboon-project.org'
+        username += '@baboon-project.org'
 
         # Get the password from stdin.
-        config['user']['passwd'] = confirm_cinput('Password: ',
-                validations=[('^\w{6,}$', 'The password must be at least 6 '
-                'characters long.')], secret=True, possible_err='The password '
-                'must match !')
+        passwd = confirm_cinput('Password: ', validations=[('^\w{6,}$', 'The '
+               'password must be at least 6 characters long.')], secret=True,
+                possible_err='The password must match !')
 
         print "\nRegistration in progress..."
 
-        # RegisterTransport uses the config.jid and config.passwd to register
-        # the new user.
-
-        config['user']['jid'] = config['username']
+        # RegisterTransport uses the config attributes to register.
+        config['user']['jid'] = username
+        config['user']['passwd'] = passwd
 
         # Registration...
         transport = RegisterTransport(callback=_on_action_finished)
         transport.open(block=True)
 
+        # Persist register information in the user configuration file.
         save_user_config()
 
     except CommandException:
@@ -53,9 +54,12 @@ def register():
 
 
 def projects():
+
+    project = config['parser']['project']
     subscriptions = []
+
     with AdminTransport(logger_enabled=False) as transport:
-        subscriptions = transport.get_project_users(config['project']) or []
+        subscriptions = transport.get_project_users(project) or []
 
     for subscription in subscriptions:
         print "%s" % subscription['jid']
@@ -65,9 +69,11 @@ def create():
     """ Create a new project with the project argument name.
     """
 
+    project = config['parser']['project']
+
     print "Creation in progress..."
     with AdminTransport(logger_enabled=False) as transport:
-        ret_status, msg = transport.create_project(config['project'])
+        ret_status, msg = transport.create_project(project)
         _on_action_finished(ret_status, msg)
 
         # TODO: write the new project into the config file.
@@ -77,9 +83,11 @@ def delete():
     """ Delete the project with the project argument name.
     """
 
+    project = config['parser']['project']
+
     print "Deletion in progress..."
     with AdminTransport(logger_enabled=False) as transport:
-        ret_status, msg = transport.delete_project(config['project'])
+        ret_status, msg = transport.delete_project(project)
         _on_action_finished(ret_status, msg)
 
         # TODO: delete the project into the config file.
@@ -89,9 +97,11 @@ def join():
     """ Join the project with the project argument name.
     """
 
+    project = config['parser']['project']
+
     print "Join in progress..."
     with AdminTransport(logger_enabled=False) as transport:
-        ret_status, msg = transport.join_project(config['project'])
+        ret_status, msg = transport.join_project(project)
         return _on_action_finished(ret_status, msg)
 
         # TODO: write the joined project into the config file.
@@ -100,9 +110,11 @@ def unjoin():
     """ Unjoin the project with the project argument name.
     """
 
+    project = config['parser']['project']
+
     print "Unjoin in progress..."
     with AdminTransport(logger_enabled=False) as transport:
-        ret_status, msg = transport.unjoin_project(config['project'])
+        ret_status, msg = transport.unjoin_project(project)
         return _on_action_finished(ret_status, msg)
 
         # TODO: write the joined project into the config file.
@@ -111,10 +123,12 @@ def accept():
     """ Accept the username to the project.
     """
 
+    project = config['parser']['project']
+    username = config['parser']['username']
+
     print "Acceptation in progress..."
     with AdminTransport(logger_enabled=False) as transport:
-        ret_status, msg = transport.accept_pending(config['project'],
-                [config['username']])
+        ret_status, msg = transport.accept_pending(project, [username])
         return _on_action_finished(ret_status, msg)
 
 
@@ -122,10 +136,12 @@ def reject():
     """ Reject the username to the project.
     """
 
+    project = config['parser']['project']
+    username = config['parser']['username']
+
     print "Rejection in progress..."
     with AdminTransport(logger_enabled=False) as transport:
-        ret_status, msg = transport.reject(config['project'],
-                [config['username']])
+        ret_status, msg = transport.reject(project, [username])
         return _on_action_finished(ret_status, msg)
 
 

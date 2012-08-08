@@ -25,7 +25,8 @@ class Transport(ClientXMPP):
 
     def __init__(self):
 
-        ClientXMPP.__init__(self, config.jid, config.password)
+        ClientXMPP.__init__(self, config['user']['jid'], config['user'][
+            'passwd'])
 
         self.register_plugin('xep_0060')  # PubSub
         self.register_plugin('xep_0065')  # Socks5 Bytestreams
@@ -53,17 +54,20 @@ class Transport(ClientXMPP):
         sid = iq['rsync']['sid']  # Registers the SID.
         rid = iq['rsync']['rid']  # Register the RID.
         sfrom = '%s' % iq['from'].bare  # Registers the bare JID.
+
         files = iq['rsync']['files']  # Get the files list to sync.
         node = iq['rsync']['node']  # Get the current project name.
 
         # Get the project path.
-        project_path = os.path.join(config.working_dir, node, sfrom)
+        project_path = os.path.join(config['server']['working_dir'], node,
+                sfrom)
 
         # Prepare the **kwargs argument for the RsyncTask contructor.
         kwargs = {
             'sid': sid,
             'rid': rid,
             'sfrom': sfrom,
+            'project': node,
             'project_path': project_path,
             'files': files,
         }
@@ -134,7 +138,8 @@ class Transport(ClientXMPP):
         rid = recv['rid']  # The rsync ID.
 
         # Sets the current working directory.
-        project_path = os.path.join(config.working_dir, node, sfrom)
+        project_path = os.path.join(config['server']['working_dir'], node,
+                sfrom)
 
         for elem in deltas:
             # Unpacks the tuple.
@@ -189,9 +194,8 @@ class Transport(ClientXMPP):
         status_msg['status'] = msg
 
         try:
-            result = self.pubsub.publish(config.pubsub,
-                                         project_name,
-                                         payload=status_msg)
+            result = self.pubsub.publish(config['server']['pubsub'],
+                                         project_name, payload=status_msg)
             id = result['pubsub']['publish']['item']['id']
             self.logger.debug('Published at item id: %s' % id)
         except:

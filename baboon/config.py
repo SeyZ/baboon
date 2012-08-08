@@ -3,6 +3,8 @@ import argparse
 import logging
 import logging.config
 
+from ConfigParser import RawConfigParser
+
 from common.config import Config
 from logconf import LOGGING
 
@@ -75,8 +77,6 @@ class ArgumentParser(object):
         start_parser = subparsers.add_parser('start',
                                              help="start Baboon !")
         start_parser.set_defaults(which='start')
-        start_parser.add_argument('-p', '--path', dest='path',
-                default=os.getcwd(), help="specify the project directory")
         start_parser.add_argument('--config', dest='configpath',
                 help="override the default location of the config file")
         # logging args
@@ -88,4 +88,36 @@ class ArgumentParser(object):
 
         self.args = parser.parse_args()
 
-config = Config(ArgumentParser(), LOGGING).attrs
+
+class BaboonConfig(Config):
+
+    def __init__(self, arg_parser, logconf):
+        super(BaboonConfig, self).__init__(ArgumentParser(), LOGGING)
+
+    def _init_config_file(self):
+        """ Override the initialization of the configuration file. Here's we
+        parse the configuration file and we transform all sections in dict into
+        self.attrs except for the projects. The projects are put in the
+        'projects' key.
+
+        example:
+            self.attrs['user']['jid'] => chuck.norris@baboon-project.org
+            self.attrs['projects']['linux_kernel'] => {path: ~/workspace/linux}
+        """
+
+        known_section = ('user', 'server')
+        self.attrs['projects'] = {}
+
+        filename = self._get_config_path()
+        parser = RawConfigParser()
+        parser.read(filename)
+
+        for section in parser.sections():
+            if section in known_section:
+                self.attrs[section] = dict(parser.items(section))
+            else:
+                # The current section in the name of a project.
+                self.attrs['projects'][section] = dict(parser.items(section))
+
+
+config = BaboonConfig(ArgumentParser(), LOGGING).attrs
