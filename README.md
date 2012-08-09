@@ -1,4 +1,4 @@
-### What is Baboon ?
+## What is Baboon ?
 
 Do you waste your time in resolving merge conflicts with your favorite source
 code manager ? Do you want to get rid of "Merge Hells" ?
@@ -7,7 +7,7 @@ Baboon is **the** solution for you ! It's a lightweight daemon that detects
 merge conflicts before they actually happen. In fact, it detects them in
 **real time**
 
-### How does it work ?
+## How does it work ?
 As soon as Baboon is installed and configured (a matter of seconds, honest,
 a minute top) on your project's contributors computers, it starts its job.
 
@@ -32,9 +32,9 @@ A few keywords:
 * Socks5 proxy (XEP-0065)
 * Pubsub (XEP-0060)
 
-### Quickstart
+## Quickstart
 
-## It's your project
+### It's your project
 
 ```
 pip install baboon
@@ -43,7 +43,7 @@ baboon create <project_name>
 baboon start
 ```
 
-## You're a contributor
+### You're a contributor
 
 ```
 pip install baboon
@@ -52,7 +52,7 @@ baboon join <project_name>
 baboon start
 ```
 
-### Contribution
+## Contribution
 
 The source code is available on Github (no seriously ?) ! **Any** contributions
 are welcome. Fork the project !
