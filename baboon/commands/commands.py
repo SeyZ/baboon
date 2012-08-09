@@ -99,6 +99,7 @@ def create():
         config['projects'][project] = {}
         config['projects'][project]['path'] = path
         config['projects'][project]['scm'] = project_scm
+        config['projects'][project]['enable'] = 1
 
     save_user_config()
     return success
