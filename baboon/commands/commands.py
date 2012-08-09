@@ -72,11 +72,6 @@ def create():
     """
 
     project = config['parser']['project']
-    path = config['parser'].get('path')
-    if not path:
-        cerr("Please specify the project's path on your system with the "
-             "'--path' option.")
-        return
 
     print "Creation in progress..."
     with AdminTransport(logger_enabled=False) as transport:
@@ -85,20 +80,11 @@ def create():
         if not success:
             return success
 
-    # Check if path exists on the system
-    project_scm = ''
-    if os.path.isdir(path):
-        project_scm = _guess_scm(path)
-    else:
-        cwarn("The project's path does not exist on your system.")
-
     if config['projects'].get(project):
         cwarn("The project was already defined in your configuration file")
         config['projects'][project]['enable'] = 1
     else:
         config['projects'][project] = {}
-        config['projects'][project]['path'] = path
-        config['projects'][project]['scm'] = project_scm
 
     save_user_config()
     return success
