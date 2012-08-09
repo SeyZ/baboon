@@ -19,7 +19,7 @@ If a conflict is detected, every contributor receives an alert to warn them that
 eventually, a conflict will occur (Baboon even tells you on which file it will
 happen).
 
-Time to blame to culprit ! (Yeah, Baboon also tells you who originated the
+Time to blame the culprit ! (Yeah, Baboon also tells you who originated the
 conflict)
 
 He's lucky anyway. At this point, the merge conflict is super easy to solve,
@@ -29,20 +29,31 @@ A few keywords:
 * Python
 * Git
 * Rsync over XMPP
-* Socks5 proxy
-* XEP-0065
-* XEP-0060
+* Socks5 proxy (XEP-0065)
+* Pubsub (XEP-0060)
 
 ### Quickstart
+
+## It's your project
 
 ```
 pip install baboon
 baboon register <username>
 baboon create <project_name>
-baboon join <project_name> --path /path/to/project
+baboon start
+```
+
+## You're a contributor
+
+```
+pip install baboon
+baboon register <username>
+baboon join <project_name>
 baboon start
 ```
 
 ### Contribution
-**Any** contributions are welcome. Fork the project !
+
+The source code is available on Github (no seriously ?) ! **Any** contributions
+are welcome. Fork the project !
 
