@@ -1,7 +1,7 @@
 [server]
 pubsub=pubsub.baboon-project.org
 streamer=streamer.baboon-project.org
-server=admin@baboon-project.org/dogwood
+server=admin@baboon-project.org/baboond
 max_stanza_size = 65535
 
 #[user]
