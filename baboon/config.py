@@ -8,6 +8,9 @@ from common.config import Config
 from logconf import LOGGING
 
 
+SCMS = ('git',)
+
+
 class ArgumentParser(object):
     def __init__(self):
         parser = argparse.ArgumentParser(description='Baboon ! Ook !')
@@ -42,6 +45,8 @@ class ArgumentParser(object):
                                               "project.")
         create_parser.set_defaults(which='create')
         create_parser.add_argument('project', help="the project name.")
+        create_parser.add_argument('-p', '--path', action='store',
+                                   help="the project's path.")
 
         # Configure the delete parser.
         delete_parser = subparsers.add_parser('delete', help="delete a "
@@ -53,6 +58,8 @@ class ArgumentParser(object):
         join_parser = subparsers.add_parser('join', help="join a project.")
         join_parser.set_defaults(which='join')
         join_parser.add_argument('project', help="the project name.")
+        join_parser.add_argument('-p', '--path', action='store',
+                                   help="the project's path.")
 
         # Configure the unjoin parser.
         unjoin_parser = subparsers.add_parser('unjoin', help="unjoin a "
@@ -120,6 +127,16 @@ class BaboonConfig(Config):
             else:
                 # The current section in the name of a project.
                 self.attrs['projects'][section] = dict(parser.items(section))
+
+        # I highly doubt this portion of code :)
+        # Some hardcoded server values, if we've found an empty server section.
+        # Shouldn't happen.
+        if not self.attrs.get('server'):
+            self.attrs['server'] = {}
+            self.attrs['server']['max_stanza_size'] = 65535
+            self.attrs['server']['pubsub'] = 'pubsub.baboon-project.org'
+            self.attrs['server']['streamer'] = 'streamer.baboon-project.org'
+            self.attrs['server']['server'] = 'admin@baboon-project.org/baboond'
 
 
 config = BaboonConfig(ArgumentParser(), LOGGING).attrs
