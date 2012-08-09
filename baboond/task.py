@@ -126,20 +126,20 @@ class RsyncTask(Task):
         for f in self.files:
             if f.event_type == FileEvent.CREATE:
                 self.logger.info('[%s] - Need to create %s.' %
-                    (self.project_path, f.src_path))
+                                 (self.project_path, f.src_path))
                 self._create_file(f.src_path)
             elif f.event_type == FileEvent.MODIF:
                 self.logger.info('[%s] - Need to sync %s.' %
-                    (self.project_path, f.src_path))
+                                 (self.project_path, f.src_path))
                 new_hash = self._get_hash(f.src_path)
                 self._send_hash(new_hash)
             elif f.event_type == FileEvent.DELETE:
                 self.logger.info('[%s] - Need to delete %s.' %
-                        (self.project_path, f.src_path))
+                                 (self.project_path, f.src_path))
                 self._delete_file(f.src_path)
             elif f.event_type == FileEvent.MOVE:
                 self.logger.info('[%s] - Need to move %s to %s.' %
-                    (self.project_path, f.src_path, f.dest_path))
+                                 (self.project_path, f.src_path, f.dest_path))
                 self._move_file(f.src_path, f.dest_path)
 
         # TODO: Remove the rsync_task in the pending_rsyncs dict of the
@@ -182,8 +182,7 @@ class RsyncTask(Task):
 
                 elif os.path.isdir(f):
                     shutil.rmtree(f)
-                    self.logger.info('Directory recursively deleted: %s' \
-                                         % f)
+                    self.logger.info('Directory recursively deleted: %s' % f)
             except OSError:
                 # There's no problem if the file/dir does not
                 # exists.
@@ -365,7 +364,7 @@ class MergeTask(Task):
 
         # Set the project cwd.
         self.project_cwd = os.path.join(config['server']['working_dir'],
-                self.project_name)
+                                        self.project_name)
 
         # Raise an error if the project cwd does not exist.
         if not os.path.exists(self.project_cwd):
@@ -439,12 +438,13 @@ class MergeTask(Task):
 
         # Get the merge-base hash commit between the master user and the
         # current user.
-        mergebase_hash = self._exec_cmd( 'git merge-base -a HEAD %s/%s' %
-                (self.username, cur_branch), user_cwd)[1].rstrip('\r\n')
+        mergebase_hash = self._exec_cmd('git merge-base -a HEAD %s/%s' %
+                                        (self.username, cur_branch),
+                                        user_cwd)[1].rstrip('\r\n')
 
         # Get the diff between the master_cwd and the mergebase_hash.
         diff = self._exec_cmd('git diff %s' % mergebase_hash,
-                self.master_cwd)[1]
+                              self.master_cwd)[1]
 
         # Set the return code of the merge task to 0 by default. It means
         # there's no conflict.
@@ -465,7 +465,7 @@ class MergeTask(Task):
 
                 # Check if the diff can be applied in the master user.
                 ret = self._exec_cmd('git apply --check %s' % tmpfile.name,
-                        user_cwd)[0]
+                                     user_cwd)[0]
             finally:
                 # Automatically delete the temp file.
                 tmpfile.close()
@@ -483,7 +483,7 @@ class MergeTask(Task):
             alert_kwargs = {
                 'merge_conflict': True,
                 'conflict_files': []
-                }
+            }
 
         # Call the _alert method with alert_args tuple as *args
         # argument and alert_kwargs dict as **kwargs.
@@ -496,7 +496,7 @@ class MergeTask(Task):
         """
 
         executor.tasks.put(AlertTask(project_name, username, merge_conflict,
-            conflict_files=conflict_files))
+                                     conflict_files=conflict_files))
 
     def _get_user_dirs(self):
         """ A generator that returns the next user directory in the

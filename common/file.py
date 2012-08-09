@@ -8,7 +8,6 @@ class FileEvent(object):
     library, the rest of the code will not need to change.
     """
 
-
     CREATE = 0
     MODIF = 1
     MOVE = 2

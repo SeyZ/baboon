@@ -60,7 +60,7 @@ class Transport(ClientXMPP):
 
         # Get the project path.
         project_path = os.path.join(config['server']['working_dir'], node,
-                sfrom)
+                                    sfrom)
 
         # Prepare the **kwargs argument for the RsyncTask contructor.
         kwargs = {
@@ -139,7 +139,7 @@ class Transport(ClientXMPP):
 
         # Sets the current working directory.
         project_path = os.path.join(config['server']['working_dir'], node,
-                sfrom)
+                                    sfrom)
 
         for elem in deltas:
             # Unpacks the tuple.

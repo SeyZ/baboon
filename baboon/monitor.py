@@ -60,7 +60,7 @@ class EventHandler(FileSystemEventHandler):
 
     def on_moved(self, event):
         self.logger.info('MOVED event from %s to %s' % (event.src_path,
-            event.dest_path))
+                                                        event.dest_path))
 
         with lock:
             project = self._get_project(event.src_path)
@@ -93,7 +93,7 @@ class EventHandler(FileSystemEventHandler):
                 # create the directory (OSError).
                 if os.path.isdir(event.src_path):
                     self.logger.info('The file %s is now a directory.' %
-                        rel_path)
+                                     rel_path)
 
                 FileEvent(project, FileEvent.MODIF, rel_path).register()
 
@@ -110,10 +110,9 @@ class EventHandler(FileSystemEventHandler):
                 FileEvent(project, FileEvent.DELETE, rel_path).register()
 
     def _verify_exclude(self, event, fullpath):
-        """ Verifies if the full path correspond to an exclude
-        file. Returns the relative path of the file if the file is not
-        excluded. Returns None if the file need to be ignored.
-        """
+        """ Verifies if the full path correspond to an exclude file. Returns
+        the relative path of the file if the file is not excluded. Returns None
+        if the file need to be ignored.  """
 
         # Use the event is_directory attribute instead of
         # os.path.isdir. Suppose a file 'foo' is deleted and a
@@ -139,6 +138,7 @@ class EventHandler(FileSystemEventHandler):
             path = os.path.expanduser(project_conf['path'])
             if path == self.project_path:
                 return project
+
 
 @logger
 class Dancer(Thread):
@@ -176,7 +176,6 @@ class Dancer(Thread):
 
                     except BaboonException, e:
                         self.logger.error(e)
-
 
                 # Clears the pending dict.
                 pending.clear()

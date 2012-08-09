@@ -86,8 +86,8 @@ class Config(object):
             exit(1)
 
         try:
-            self.logconf['loggers']['baboon']['level'] = \
-                    self.attrs['parser']['loglevel']
+            self.logconf['loggers']['baboon']['level'] = self.attrs['parser'][
+                'loglevel']
             dictConfig(self.logconf)
         except:
             sys.stderr.write("Failed to parse the logging config file\n")

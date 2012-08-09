@@ -10,11 +10,13 @@ try:
 except:
     pass
 
+
 def cerr(msg):
     """ Displays the formatted msg with an error style.
     """
 
     cprint(msg, 'red', attrs=['bold'])
+
 
 def csuccess(msg):
     """ Displays the formatted msg with a success style.
@@ -22,17 +24,20 @@ def csuccess(msg):
 
     cprint(msg, 'green', attrs=['bold'])
 
+
 def cwarn(msg):
     """
     """
 
     cprint(msg, 'yellow', attrs=['bold'])
 
+
 def cblabla(msg):
     """
     """
 
     cprint(msg, attrs=['bold'])
+
 
 def cinput(prompt, validations=[], secret=False):
     """ Retrieves the user input with a formatted prompt. Return the value when
@@ -67,9 +72,11 @@ def cinput(prompt, validations=[], secret=False):
 
     return ret
 
+
 def cinput_yes_no(prompt):
     ret = input(colored(prompt + ' (y/n) ', attrs=['bold']))
     return ret.lower() in ('true', 'y', 'yes')
+
 
 def confirm_cinput(prompt, validations=[], possible_err="", secret=False):
 
@@ -92,4 +99,3 @@ def confirm_cinput(prompt, validations=[], possible_err="", secret=False):
         # try again...
         cerr(possible_err)
         raise CommandException(500, "Password must match.")
-

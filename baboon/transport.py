@@ -35,7 +35,7 @@ class CommonTransport(ClientXMPP):
         # Register and configure pubsub plugin.
         self.register_plugin('xep_0060')
         self.register_handler(Callback('Pubsub event', StanzaPath(
-                    'message/pubsub_event'), self._pubsub_event))
+            'message/pubsub_event'), self._pubsub_event))
 
         # Shortcut to access to the xep_0060 plugin.
         self.pubsub = self.plugin["xep_0060"]
@@ -103,6 +103,7 @@ class CommonTransport(ClientXMPP):
             self.logger.debug("Received pubsub event: \n%s" %
                               msg['pubsub_event'])
 
+
 @logger
 class WatchTransport(CommonTransport):
     """ The transport has the responsability to communicate via HTTP
@@ -119,7 +120,6 @@ class WatchTransport(CommonTransport):
 
         self.register_plugin('xep_0065')  # Socks5 Bytestreams
         self.add_event_handler('socks_recv', self.on_recv)
-
 
     def start(self, event):
         """ Handler for the session_start sleekxmpp event.
@@ -149,7 +149,6 @@ class WatchTransport(CommonTransport):
 
         # Disconnect...
         super(WatchTransport, self).close()
-
 
     def rsync(self, project, files=None):
         """ Starts a rsync transaction, rsync and stop the
@@ -258,6 +257,7 @@ class WatchTransport(CommonTransport):
         # TODO: catch the possible exception
         iq.send()
 
+
 class AdminTransport(CommonTransport):
 
     def __init__(self, logger_enabled=True):
@@ -276,20 +276,21 @@ class AdminTransport(CommonTransport):
             node_config = self.pubsub.get_node_config(self.pubsub_addr)
             node_config_form = node_config['pubsub_owner']['default']['config']
             node_config_form.field['pubsub#access_model'].set_value(
-                    'authorize')
+                'authorize')
 
             # Create the node (name == project).
             self.pubsub.create_node(self.pubsub_addr, project,
-                    config=node_config_form)
+                                    config=node_config_form)
 
             # The owner must subscribe to the node to receive the alerts.
             self.pubsub.modify_subscriptions(self.pubsub_addr, project,
-                    [(config['user']['jid'], 'subscribed')])
+                                             [(config['user']['jid'],
+                                               'subscribed')])
 
             # The admin must have the publisher affiliation to publish alerts
             # into the node.
             self.pubsub.modify_affiliations(self.pubsub_addr, project,
-                    [(self.server_addr,'publisher')])
+                                            [(self.server_addr, 'publisher')])
 
             return (200, 'The project %s is successfuly created.' % project)
         except IqError as e:
@@ -330,7 +331,7 @@ class AdminTransport(CommonTransport):
 
             if status == 'pending':
                 return (202, "Invitation sent. You need to wait until the "
-                "owner accepts your invitation.")
+                        "owner accepts your invitation.")
             elif status == 'subscribed':
                 return (200, "You are now a contributor of the %s project." %
                         project)
@@ -343,7 +344,7 @@ class AdminTransport(CommonTransport):
             msg = "Something went wrong. Cannot join the %s project." % project
 
             if status_code == 404:
-                msg = "The %s project does not exist." %  project
+                msg = "The %s project does not exist." % project
 
             return (status_code, msg)
 
@@ -354,13 +355,13 @@ class AdminTransport(CommonTransport):
             return (200, "Successfully unjoin the %s project." % project)
         except IqError as e:
             status_code = int(e.iq['error']['code'])
-            msg = "Something went wrong. Cannot unjoin the %s project." % \
-                    project
+            msg = "Something went wrong. Cannot unjoin the %s project." \
+                  % project
 
             if status_code == 401:
                 msg = "You are not a contributor of the %s project." % project
             elif status_code == 404:
-                msg = "The %s project does not exist." %  project
+                msg = "The %s project does not exist." % project
 
             return (status_code, msg)
 
@@ -383,7 +384,7 @@ class AdminTransport(CommonTransport):
 
         try:
             self.pubsub.modify_subscriptions(self.pubsub_addr, project,
-                    subscriptions=subscriptions)
+                                             subscriptions=subscriptions)
             return (200, "Users are now successfuly subscribed.")
         except IqError as e:
             status_code = int(e.iq['error']['code'])
@@ -392,7 +393,7 @@ class AdminTransport(CommonTransport):
             if status_code == 403:
                 msg = "You don't have the permission to do this."
             elif status_code == 404:
-                msg = "The %s project does not exist." %  project
+                msg = "The %s project does not exist." % project
 
             return (status_code, msg)
 
@@ -404,7 +405,7 @@ class AdminTransport(CommonTransport):
 
         try:
             self.pubsub.modify_subscriptions(self.pubsub_addr, project,
-                    subscriptions=subscriptions)
+                                             subscriptions=subscriptions)
             return (200, "Users are now successfuly rejected.")
         except IqError as e:
             status_code = int(e.iq['error']['code'])
@@ -413,7 +414,7 @@ class AdminTransport(CommonTransport):
             if status_code == 403:
                 msg = "You don't have the permission to do this."
             elif status_code == 404:
-                msg = "The %s project does not exist." %  project
+                msg = "The %s project does not exist." % project
 
             return (status_code, msg)
 
@@ -443,7 +444,7 @@ class RegisterTransport(CommonTransport):
 
             if self.callback:
                 self.callback(200, 'You are now registered as %s.' %
-                        config['user']['jid'])
+                              config['user']['jid'])
         except IqError as e:
             if self.callback:
                 status_code = int(e.iq['error']['code'])
@@ -451,7 +452,7 @@ class RegisterTransport(CommonTransport):
 
                 if status_code == 409:
                     msg = "This username is already use. Please choose " \
-                    "another one."
+                          "another one."
                 elif status_code == 500:
                     # Often, registration limit exception.
                     msg = e.iq['error']['text']
@@ -459,4 +460,3 @@ class RegisterTransport(CommonTransport):
                 self.callback(status_code, msg, fatal=True)
 
         self.close()
-

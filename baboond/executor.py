@@ -55,4 +55,3 @@ class Scheduler(Thread):
             tasks.task_done()
 
         self.logger.debug('The executor thread is now finished.')
-

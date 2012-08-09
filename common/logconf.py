@@ -10,7 +10,7 @@ class ConsoleUnixColoredHandler(logging.StreamHandler):
         'WARNING': YELLOW,
         'INFO': GREEN,
         'DEBUG': CYAN,
-        }
+    }
 
     def emit(self, r):
         # Need to make a actual copy of the record to prevent altering

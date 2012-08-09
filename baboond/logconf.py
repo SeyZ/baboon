@@ -4,8 +4,8 @@ LOGGING = {
     'version': 1,
     'formatters': {
         'verbose': {
-            'format': '%(asctime)-20s%(levelname)-18s %(message)s'\
-                ' (%(threadName)s/%(funcName)s:%(lineno)s)',
+            'format': '%(asctime)-20s%(levelname)-18s %(message)s'
+            ' (%(threadName)s/%(funcName)s:%(lineno)s)',
             'datefmt': '%Y/%m/%d %H:%M:%S'
         },
         'simple': {

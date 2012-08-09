@@ -43,7 +43,7 @@ if not(hasattr(__builtins__, "bytes")) or str is bytes:
             return map(ord, var)
 
 __all__ = ["rollingchecksum", "weakchecksum", "patchstream", "rsyncdelta",
-    "blockchecksums"]
+           "blockchecksums"]
 
 
 def rsyncdelta(datastream, remotesignatures, blocksize=4096):
@@ -178,6 +178,6 @@ def weakchecksum(data):
     l = len(data)
     for i in range(l):
         a += data[i]
-        b += (l - i)*data[i]
+        b += (l - i) * data[i]
 
     return (b << 16) | a, a, b
