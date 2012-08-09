@@ -34,11 +34,11 @@ A few keywords:
 * XEP-0060
 
 ### Quickstart
-`pip install baboon`
-`baboon register <username>`
-`baboon create <project_name>`
-`baboon join <project_name> --path /path/to/project`
-`baboon start`
+```pip install baboon```
+```baboon register <username>```
+```baboon create <project_name>```
+```baboon join <project_name> --path /path/to/project```
+```baboon start```
 
 ### Contribution
 **Any** contributions are welcome. Fork the project !
