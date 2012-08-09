@@ -4,7 +4,8 @@ import shutil
 from baboon.transport import RegisterTransport, AdminTransport
 from baboon.fmt import cinput, confirm_cinput, cwarn
 from baboon.fmt import csuccess, cerr
-from baboon.config import config
+
+from baboon.config import config, SCMS
 from common.errors.baboon_exception import CommandException
 
 
@@ -33,6 +34,7 @@ def register():
         print "\nRegistration in progress..."
 
         # RegisterTransport uses the config attributes to register.
+        config['user'] = {}
         config['user']['jid'] = username
         config['user']['passwd'] = passwd
 
@@ -70,13 +72,36 @@ def create():
     """
 
     project = config['parser']['project']
+    path = config['parser'].get('path')
+    if not path:
+        cerr("Please specify the project's path on your system with the "
+             "'--path' option.")
+        return
 
     print "Creation in progress..."
     with AdminTransport(logger_enabled=False) as transport:
         ret_status, msg = transport.create_project(project)
-        _on_action_finished(ret_status, msg)
+        success = _on_action_finished(ret_status, msg)
+        if not success:
+            return success
 
-        # TODO: write the new project into the config file.
+    # Check if path exists on the system
+    project_scm = ''
+    if os.path.isdir(path):
+        project_scm = _guess_scm(path)
+    else:
+        cwarn("The project's path does not exist on your system.")
+
+    if config['projects'].get(project):
+        cwarn("The project was already defined in your configuration file")
+        config['projects'][project]['enable'] = 1
+    else:
+        config['projects'][project] = {}
+        config['projects'][project]['path'] = path
+        config['projects'][project]['scm'] = project_scm
+
+    save_user_config()
+    return success
 
 
 def delete():
@@ -88,9 +113,17 @@ def delete():
     print "Deletion in progress..."
     with AdminTransport(logger_enabled=False) as transport:
         ret_status, msg = transport.delete_project(project)
-        _on_action_finished(ret_status, msg)
+        success = _on_action_finished(ret_status, msg)
+        if not success:
+            return success
 
-        # TODO: delete the project into the config file.
+    try:
+        del config['projects'][project]
+    except AttributeError:
+        cwarn("The project was not found in your configuration file")
+
+    save_user_config()
+    return success
 
 
 def join():
@@ -98,13 +131,39 @@ def join():
     """
 
     project = config['parser']['project']
+    path = config['parser'].get('path')
+    if not path:
+        cerr("Please specify the project's path on your system with the "
+             "'--path' option.")
+        return
+
+    project_scm = ''
 
     print "Join in progress..."
     with AdminTransport(logger_enabled=False) as transport:
         ret_status, msg = transport.join_project(project)
-        return _on_action_finished(ret_status, msg)
+        success = _on_action_finished(ret_status, msg)
+        #if not success:
+        #    return success
 
-        # TODO: write the joined project into the config file.
+    # Check if path exists on the system
+    if os.path.isdir(path):
+        project_scm = _guess_scm(path)
+    else:
+        cwarn("The project's path does not exist on your system.")
+
+    if config['projects'].get(project):
+        cwarn("The project was already defined in your configuration file")
+        config['projects'][project]['enable'] = 1
+    else:
+        config['projects'][project] = {}
+        config['projects'][project]['path'] = path
+        config['projects'][project]['scm'] = project_scm
+        config['projects'][project]['enable'] = 1
+
+    save_user_config()
+    return success
+
 
 def unjoin():
     """ Unjoin the project with the project argument name.
@@ -115,9 +174,16 @@ def unjoin():
     print "Unjoin in progress..."
     with AdminTransport(logger_enabled=False) as transport:
         ret_status, msg = transport.unjoin_project(project)
-        return _on_action_finished(ret_status, msg)
+        success = _on_action_finished(ret_status, msg)
 
-        # TODO: write the joined project into the config file.
+    if config['projects'].get(project):
+        config['projects'][project]['enable'] = 0
+    else:
+        cwarn("The project was not defined in your configuration file")
+
+    save_user_config()
+    return success
+
 
 def accept():
     """ Accept the username to the project.
@@ -154,28 +220,67 @@ def _on_action_finished(ret_status, msg, fatal=False):
         cerr(msg)
         return False
 
-def save_user_config(project=None):
 
+def save_user_config():
+    """Saves the config dict to the user's configuration file ~/.baboonrc.
+    If the file already exists, it's copied to ~/.baboonrc.old and the original
+    file is overwritten.
+    """
     baboonrc_path = os.path.expanduser('~/.baboonrc')
     baboonrc_old_path = os.path.expanduser('~/.baboonrc.old')
 
     if os.path.exists(baboonrc_path):
-        cwarn("A baboon configuration file already exists. Save it as "
+        cwarn("A baboon configuration file already exists. Saved it as "
                 "~/.baboonrc.old")
         shutil.copy2(baboonrc_path, baboonrc_old_path)
 
     csuccess("The new configuration file is written in ~/.baboonrc\n")
-    return
+    filecontent = ''
 
-    with open(baboonrc_path, 'w') as f:
-        f.write('[project]\n')
-        f.write('pubsub=pubsub.baboon-project.org\n')
-        f.write('server=admin@baboon-project.org\n')
-        f.write('streamer=streamer.baboon-project.org\n')
-        if project:
-            f.write('node=%s\n' % project)
-        f.write('jid=%s\n' % config['user']['jid'])
-        f.write('password=%s\n' % config['user']['password'])
-        f.write('scm=git\n')
-        f.write('max_stanza_size=65536\n')
+    # Add the server section
+    filecontent += '[server]\n'
+    for option, value in config['server'].iteritems():
+        filecontent += '%s = %s\n' % (option, value)
+    filecontent += '\n'
 
+    # Add the user section
+    filecontent += '[user]\n'
+    for option, value in config['user'].iteritems():
+        filecontent += '%s = %s\n' % (option, value)
+    filecontent += '\n'
+
+    # Add projects
+    for project, project_options in config['projects'].iteritems():
+        filecontent += '[%s]\n' % project
+        for option, value in project_options.iteritems():
+            filecontent += '%s = %s\n' % (option, value)
+        filecontent += '\n'
+
+    # Example of project
+    filecontent += """# Example of project definition
+#[awesome_project] \t# The project name on the baboon server
+#path = /pathto/project # The project path of your system
+#scm = git \t\t# The source code manager you use for this project
+#enable = 1 \t\t# You want baboon to actually watch this project
+"""
+
+    # Write content to file
+    with open(baboonrc_path, 'w') as fd:
+        fd.write(filecontent)
+
+
+def _guess_scm(path):
+    """Rough guess of the source code manager the user uses for the project
+    based on the path he provides in the command line. For instance, it checks
+    if a .git folder is present in the project's folder. SCMs are defined in
+    the baboon/config.py file.
+    """
+    project_scm = ''
+    # Detect scm in path
+    for scm in SCMS:
+        if os.path.isdir(os.path.join(path, '.' + scm)):
+            project_scm = scm
+    if not project_scm:
+        cwarn("Your project isn't managed by a supported source code manager.")
+
+    return project_scm
