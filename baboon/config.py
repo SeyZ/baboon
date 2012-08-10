@@ -95,16 +95,15 @@ class ArgumentParser(object):
                             const=logging.DEBUG,
                             default=logging.INFO)
 
-        # I can't decide if I like this block of code or not :)
-        def add_no_save_option(*args):
-            for subparser in args:
-                subparser.add_argument('--nosave', action='store_false',
-                                       dest='save', default=True,
-                                       help="don't overwrite config file")
 
-        add_no_save_option(register_parser, create_parser, delete_parser,
-                           join_parser, unjoin_parser)
-        # <-- I'm not sure 'till here
+        # Add the nosave option to some of the parsers.
+        no_save_subparsers = (register_parser, create_parser, delete_parser,
+                              join_parser, unjoin_parser)
+
+        for subparser in no_save_subparsers:
+            subparser.add_argument('--nosave', action='store_false',
+                                   dest='save', default=True,
+                                   help="don't overwrite config file")
 
         self.args = parser.parse_args()
 
