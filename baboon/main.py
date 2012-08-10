@@ -49,7 +49,13 @@ class Main(object):
             success = False
             hint = err
 
-        # Let's check at least 1 project is set up
+        if not success:
+            msg = "Something's missing in your configuration file. "
+            "I can't start. Hint: %s" % hint
+            self.logger.error(msg)
+            return success
+
+        # Let's check that at least 1 project is set up
         # For each set up project, some options are mandatory and cannot be
         # empty.
         if len(config.get('projects', {})):
@@ -70,6 +76,7 @@ class Main(object):
             msg = "Something's missing in your configuration file. "
             "I can't start. Hint: %s" % hint
             self.logger.error(msg)
+            return success
 
         return success
 
