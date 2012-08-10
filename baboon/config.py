@@ -17,11 +17,6 @@ class ArgumentParser(object):
 
         subparsers = parser.add_subparsers()
 
-        # Configure the QUICKSTART parser.
-        quickstart_parser = subparsers.add_parser('quickstart', help="start "
-                                                  "the quickstart guide")
-        quickstart_parser.set_defaults(which='quickstart')
-
         # Configure the REGISTER parser.
         register_parser = subparsers.add_parser('register', help="create an "
                                                 "account.")
