@@ -43,7 +43,8 @@ def register():
         transport.open(block=True)
 
         # Persist register information in the user configuration file.
-        save_user_config()
+        if config['parser']['save']:
+            save_user_config()
 
     except CommandException:
         pass
@@ -101,7 +102,8 @@ def create():
         config['projects'][project]['scm'] = project_scm
         config['projects'][project]['enable'] = 1
 
-    save_user_config()
+    if config['parser']['save']:
+        save_user_config()
     return success
 
 
@@ -123,7 +125,8 @@ def delete():
     except AttributeError:
         cwarn("The project was not found in your configuration file")
 
-    save_user_config()
+    if config['parser']['save']:
+        save_user_config()
     return success
 
 
@@ -162,7 +165,8 @@ def join():
         config['projects'][project]['scm'] = project_scm
         config['projects'][project]['enable'] = 1
 
-    save_user_config()
+    if config['parser']['save']:
+        save_user_config()
     return success
 
 
@@ -182,7 +186,8 @@ def unjoin():
     else:
         cwarn("The project was not defined in your configuration file")
 
-    save_user_config()
+    if config['parser']['save']:
+        save_user_config()
     return success
 
 

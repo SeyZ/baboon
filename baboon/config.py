@@ -17,12 +17,12 @@ class ArgumentParser(object):
 
         subparsers = parser.add_subparsers()
 
-        # Configure the quickstart parser.
+        # Configure the QUICKSTART parser.
         quickstart_parser = subparsers.add_parser('quickstart', help="start "
                                                   "the quickstart guide")
         quickstart_parser.set_defaults(which='quickstart')
 
-        # Configure the register parser.
+        # Configure the REGISTER parser.
         register_parser = subparsers.add_parser('register', help="create an "
                                                 "account.")
         register_parser.set_defaults(which='register')
@@ -30,7 +30,7 @@ class ArgumentParser(object):
         register_parser.add_argument('username', nargs='?', help="your "
                                      "username.")
 
-        # Configure the projects parser.
+        # Configure the PROJECTS parser.
         project_parser = subparsers.add_parser('projects', help="list all "
                                                "owned and subscribed "
                                                "projects.")
@@ -40,7 +40,7 @@ class ArgumentParser(object):
         project_parser.add_argument('-a', '--all', action='store_true',
                                     help="display maximum information.")
 
-        # Configure the create parser.
+        # Configure the CREATE parser.
         create_parser = subparsers.add_parser('create', help="create a "
                                               "project.")
         create_parser.set_defaults(which='create')
@@ -48,40 +48,40 @@ class ArgumentParser(object):
         create_parser.add_argument('-p', '--path', action='store',
                                    help="the project's path.")
 
-        # Configure the delete parser.
+        # Configure the DELETE parser.
         delete_parser = subparsers.add_parser('delete', help="delete a "
                                               "project.")
         delete_parser.set_defaults(which='delete')
         delete_parser.add_argument('project', help="the project name.")
 
-        # Configure the join parser.
+        # Configure the JOIN parser.
         join_parser = subparsers.add_parser('join', help="join a project.")
         join_parser.set_defaults(which='join')
         join_parser.add_argument('project', help="the project name.")
         join_parser.add_argument('-p', '--path', action='store',
                                    help="the project's path.")
 
-        # Configure the unjoin parser.
+        # Configure the UNJOIN parser.
         unjoin_parser = subparsers.add_parser('unjoin', help="unjoin a "
                                               "project.")
         unjoin_parser.set_defaults(which='unjoin')
         unjoin_parser.add_argument('project', help="the project name.")
 
-        # Configure the accept parser.
+        # Configure the ACCEPT parser.
         accept_parser = subparsers.add_parser('accept', help="accept a user "
                                               "to join a project.")
         accept_parser.set_defaults(which='accept')
         accept_parser.add_argument('project', help="the project name.")
         accept_parser.add_argument('username', help="the username to accept.")
 
-        # Configure the reject parser.
+        # Configure the REJECT parser.
         reject_parser = subparsers.add_parser('reject', help="kick a user "
                                               "from a project.")
         reject_parser.set_defaults(which='reject')
         reject_parser.add_argument('project', help="the project name.")
         reject_parser.add_argument('username', help="the username to reject.")
 
-        # Configure the start parser.
+        # Configure the START parser.
         start_parser = subparsers.add_parser('start',
                                              help="start Baboon !")
         start_parser.set_defaults(which='start')
@@ -94,6 +94,17 @@ class ArgumentParser(object):
                             dest='loglevel',
                             const=logging.DEBUG,
                             default=logging.INFO)
+
+        # I can't decide if I like this block of code or not :)
+        def add_no_save_option(*args):
+            for subparser in args:
+                subparser.add_argument('--nosave', action='store_false',
+                                       dest='save', default=True,
+                                       help="don't overwrite config file")
+
+        add_no_save_option(register_parser, create_parser, delete_parser,
+                           join_parser, unjoin_parser)
+        # <-- I'm not sure 'till here
 
         self.args = parser.parse_args()
 
