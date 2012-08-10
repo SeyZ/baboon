@@ -34,9 +34,10 @@ def register():
         print "\nRegistration in progress..."
 
         # RegisterTransport uses the config attributes to register.
-        config['user'] = {}
-        config['user']['jid'] = username
-        config['user']['passwd'] = passwd
+        config['user'] = {
+            'jid': username,
+            'passwd': passwd
+        }
 
         # Registration...
         transport = RegisterTransport(callback=_on_action_finished)
