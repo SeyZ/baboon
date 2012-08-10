@@ -67,8 +67,8 @@ class Main(object):
 
         # Give a hint to the user. We're so kind.
         if not success:
-            msg = "Something's missing in your configuration file. " \
-                 "I can't start. Hint: %s" % hint
+            msg = "Something's missing in your configuration file. "
+            "I can't start. Hint: %s" % hint
             self.logger.error(msg)
 
         return success

@@ -54,7 +54,7 @@ class ArgumentParser(object):
         join_parser.set_defaults(which='join')
         join_parser.add_argument('project', help="the project name.")
         join_parser.add_argument('-p', '--path', action='store',
-                                   help="the project's path.")
+                                 help="the project's path.")
 
         # Configure the UNJOIN parser.
         unjoin_parser = subparsers.add_parser('unjoin', help="unjoin a "
@@ -89,7 +89,6 @@ class ArgumentParser(object):
                             dest='loglevel',
                             const=logging.DEBUG,
                             default=logging.INFO)
-
 
         # Add the nosave option to some of the parsers.
         no_save_subparsers = (register_parser, create_parser, delete_parser,
