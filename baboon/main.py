@@ -20,12 +20,58 @@ class Main(object):
 
         # The start command is a special command. Call it from this class
         if self.which == 'start':
-            self.start()
+            if self.check_config():
+                self.start()
             return
 
         # Call the correct method according to the current arg subparser.
         if hasattr(commands, self.which):
             getattr(commands, self.which)()
+
+    def check_config(self):
+        """Some sections and options of the config file are mandatory. Let's be
+        sure they are at least filled. We leave the "filled correctly" to the
+        XMPP server.
+        """
+
+        success = True
+        hint = "An option misses its value."
+        # First, check SERVER and USER sections
+        try:
+            # Of course, values can't be empty
+            success = '' not in (config['server']['master'],
+                                 config['server']['pubsub'],
+                                 config['user']['jid'],
+                                 config['user']['passwd'])
+
+        # And some options are mandatory, else it fails
+        except KeyError as err:
+            success = False
+            hint = err
+
+        # Let's check at least 1 project is set up
+        # For each set up project, some options are mandatory and cannot be
+        # empty.
+        if len(config.get('projects', {})):
+            for project in config['projects']:
+                try:
+                    success = '' not in (config['projects'][project]['path'],
+                                         config['projects'][project]['scm'])
+                except KeyError as err:
+                    success = False
+                    hint = str(err)
+                    hint += " not present for the '%s' project" % project
+        else:
+            success = False
+            hint = "No project is configured."
+
+        # Give a hint to the user. We're so kind.
+        if not success:
+            msg = "Something's missing in your configuration file. " \
+                 "I can't start. Hint: %s" % hint
+            self.logger.error(msg)
+
+        return success
 
     def start(self):
         try:

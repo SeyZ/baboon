@@ -42,7 +42,7 @@ class CommonTransport(ClientXMPP):
 
         # Shortcuts to access to the config server information
         self.pubsub_addr = config['server']['pubsub']
-        self.server_addr = config['server']['server']
+        self.server_addr = config['server']['master']
 
         # Register events
         self.add_event_handler('session_start', self.start)
@@ -133,7 +133,7 @@ class WatchTransport(CommonTransport):
         self.streamer = self.plugin["xep_0065"]
 
         # Negotiates the bytestream
-        streamhost_used = self.streamer.handshake(config['server']['server'],
+        streamhost_used = self.streamer.handshake(config['server']['master'],
                                                   config['server']['streamer'])
 
         # Registers the SID to retrieve later to send/recv data to the
@@ -157,7 +157,7 @@ class WatchTransport(CommonTransport):
         Raises a BaboonException if there's a problem.
         """
 
-        iq = self.Iq(sto=config['server']['server'], stype='set')
+        iq = self.Iq(sto=config['server']['master'], stype='set')
 
         # Generate a new rsync ID.
         iq['rsync']['sid'] = self.sid

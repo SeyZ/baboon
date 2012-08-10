@@ -147,7 +147,7 @@ class BaboonConfig(Config):
             self.attrs['server']['max_stanza_size'] = 65535
             self.attrs['server']['pubsub'] = 'pubsub.baboon-project.org'
             self.attrs['server']['streamer'] = 'streamer.baboon-project.org'
-            self.attrs['server']['server'] = 'admin@baboon-project.org/baboond'
+            self.attrs['server']['master'] = 'admin@baboon-project.org/baboond'
 
 
 config = BaboonConfig(ArgumentParser(), LOGGING).attrs
