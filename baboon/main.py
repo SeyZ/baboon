@@ -35,7 +35,7 @@ class Main(object):
         """
 
         success = True
-        hint = "An option misses its value."
+        hint = "An option misses its value"
         # First, check SERVER and USER sections
         try:
             # Of course, values can't be empty
@@ -50,8 +50,8 @@ class Main(object):
             hint = err
 
         if not success:
-            msg = "Something's missing in your configuration file. "
-            "I can't start. Hint: %s" % hint
+            msg = ("Something's missing in your configuration file. "
+                   "Hint: %s") % hint
             self.logger.error(msg)
             return success
 
@@ -63,6 +63,15 @@ class Main(object):
                 try:
                     success = '' not in (config['projects'][project]['path'],
                                          config['projects'][project]['scm'])
+
+                    # Give a hint to the user. We're so kind.
+                    if not success:
+                        msg = ("Something's missing in your "
+                               "configuration file. "
+                               "Hint: %s in [%s]" % (hint, project))
+                        self.logger.error(msg)
+                        return success
+
                 except KeyError as err:
                     success = False
                     hint = str(err)
@@ -70,13 +79,6 @@ class Main(object):
         else:
             success = False
             hint = "No project is configured."
-
-        # Give a hint to the user. We're so kind.
-        if not success:
-            msg = "Something's missing in your configuration file. "
-            "I can't start. Hint: %s" % hint
-            self.logger.error(msg)
-            return success
 
         return success
 

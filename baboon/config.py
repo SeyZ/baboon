@@ -1,9 +1,11 @@
+import sys
 import argparse
 import logging
 import logging.config
 
-from ConfigParser import RawConfigParser
+from ConfigParser import RawConfigParser, MissingSectionHeaderError
 
+from baboon.fmt import cerr
 from common.config import Config
 from logconf import LOGGING
 
@@ -122,9 +124,22 @@ class BaboonConfig(Config):
         self.attrs['projects'] = {}
 
         filename = self._get_config_path()
-        parser = RawConfigParser()
-        parser.read(filename)
+        # Check if we found a location for the config file
+        # If not, let's go brutal.
+        if not filename:
+            cerr("Configuration file not found. Quitting.")
+            sys.exit(1)
 
+        # Parse the file if found.
+        # Check if it looks like a real python config file.
+        parser = RawConfigParser()
+        try:
+            parser.read(filename)
+        except MissingSectionHeaderError:
+            cerr("Config file not properly formatted. %s" % filename)
+            sys.exit(1)
+
+        # Fill the config dict whit what we found in the config file
         for section in parser.sections():
             if section in known_section:
                 self.attrs[section] = dict(parser.items(section))
