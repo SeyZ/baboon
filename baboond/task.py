@@ -125,6 +125,7 @@ class RsyncTask(Task):
 
         # Lock the repository with a .baboon.lock file.
         lock_file = os.path.join(self.project_path, '.baboon.lock')
+        self._create_missing_dirs(lock_file)
         with open(lock_file, 'w'):
             pass
 
