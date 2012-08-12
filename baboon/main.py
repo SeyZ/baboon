@@ -14,7 +14,9 @@ from common.errors.baboon_exception import BaboonException
 class Main(object):
 
     def __init__(self):
-        self.monitor = None
+
+        # Exit baboon when receiving a sigint signal.
+        signal.signal(signal.SIGINT, self.sigint_handler)
 
         self.which = config['parser']['which']
 
@@ -27,6 +29,9 @@ class Main(object):
         # Call the correct method according to the current arg subparser.
         if hasattr(commands, self.which):
             getattr(commands, self.which)()
+
+        # TODO this won't work on windows...
+        signal.pause()
 
     def check_config(self):
         """Some sections and options of the config file are mandatory. Let's be
@@ -83,18 +88,15 @@ class Main(object):
         return success
 
     def start(self):
+        self.monitor = None
+
         try:
-            # exists baboon when receiving a sigint signal
-            signal.signal(signal.SIGINT, self.sigint_handler)
 
             self.transport = WatchTransport()
             self.transport.open()
 
             self.monitor = Monitor(self.transport)
             self.monitor.watch()
-
-            # TODO this won't work on windows...
-            signal.pause()
 
         except BaboonException, err:
             sys.stderr.write("%s\n" % err)
@@ -115,8 +117,14 @@ class Main(object):
         Closing baboon in a clean way.
         """
         self.logger.debug("Received SIGINT signal")
-        self.transport.close()
-        self.monitor.close()
+
+        try:
+            self.transport.close()
+            self.monitor.close()
+        except AttributeError:
+            # If AttributeError is raise, transport or monitor does not exist.
+            # It's not a problem.
+            pass
 
         self.logger.info("Bye !")
         sys.exit(0)
