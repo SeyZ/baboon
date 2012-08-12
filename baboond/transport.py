@@ -54,9 +54,18 @@ class Transport(ClientXMPP):
         sid = iq['rsync']['sid']  # Registers the SID.
         rid = iq['rsync']['rid']  # Register the RID.
         sfrom = '%s' % iq['from'].bare  # Registers the bare JID.
-
         files = iq['rsync']['files']  # Get the files list to sync.
         node = iq['rsync']['node']  # Get the current project name.
+
+        # The future reply stanza.
+        reply = iq.reply()
+
+        # Verify if the user is a subscriber/owner of the node.
+        is_subscribed = self._verify_subscription(sfrom, node)
+        if not is_subscribed:
+            self._send_forbidden_error(reply, "You are not a contributor on "
+                                       "%s." % node)
+            return
 
         # Get the project path.
         project_path = os.path.join(config['server']['working_dir'], node,
@@ -83,9 +92,7 @@ class Transport(ClientXMPP):
         self.pending_rsyncs[rid] = rsync_task
 
         # Replies to the IQ
-        reply = iq.reply()
         reply['rsync']
-
         reply.send()
 
     def _handle_merge_verification(self, iq):
@@ -95,11 +102,21 @@ class Transport(ClientXMPP):
         sfrom = iq['from'].bare
         node = iq['merge']['node']
 
+        # The future reply stanza.
+        reply = iq.reply()
+
+        # Verify if the user is a subscriber/owner of the node.
+        is_subscribed = self._verify_subscription(sfrom, node)
+        if not is_subscribed:
+            self._send_forbidden_error(reply, "You are not a contributor on "
+                                       "%s." % node)
+            return
+
         # Prepares the merge verification with this data.
         executor.tasks.put(task.MergeTask(node, sfrom))
 
         # Replies to the request.
-        iq.reply().send()
+        reply.send()
 
     def start(self, event):
         """ Handler for the session_start sleekxmpp event.
@@ -201,5 +218,33 @@ class Transport(ClientXMPP):
         except:
             self.logger.debug('Could not publish to: %s' %
                               project_name)
+
+    def _verify_subscription(self, jid, node):
+        """ Verify if the bare jid is a subscriber/owner on the node.
+        """
+
+        try:
+            ret = self.pubsub.get_node_subscriptions(
+                config['server']['pubsub'], node)
+            subscriptions = ret['pubsub_owner']['subscriptions']
+
+            for subscription in subscriptions:
+                if jid == subscription['jid']:
+                    return True
+        except Exception as e:
+            import pdb
+            pdb.set_trace()
+
+        return False
+
+    def _send_forbidden_error(self, iq, err_msg):
+        """ Send an error iq with the err_msg as text.
+        """
+        iq.error()
+        iq['error']['code'] = '503'
+        iq['error']['type'] = 'auth'
+        iq['error']['condition'] = 'forbidden'
+        iq['error']['text'] = err_msg
+        iq.send()
 
 transport = Transport()

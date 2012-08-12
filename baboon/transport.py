@@ -178,10 +178,10 @@ class WatchTransport(CommonTransport):
             if sys.getsizeof(to_xml) >= config['server']['max_stanza_size']:
                 self.logger.warning('The xml stanza is too big !')
             else:
-                iq.send(block=False)
+                iq.send()
                 self.logger.info('Sent !')
         except IqError as e:
-            self.logger.error(e.iq)
+            self.logger.error(e.iq['error']['text'])
         except Exception as e:
             self.logger.error(e)
 
@@ -254,8 +254,10 @@ class WatchTransport(CommonTransport):
         iq = self.Iq(sto=self.server_addr, stype='set')
         iq['merge']['node'] = project
 
-        # TODO: catch the possible exception
-        iq.send()
+        try:
+            iq.send()
+        except IqError as e:
+            self.logger.error(e.iq['error']['text'])
 
 
 class AdminTransport(CommonTransport):
@@ -287,10 +289,10 @@ class AdminTransport(CommonTransport):
                                              [(config['user']['jid'],
                                                'subscribed')])
 
-            # The admin must have the publisher affiliation to publish alerts
+            # The admin must have the owner affiliation to publish alerts
             # into the node.
             self.pubsub.modify_affiliations(self.pubsub_addr, project,
-                                            [(self.server_addr, 'publisher')])
+                                            [(self.server_addr, 'owner')])
 
             return (200, 'The project %s is successfuly created.' % project)
         except IqError as e:
