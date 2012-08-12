@@ -205,7 +205,7 @@ def accept():
 
     print "Acceptation in progress..."
     with AdminTransport(logger_enabled=False) as transport:
-        ret_status, msg = transport.accept_pending(project, [username])
+        ret_status, msg = transport.accept_pending(project, username)
         return _on_action_finished(ret_status, msg)
 
 
@@ -218,7 +218,20 @@ def reject():
 
     print "Rejection in progress..."
     with AdminTransport(logger_enabled=False) as transport:
-        ret_status, msg = transport.reject(project, [username])
+        ret_status, msg = transport.reject(project, username)
+        return _on_action_finished(ret_status, msg)
+
+
+def kick():
+    """ Kick the username to the project.
+    """
+
+    project = config['parser']['project']
+    username = config['parser']['username']
+
+    print "Kick in progress..."
+    with AdminTransport(logger_enabled=False) as transport:
+        ret_status, msg = transport.kick(project, username)
         return _on_action_finished(ret_status, msg)
 
 

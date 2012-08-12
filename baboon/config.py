@@ -78,6 +78,13 @@ class ArgumentParser(object):
         reject_parser.add_argument('project', help="the project name.")
         reject_parser.add_argument('username', help="the username to reject.")
 
+        # Configure the KICK parser.
+        reject_parser = subparsers.add_parser('kick', help="kick a user "
+                                              "from a project.")
+        reject_parser.set_defaults(which='kick')
+        reject_parser.add_argument('project', help="the project name.")
+        reject_parser.add_argument('username', help="the username to kick.")
+
         # Configure the START parser.
         start_parser = subparsers.add_parser('start',
                                              help="start Baboon !")

@@ -6,7 +6,7 @@ import uuid
 
 from threading import Event
 
-from sleekxmpp import ClientXMPP
+from sleekxmpp import ClientXMPP, Message
 from sleekxmpp.xmlstream.handler import Callback
 from sleekxmpp.xmlstream.matcher import StanzaPath
 from sleekxmpp.xmlstream.tostring import tostring
@@ -50,6 +50,7 @@ class CommonTransport(ClientXMPP):
 
     def __enter__(self):
         self.open()
+        self.connected.wait()
         return self
 
     def __exit__(self, type, value, traceback):
@@ -85,8 +86,9 @@ class CommonTransport(ClientXMPP):
         """
 
         self.connected.clear()
-        self.disconnect()
-        self.logger.debug('Closed the XMPP connection')
+        self.logger.debug('Closing the XMPP connection...')
+        self.disconnect(wait=True)
+        self.logger.debug('XMPP connection closed.')
 
     def _pubsub_event(self, msg):
         if msg['type'] in ('normal', 'headline'):
@@ -265,6 +267,10 @@ class AdminTransport(CommonTransport):
     def __init__(self, logger_enabled=True):
 
         super(AdminTransport, self).__init__()
+
+        self.register_plugin('xep_0004')  # Data form
+        self.form = self.plugin['xep_0004']
+
         self.logger.disabled = not logger_enabled
 
     def create_project(self, project):
@@ -375,19 +381,24 @@ class AdminTransport(CommonTransport):
             # TODO: Handle this error.
             pass
 
-    def accept_pending(self, project, users):
+    def accept_pending(self, project, user):
+        self._allow_pending(project, user, 'true')
+        return (200, "%s is now successfuly subscribed on %s." % (user,
+                                                                  project))
 
-        # TODO: accept only pending users, not all. (ref.
-        # http://xmpp.org/extensions/xep-0060.html#owner-subreq-process)
+    def reject(self, project, user):
+        self._allow_pending(project, user, 'false')
+        return (200, "%s is now successfuly rejected on %s." % (user,
+                                                                project))
 
-        subscriptions = []
-        for user in users:
-            subscriptions.append((user, 'subscribed'))
+    def kick(self, project, user):
 
+        subscriptions = [(user, 'none')]
         try:
             self.pubsub.modify_subscriptions(self.pubsub_addr, project,
                                              subscriptions=subscriptions)
-            return (200, "Users are now successfuly subscribed.")
+            return (200, "%s is now successfuly kicked from %s." % (user,
+                                                                    project))
         except IqError as e:
             status_code = int(e.iq['error']['code'])
             msg = "Something went wrong."
@@ -399,26 +410,27 @@ class AdminTransport(CommonTransport):
 
             return (status_code, msg)
 
-    def reject(self, project, users):
+    def _allow_pending(self, project, user, allow):
+        """ Build and send the message to accept/reject the user on the node
+        project depending on allow boolean.
+        """
 
-        subscriptions = []
-        for user in users:
-            subscriptions.append((user, 'none'))
+        # Build the data form.
+        payload = self.form.make_form(ftype='submit')
+        payload.add_field(var='FORM_TYPE', ftype='hidden',
+                          value='http://jabber.org/protocol/pubsub'
+                          '#subscribe_authorization')
+        payload.add_field(var='pubsub#subid', value='ididid')
+        payload.add_field(var='pubsub#node', value=project)
+        payload.add_field(var='pubsub#subscriber_jid', value=user)
+        payload.add_field(var='pubsub#allow', value=allow)
 
-        try:
-            self.pubsub.modify_subscriptions(self.pubsub_addr, project,
-                                             subscriptions=subscriptions)
-            return (200, "Users are now successfuly rejected.")
-        except IqError as e:
-            status_code = int(e.iq['error']['code'])
-            msg = "Something went wrong."
+        # Build the message.
+        message = self.make_message(self.pubsub_addr)
+        message.appendxml(payload.xml)
 
-            if status_code == 403:
-                msg = "You don't have the permission to do this."
-            elif status_code == 404:
-                msg = "The %s project does not exist." % project
-
-            return (status_code, msg)
+        # Send the message to the pubsub server !
+        message.send()
 
 
 class RegisterTransport(CommonTransport):
