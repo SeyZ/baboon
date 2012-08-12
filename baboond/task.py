@@ -123,9 +123,14 @@ class RsyncTask(Task):
 
         self.logger.debug('RsyncTask %s started' % self.sid)
 
+        # Lock the repository with a .baboon.lock file.
+        lock_file = os.path.join(self.project_path, '.baboon.lock')
+        with open(lock_file, 'w'):
+            pass
+
         for f in self.files:
 
-            # Verify if the file can be written in the self.project_path
+            # Verify if the file can be written in the self.project_path.
             path_valid = self._verify_paths(f)
             if not path_valid:
                 self.logger.error("The file path cannot be written in %s." %
@@ -149,6 +154,9 @@ class RsyncTask(Task):
                 self.logger.info('[%s] - Need to move %s to %s.' %
                                  (self.project_path, f.src_path, f.dest_path))
                 self._move_file(f.src_path, f.dest_path)
+
+        # Remove the .baboon.lock file.
+        os.remove(lock_file)
 
         # TODO: Remove the rsync_task in the pending_rsyncs dict of the
         # transport.
@@ -336,40 +344,6 @@ class RsyncTask(Task):
 
 
 @logger
-class CorruptedTask(Task):
-    """ A task to mark a repository in corrupted mode.
-    """
-
-    def __init__(self, project_name, username):
-        """ Initializes the corrupted task with the higher possible
-        priority.
-        """
-
-        super(CorruptedTask, self).__init__(0)
-
-        self.project_name = project_name
-        self.username = username
-
-    def run(self):
-        """ Marks the directory of the project_name/username as
-        corrupted.
-        """
-
-        # Gets the project directory
-        project_dir = os.path.join(config['server']['working_dir'],
-                                   self.project_name,
-                                   self.username)
-
-        # Writes a .lock file in the directory to say the directory is
-        # corrupted.
-        with open(os.path.join(project_dir, '.lock'), 'w'):
-            pass
-
-        self.logger.error('The repository %s is mark as corrupted.' %
-                          project_dir)
-
-
-@logger
 class MergeTask(Task):
     """ A task to test if there's a conflict or not.
     """
@@ -419,6 +393,13 @@ class MergeTask(Task):
         """ Test if there's a merge conflict or not.
         """
 
+        # Verify if the repository of the master user is not locked.
+        lock_file = os.path.join(self.master_cwd, '.baboon.lock')
+        if os.path.exists(lock_file):
+            self.logger.error("The %s directory is locked. Can't start a merge"
+                              "task." % self.master_cwd)
+            return
+
         self.logger.debug('Merge task %s started' % self.master_cwd)
 
         merge_threads = []
@@ -445,10 +426,11 @@ class MergeTask(Task):
 
         user_cwd = os.path.join(self.project_cwd, user)
 
-        # If the user cwd is mark as corrupted, stop the process.
-        if os.path.exists(os.path.join(user_cwd, '.lock')):
-            # The path exists -> the user_cwd is corrupted.
-            raise BaboonException('The %s is corrupted. Ignore it' % user_cwd)
+        # If the user cwd is locked, stop the process.
+        if os.path.exists(os.path.join(user_cwd, '.baboon.lock')):
+            # The path exists -> the user_cwd is locke.
+            self.logger.error('The %s is locked. Ignore it' % user_cwd)
+            return
 
         # Add the master_cwd remote.
         self._exec_cmd('git remote add %s %s' %
