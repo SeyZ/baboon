@@ -124,6 +124,14 @@ class RsyncTask(Task):
         self.logger.debug('RsyncTask %s started' % self.sid)
 
         for f in self.files:
+
+            # Verify if the file can be written in the self.project_path
+            path_valid = self._verify_paths(f)
+            if not path_valid:
+                self.logger.error("The file path cannot be written in %s." %
+                                  self.project)
+                return
+
             if f.event_type == FileEvent.CREATE:
                 self.logger.info('[%s] - Need to create %s.' %
                                  (self.project_path, f.src_path))
@@ -145,6 +153,27 @@ class RsyncTask(Task):
         # TODO: Remove the rsync_task in the pending_rsyncs dict of the
         # transport.
         self.logger.debug('Rsync task %s finished', self.sid)
+
+    def _verify_paths(self, file_event):
+        """ Verifies if the file_event paths can be written in the
+        project_path.
+        """
+
+        valid = self._verify_path(file_event.src_path)
+        if valid and file_event.dest_path:
+            valid = self._verify_path(file_event.dest_path)
+
+        return valid
+
+    def _verify_path(self, f):
+        """ Verifies if the f path can be written in the project_path.
+        """
+
+        joined = os.path.join(self.project_path, f)
+        if self.project_path not in os.path.abspath(joined):
+            return False
+
+        return True
 
     def _create_file(self, f):
         """ Create the file f.
