@@ -122,12 +122,16 @@ def delete():
             return success
 
     try:
+        # Delete the project entry in the configuration dict.
         del config['projects'][project]
-    except AttributeError:
+
+        # Dump the configuration dict.
+        if config['parser']['save']:
+            save_user_config()
+    except KeyError:
+        # The project entry does not exist in the configuration file
         cwarn("The project was not found in your configuration file")
 
-    if config['parser']['save']:
-        save_user_config()
     return success
 
 
