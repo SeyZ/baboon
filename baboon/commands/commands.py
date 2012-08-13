@@ -75,7 +75,7 @@ def create():
 
     project = config['parser']['project']
     path = config['parser'].get('path')
-    if not path:
+    if not path and not config['parser']['nosave']:
         cerr("Please specify the project's path on your system with the "
              "'--path' option.")
         return
