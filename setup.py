@@ -14,8 +14,8 @@ setup(name='baboon',
       url='http://baboon-project.org',
       packages=find_packages(),
       install_requires=[requires],
-      scripts = ['bin/baboon', 'bin/baboond'],
+      scripts=['bin/baboon', 'bin/baboond'],
 
       # Take the latest develop version of SleekXMPP
-      dependency_links = ['https://github.com/fritzy/SleekXMPP/tarball/develop#egg=sleekxmpp-1.1.5beta']
+      dependency_links=['https://github.com/fritzy/SleekXMPP/tarball/develop#egg=sleekxmpp-1.1.5beta']
       )

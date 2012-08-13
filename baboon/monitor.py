@@ -228,7 +228,7 @@ class Monitor(object):
         self.dancer.start()
 
     def initial_rsync(self):
-        """This is pretty rough, but this small piece of code actually 
+        """This is pretty rough, but this small piece of code actually
         works using baboon's watchdog.
         It triggers an ON_MODIFIED event on every file of every project
         defined in the configuration file.
@@ -237,11 +237,11 @@ class Monitor(object):
         for project, project_attrs in config['projects'].iteritems():
             project_path = os.path.expanduser(project_attrs['path'])
             for root, _, files in os.walk(project_path):
-                for name in files:       
+                for name in files:
                     filename = os.path.join(root, name)
                     try:
                         # Trigger ON_MODIFIED event.
-                        open(filename,'a').close()
+                        open(filename, 'a').close()
                     except IOError:
                         # Can't touch this. Hammer time.
                         # Need to deal with permissions here

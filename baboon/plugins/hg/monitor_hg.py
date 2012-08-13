@@ -100,5 +100,7 @@ class EventHandlerHg(EventHandler):
 
     def _get_hgignore_syntax(self, line):
         if line.startswith('syntax'):
-            if 'glob' in line: return 'glob'
-            if 'regexp' in line: return 'regexp'
+            if 'glob' in line:
+                return 'glob'
+            if 'regexp' in line:
+                return 'regexp'
