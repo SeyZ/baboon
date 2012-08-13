@@ -50,7 +50,7 @@ class EventHandler(FileSystemEventHandler):
         return
 
     def on_created(self, event):
-        self.logger.info('CREATED event %s' % event.src_path)
+        self.logger.debug('CREATED event %s' % event.src_path)
 
         with lock:
             project = self._get_project(event.src_path)
@@ -59,7 +59,7 @@ class EventHandler(FileSystemEventHandler):
                 FileEvent(project, FileEvent.CREATE, rel_path).register()
 
     def on_moved(self, event):
-        self.logger.info('MOVED event from %s to %s' % (event.src_path,
+        self.logger.debug('MOVED event from %s to %s' % (event.src_path,
                                                         event.dest_path))
 
         with lock:
@@ -79,7 +79,7 @@ class EventHandler(FileSystemEventHandler):
         @raise BaboonException: if cannot retrieve the relative project path
         """
 
-        self.logger.info('MODIFIED event %s' % event.src_path)
+        self.logger.debug('MODIFIED event %s' % event.src_path)
 
         with lock:
             project = self._get_project(event.src_path)
@@ -92,7 +92,7 @@ class EventHandler(FileSystemEventHandler):
                 # delete absolutely the file. Otherwise, the server will not
                 # create the directory (OSError).
                 if os.path.isdir(event.src_path):
-                    self.logger.info('The file %s is now a directory.' %
+                    self.logger.debug('The file %s is now a directory.' %
                                      rel_path)
 
                 FileEvent(project, FileEvent.MODIF, rel_path).register()
@@ -101,7 +101,7 @@ class EventHandler(FileSystemEventHandler):
         """ Trigered when a file is deleted in the watched project.
         """
 
-        self.logger.info('DELETED event %s' % event.src_path)
+        self.logger.debug('DELETED event %s' % event.src_path)
 
         with lock:
             project = self._get_project(event.src_path)
@@ -226,6 +226,27 @@ class Monitor(object):
             self.logger.debug("Started to monitor the %s directory" % project)
 
         self.dancer.start()
+
+    def initial_rsync(self):
+        """This is pretty rough, but this small piece of code actually 
+        works using baboon's watchdog.
+        It triggers an ON_MODIFIED event on every file of every project
+        defined in the configuration file.
+        """
+
+        for project, project_attrs in config['projects'].iteritems():
+            project_path = os.path.expanduser(project_attrs['path'])
+            for root, _, files in os.walk(project_path):
+                for name in files:       
+                    filename = os.path.join(root, name)
+                    try:
+                        # Trigger ON_MODIFIED event.
+                        open(filename,'a').close()
+                    except IOError:
+                        # Can't touch this. Hammer time.
+                        # Need to deal with permissions here
+                        # Some files are not synced
+                        pass
 
     def close(self):
         """ Stops the monitoring on the watched project

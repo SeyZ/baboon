@@ -98,6 +98,9 @@ class Main(object):
 
             self.monitor = Monitor(self.transport)
             self.monitor.watch()
+            # Do not execute initial rsync if --noinit is set in CLI.
+            if not config['parser']['noinit']:
+                self.monitor.initial_rsync()
 
         except BaboonException, err:
             sys.stderr.write("%s\n" % err)

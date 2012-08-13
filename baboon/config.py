@@ -92,6 +92,10 @@ class ArgumentParser(object):
         start_parser.add_argument('--config', dest='configpath',
                                   help="override the default location of the "
                                   "config file")
+        start_parser.add_argument('--noinit', dest='noinit',
+                                  default=False, action='store_true',
+                                  help="doesn't execute initial rsync")
+
         # logging args
         parser.add_argument('-d', '--debug', help="set logging to DEBUG",
                             action='store_const',
@@ -104,8 +108,8 @@ class ArgumentParser(object):
                               join_parser, unjoin_parser)
 
         for subparser in no_save_subparsers:
-            subparser.add_argument('--nosave', action='store_false',
-                                   dest='save', default=True,
+            subparser.add_argument('--nosave', action='store_true',
+                                   dest='nosave', default=False,
                                    help="don't overwrite config file")
 
         self.args = parser.parse_args()
