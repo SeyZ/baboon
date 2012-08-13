@@ -31,6 +31,7 @@ class CommonTransport(ClientXMPP):
             'passwd'])
 
         self.connected = Event()
+        self.disconnected = Event()
 
         # Register and configure pubsub plugin.
         self.register_plugin('xep_0060')
@@ -64,6 +65,7 @@ class CommonTransport(ClientXMPP):
         self.use_ipv6 = False
         if self.connect(use_ssl=False, use_tls=False):
             self.logger.debug("Connected to XMPP")
+            self.disconnected.clear()
             self.process(block=block)
         else:
             self.logger.error("Unable to connect.")
@@ -88,6 +90,7 @@ class CommonTransport(ClientXMPP):
         self.connected.clear()
         self.logger.debug('Closing the XMPP connection...')
         self.disconnect(wait=True)
+        self.disconnected.set()
         self.logger.debug('XMPP connection closed.')
 
     def _pubsub_event(self, msg):

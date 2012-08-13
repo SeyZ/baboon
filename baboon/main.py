@@ -24,14 +24,15 @@ class Main(object):
         if self.which == 'start':
             if self.check_config():
                 self.start()
-            return
 
         # Call the correct method according to the current arg subparser.
-        if hasattr(commands, self.which):
+        elif hasattr(commands, self.which):
             getattr(commands, self.which)()
 
-        # TODO this won't work on windows...
-        signal.pause()
+        # Wait until the transport is disconnected before exiting Baboon.
+        if hasattr(self, 'transport'):
+            while True:
+                self.transport.disconnected.wait(5)
 
     def check_config(self):
         """Some sections and options of the config file are mandatory. Let's be
