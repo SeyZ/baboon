@@ -6,7 +6,7 @@ import uuid
 
 from threading import Event
 
-from sleekxmpp import ClientXMPP, Message
+from sleekxmpp import ClientXMPP
 from sleekxmpp.xmlstream.handler import Callback
 from sleekxmpp.xmlstream.matcher import StanzaPath
 from sleekxmpp.xmlstream.tostring import tostring
@@ -24,7 +24,7 @@ from common.stanza import rsync
 class CommonTransport(ClientXMPP):
 
     def __init__(self):
-        """
+        """ Initializes the CommonTranport with the XEP-0060 support.
         """
 
         ClientXMPP.__init__(self, config['user']['jid'], config['user'][
@@ -50,11 +50,24 @@ class CommonTransport(ClientXMPP):
         self.add_event_handler('stream_error', self.stream_err)
 
     def __enter__(self):
+        """ Adds the support of with statement with all CommonTransport
+        classes. A new XMPP connection is instantiated and returned when the
+        connection is established.
+        """
+
+        # Open a new connection.
         self.open()
+
+        # Wait until the connection is established.
         self.connected.wait()
+
+        # Return the instance itself.
         return self
 
     def __exit__(self, type, value, traceback):
+        """ Disconnects the transport at the end of the with statement.
+        """
+
         self.close()
 
     def open(self, block=False):
@@ -71,6 +84,9 @@ class CommonTransport(ClientXMPP):
             self.logger.error("Unable to connect.")
 
     def stream_err(self, iq):
+        """ Called when a StreamError is received.
+        """
+
         self.logger.error(iq['text'])
 
     def start(self, event):
@@ -94,6 +110,9 @@ class CommonTransport(ClientXMPP):
         self.logger.debug('XMPP connection closed.')
 
     def _pubsub_event(self, msg):
+        """ Called when a pubsub event is received.
+        """
+
         if msg['type'] in ('normal', 'headline'):
             self.logger.debug("Received pubsub item(s): \n%s" %
                               msg['pubsub_event'])
