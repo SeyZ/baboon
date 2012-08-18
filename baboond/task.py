@@ -13,7 +13,6 @@ from common import pyrsync
 from common.file import FileEvent
 from common.logger import logger
 from common.errors.baboon_exception import BaboonException
-from common import pyrsync
 from config import config
 
 
@@ -139,20 +138,20 @@ class RsyncTask(Task):
                 return
 
             if f.event_type == FileEvent.CREATE:
-                self.logger.info('[%s] - Need to create %s.' %
+                self.logger.debug('[%s] - Need to create %s.' %
                                  (self.project_path, f.src_path))
                 self._create_file(f.src_path)
             elif f.event_type == FileEvent.MODIF:
-                self.logger.info('[%s] - Need to sync %s.' %
+                self.logger.debug('[%s] - Need to sync %s.' %
                                  (self.project_path, f.src_path))
                 new_hash = self._get_hash(f.src_path)
                 self._send_hash(new_hash)
             elif f.event_type == FileEvent.DELETE:
-                self.logger.info('[%s] - Need to delete %s.' %
+                self.logger.debug('[%s] - Need to delete %s.' %
                                  (self.project_path, f.src_path))
                 self._delete_file(f.src_path)
             elif f.event_type == FileEvent.MOVE:
-                self.logger.info('[%s] - Need to move %s to %s.' %
+                self.logger.debug('[%s] - Need to move %s to %s.' %
                                  (self.project_path, f.src_path, f.dest_path))
                 self._move_file(f.src_path, f.dest_path)
 
@@ -258,6 +257,7 @@ class RsyncTask(Task):
         transport.streamer.send(self.sid, transport._pack(payload))
 
         # Wait until the rsync is finished.
+        # TODO: It takes sometimes more than 60 sec (i.e. git pack files)
         self.rsync_finished.wait(60)
 
         if not self.rsync_finished.is_set():
