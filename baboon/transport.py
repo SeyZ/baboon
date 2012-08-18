@@ -181,6 +181,43 @@ class WatchTransport(CommonTransport):
         Raises a BaboonException if there's a problem.
         """
 
+        #TODO: temporary, related to issue #51
+        import time
+        time.sleep(8)
+
+        #TODO: make this an int while checking config file
+        max_stanza_size = int(config['server']['max_stanza_size'])
+
+        # Build first stanza
+        iq = self._build_iq(project, files)
+
+        try:
+            # Get the size of the stanza
+            to_xml = tostring(iq.xml)
+            size = sys.getsizeof(to_xml)
+
+            # If it's bigger than the max_stanza_size, split it !
+            if size >= max_stanza_size:
+                iqs = self._split_iq(size, project, files)
+                self.logger.warning('The xml stanza is too big !')
+            else:
+                # Else the original iq will be the only element to send
+                iqs = [iq]
+
+            # Send elements in list
+            for iq in iqs:
+                iq.send()
+                self.logger.info('Sent (%d/%d)!' %
+                                 (iqs.index(iq) + 1, len(iqs)))
+
+        except IqError as e:
+            self.logger.error(e.iq['error']['text'])
+        except Exception as e:
+            self.logger.error(e)
+
+    def _build_iq(self, project, files):
+        """Build a single rsync stanza.
+        """
         iq = self.Iq(sto=config['server']['master'], stype='set')
 
         # Generate a new rsync ID.
@@ -196,18 +233,37 @@ class WatchTransport(CommonTransport):
             elif f.event_type == FileEvent.DELETE:
                 iq['rsync'].add_delete_file(f.src_path)
 
-        try:
-            self.logger.info('Sending a rsync stanza !')
-            to_xml = tostring(iq.xml)
-            if sys.getsizeof(to_xml) >= config['server']['max_stanza_size']:
-                self.logger.warning('The xml stanza is too big !')
-            else:
-                iq.send()
-                self.logger.info('Sent !')
-        except IqError as e:
-            self.logger.error(e.iq['error']['text'])
-        except Exception as e:
-            self.logger.error(e)
+        return iq
+
+    def _split_iq(self, size, project, files):
+        """Splits a stanza into multiple stanzas whith size < max_stanza_size.
+        Returns a list a stanzas
+        """
+
+        iqs = []
+
+        # We don't need the exact result of the division. Let's add 1 to
+        # overcome "round" issues. How many chunks do we need ?
+        chunk_num = size / int(config['server']['max_stanza_size']) + 1
+
+        # How many files per chunk then ?
+        step = len(files) / chunk_num
+
+        # Get the splitted files list
+        chunks = list(self._get_chunks(files, step))
+
+        # Build a stanza for each of them
+        for chunk in chunks:
+            iqs.append(self._build_iq(project, chunk))
+
+        return iqs
+
+    def _get_chunks(self, files, step):
+        """ Generate the chunks from the files list.
+        """
+        for i in xrange(0, len(files), step):
+            yield files[i:i+step]
+
 
     def on_recv(self, payload):
         """ Called when receiving data over the socks5 socket (xep
