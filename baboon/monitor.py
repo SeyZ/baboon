@@ -206,10 +206,10 @@ class Monitor(object):
         try:
             for project, project_attrs in config['projects'].iteritems():
                 project_path = os.path.expanduser(project_attrs['path'])
-                handler = EventHandlerGit(project_path, transport)
+                self.handler = EventHandlerGit(project_path, transport)
 
                 monitor = Observer()
-                monitor.schedule(handler, project_path, recursive=True)
+                monitor.schedule(self.handler, project_path, recursive=True)
 
                 self.monitors[project_path] = monitor
         except OSError, err:
@@ -238,15 +238,11 @@ class Monitor(object):
             project_path = os.path.expanduser(project_attrs['path'])
             for root, _, files in os.walk(project_path):
                 for name in files:
-                    filename = os.path.join(root, name)
-                    try:
-                        # Trigger ON_MODIFIED event.
-                        open(filename, 'a').close()
-                    except IOError:
-                        # Can't touch this. Hammer time.
-                        # Need to deal with permissions here
-                        # Some files are not synced
-                        pass
+                    fullpath = os.path.join(root, name)
+                    rel_path = os.path.relpath(fullpath, project_path)
+                    if not self.handler.exclude(rel_path):
+                        FileEvent(project, FileEvent.MODIF,
+                                  rel_path).register()
 
     def close(self):
         """ Stops the monitoring on the watched project
