@@ -92,9 +92,9 @@ class ArgumentParser(object):
         start_parser.add_argument('--config', dest='configpath',
                                   help="override the default location of the "
                                   "config file")
-        start_parser.add_argument('--noinit', dest='noinit',
+        start_parser.add_argument('--init', dest='init',
                                   default=False, action='store_true',
-                                  help="doesn't execute initial rsync")
+                                  help="execute initial rsync")
 
         # logging args
         parser.add_argument('-d', '--debug', help="set logging to DEBUG",
