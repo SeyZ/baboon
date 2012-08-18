@@ -262,8 +262,7 @@ class WatchTransport(CommonTransport):
         """ Generate the chunks from the files list.
         """
         for i in xrange(0, len(files), step):
-            yield files[i:i+step]
-
+            yield files[i:i + step]
 
     def on_recv(self, payload):
         """ Called when receiving data over the socks5 socket (xep
