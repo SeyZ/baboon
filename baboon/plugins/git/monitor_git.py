@@ -56,13 +56,14 @@ class EventHandlerGit(EventHandler):
 
         # Reset the include_regexps and exclude_regexps.
         self.include_regexps = []
-        self.exclude_regexps = [re.compile('.*\.git/.*\.lock')]
+        self.exclude_regexps = [re.compile('.*\.git/.*\.lock'),
+                                re.compile('.*\.baboon-timestamp')]
 
         # If there's a .gitignore file in the watched directory.
         if os.path.exists(self.gitignore_path):
             # Parse the gitignore.
             ignores = self._parse_gitignore()
-            if ignores != None:
+            if ignores is not None:
                 # Populate the regexps list with the ignores result.
                 self.include_regexps += [re.compile(x) for x in ignores[0]]
                 self.exclude_regexps += [re.compile(x) for x in ignores[1]]

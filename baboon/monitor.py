@@ -1,5 +1,6 @@
 import os
 
+from os.path import join
 from time import sleep
 from threading import Thread, Lock
 from abc import ABCMeta, abstractmethod, abstractproperty
@@ -170,6 +171,14 @@ class Dancer(Thread):
                         # Starts the rsync.
                         self.transport.rsync(project, files=files)
 
+                        cur_project_path = config['projects'][project]['path']
+                        timestamp_file = join(cur_project_path,
+                                              '.baboon-timestamp')
+
+                        # Update the last modification date of the
+                        # .baboon-0t
+                        os.utime(timestamp_file, None)
+
                         # Asks to baboon to verify if there's a conflict
                         # or not.
                         self.transport.merge_verification(project)
@@ -236,13 +245,24 @@ class Monitor(object):
 
         for project, project_attrs in config['projects'].iteritems():
             project_path = os.path.expanduser(project_attrs['path'])
+
+            # Get the timestamp of the last rsync.
+            register_timestamp = os.path.getmtime(join(project_path,
+                                                       '.baboon-timestamp'))
             for root, _, files in os.walk(project_path):
                 for name in files:
-                    fullpath = os.path.join(root, name)
+                    fullpath = join(root, name)
                     rel_path = os.path.relpath(fullpath, project_path)
-                    if not self.handler.exclude(rel_path):
-                        FileEvent(project, FileEvent.MODIF,
-                                  rel_path).register()
+
+                    # Get the timestamp of the current file
+                    cur_timestamp = os.path.getmtime(fullpath)
+
+                    # Register a FileEvent.MODIF if the file is not excluded
+                    # and the file is more recent than the last rsync.
+                    if (not self.handler.exclude(rel_path) and
+                        cur_timestamp > register_timestamp):
+                            FileEvent(project, FileEvent.MODIF,
+                                      rel_path).register()
 
     def close(self):
         """ Stops the monitoring on the watched project
