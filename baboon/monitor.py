@@ -236,11 +236,8 @@ class Monitor(object):
 
         self.dancer.start()
 
-    def initial_rsync(self):
-        """This is pretty rough, but this small piece of code actually
-        works using baboon's watchdog.
-        It triggers an ON_MODIFIED event on every file of every project
-        defined in the configuration file.
+    def startup_rsync(self):
+        """
         """
 
         for project, project_attrs in config['projects'].iteritems():

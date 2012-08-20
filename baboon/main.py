@@ -98,9 +98,10 @@ class Main(object):
 
             self.monitor = Monitor(self.transport)
             self.monitor.watch()
-            # Execute initial rsync if --init is set in CLI.
+
+            # Execute startup rsync if --init is set in CLI.
             if config['parser']['init']:
-                self.monitor.initial_rsync()
+                self.monitor.startup_rsync()
 
         except BaboonException, err:
             sys.stderr.write("%s\n" % err)
