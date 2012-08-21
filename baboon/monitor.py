@@ -1,6 +1,8 @@
 import os
+import tarfile
+import tempfile
 
-from os.path import join
+from os.path import join, exists
 from time import sleep
 from threading import Thread, Lock
 from abc import ABCMeta, abstractmethod, abstractproperty
@@ -175,8 +177,11 @@ class Dancer(Thread):
                         timestamp_file = join(cur_project_path,
                                               '.baboon-timestamp')
 
+                        if not exists(timestamp_file):
+                            open(timestamp_file, 'w').close()
+
                         # Update the last modification date of the
-                        # .baboon-0t
+                        # .baboon-timestamp_file.
                         os.utime(timestamp_file, None)
 
                         # Asks to baboon to verify if there's a conflict
@@ -236,30 +241,55 @@ class Monitor(object):
 
         self.dancer.start()
 
-    def startup_rsync(self):
+    def first_rsync(self, project, project_path):
+        """
+        1. Client: create tmp targz file in project folder with temp name
+        2. Client: add all files from folder in targz, except targz
+        3. Client: generate a FIRST_RSYNC file event
+        4. Server: create targz file in project folder with same name as above
+        5. Server: add all files from folder in targz, except targz
+        5. Server: calculate hash and send it back using transport
+        6. - sync takes place
+        7. Server: remove project except targz
+        8. Server: untar targz
+        9. Server: delete targz
+        10. Client: delete targz
+        """
+
+        # Create a temporary file.
+        temp = tempfile.NamedTemporaryFile(prefix='baboon', dir=project_path,
+                                           delete=False)
+
+        # Create a tar.gz file of the project.
+        archive = tarfile.open(fileobj=temp, mode='w')
+        archive.add(project_path, arcname='.',
+                    exclude=lambda x: x == temp.name)
+        archive.close()
+
+        FileEvent(project, FileEvent.FIRST_RSYNC, temp.name).register()
+
+    def startup_rsync(self, project, project_path):
         """
         """
 
-        for project, project_attrs in config['projects'].iteritems():
-            project_path = os.path.expanduser(project_attrs['path'])
+        # Get the timestamp of the last rsync.
+        register_timestamp = os.path.getmtime(join(project_path,
+                                                   '.baboon-timestamp'))
 
-            # Get the timestamp of the last rsync.
-            register_timestamp = os.path.getmtime(join(project_path,
-                                                       '.baboon-timestamp'))
-            for root, _, files in os.walk(project_path):
-                for name in files:
-                    fullpath = join(root, name)
-                    rel_path = os.path.relpath(fullpath, project_path)
+        for root, _, files in os.walk(project_path):
+            for name in files:
+                fullpath = join(root, name)
+                rel_path = os.path.relpath(fullpath, project_path)
 
-                    # Get the timestamp of the current file
-                    cur_timestamp = os.path.getmtime(fullpath)
+                # Get the timestamp of the current file
+                cur_timestamp = os.path.getmtime(fullpath)
 
-                    # Register a FileEvent.MODIF if the file is not excluded
-                    # and the file is more recent than the last rsync.
-                    if (not self.handler.exclude(rel_path) and
-                        cur_timestamp > register_timestamp):
-                            FileEvent(project, FileEvent.MODIF,
-                                      rel_path).register()
+                # Register a FileEvent.MODIF if the file is not excluded
+                # and the file is more recent than the last rsync.
+                if (not self.handler.exclude(rel_path) and cur_timestamp >
+                    register_timestamp):
+                        FileEvent(project, FileEvent.MODIF,
+                                  rel_path).register()
 
     def close(self):
         """ Stops the monitoring on the watched project

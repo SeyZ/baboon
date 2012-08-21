@@ -48,6 +48,9 @@ class CommonTransport(ClientXMPP):
         # Register events
         self.add_event_handler('session_start', self.start)
         self.add_event_handler('stream_error', self.stream_err)
+        self.register_handler(Callback('RsyncFinished Handler',
+                                       StanzaPath('iq@type=set/rsyncfinished'),
+                                       self._handle_rsync_finished))
 
     def __enter__(self):
         """ Adds the support of with statement with all CommonTransport
@@ -127,6 +130,9 @@ class CommonTransport(ClientXMPP):
             self.logger.debug("Received pubsub event: \n%s" %
                               msg['pubsub_event'])
 
+    def _handle_rsync_finished(self, iq):
+        iq.reply().send()
+
 
 @logger
 class WatchTransport(CommonTransport):
@@ -183,7 +189,7 @@ class WatchTransport(CommonTransport):
 
         #TODO: temporary, related to issue #51
         import time
-        time.sleep(8)
+        time.sleep(5)
 
         #TODO: make this an int while checking config file
         max_stanza_size = int(config['server']['max_stanza_size'])
@@ -232,6 +238,8 @@ class WatchTransport(CommonTransport):
                 iq['rsync'].add_create_file(f.src_path)
             elif f.event_type == FileEvent.DELETE:
                 iq['rsync'].add_delete_file(f.src_path)
+            elif f.event_type == FileEvent.FIRST_RSYNC:
+                iq['rsync'].add_first_rsync(f.src_path)
 
         return iq
 
@@ -272,8 +280,7 @@ class WatchTransport(CommonTransport):
         deltas = []  # The list of delta.
 
         # Sets the future socket response dict.
-        ret = {'from': self.boundjid.bare,
-               }
+        ret = {'from': self.boundjid.bare}
 
         # Unpacks the recv data.
         recv = payload['data']

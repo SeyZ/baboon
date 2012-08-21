@@ -5,10 +5,12 @@ import subprocess
 import threading
 import shutil
 import tempfile
+import tarfile
 
 import executor
 
 from transport import transport
+from sleekxmpp.jid import JID
 from common import pyrsync
 from common.file import FileEvent
 from common.logger import logger
@@ -104,7 +106,7 @@ class RsyncTask(Task):
 
         self.sid = sid
         self.rid = rid
-        self.sfrom = sfrom
+        self.jid = JID(sfrom)
         self.project = project
         self.project_path = project_path
         self.files = files
@@ -125,17 +127,16 @@ class RsyncTask(Task):
         # Lock the repository with a .baboon.lock file.
         lock_file = os.path.join(self.project_path, '.baboon.lock')
         self._create_missing_dirs(lock_file)
-        with open(lock_file, 'w'):
-            pass
+        open(lock_file, 'w').close()
 
         for f in self.files:
 
             # Verify if the file can be written in the self.project_path.
-            path_valid = self._verify_paths(f)
-            if not path_valid:
-                self.logger.error("The file path cannot be written in %s." %
-                                  self.project)
-                return
+            #path_valid = self._verify_paths(f)
+            #if not path_valid:
+                #self.logger.error("The file path cannot be written in %s." %
+                                  #self.project)
+                #return
 
             if f.event_type == FileEvent.CREATE:
                 self.logger.debug('[%s] - Need to create %s.' %
@@ -154,6 +155,10 @@ class RsyncTask(Task):
                 self.logger.debug('[%s] - Need to move %s to %s.' %
                                  (self.project_path, f.src_path, f.dest_path))
                 self._move_file(f.src_path, f.dest_path)
+            elif f.event_type == FileEvent.FIRST_RSYNC:
+                self.logger.debug('[%s] - First RSYNC' % (self.project_path))
+                self._first_rsync(f.src_path)
+                break
 
         # Remove the .baboon.lock file.
         os.remove(lock_file)
@@ -161,6 +166,41 @@ class RsyncTask(Task):
         # TODO: Remove the rsync_task in the pending_rsyncs dict of the
         # transport.
         self.logger.debug('Rsync task %s finished', self.sid)
+
+    def _first_rsync(self, src_path):
+        """
+        """
+
+        arch_name = os.path.basename(src_path)
+        arch_path = os.path.join(self.project_path, arch_name)
+        archive = tarfile.open(name=arch_path, mode='w')
+        archive.add(self.project_path, arcname='.',
+                    exclude=lambda x: x == arch_path)
+        archive.close()
+
+        new_hash = self._get_hash(arch_name)
+        self._send_hash(new_hash)
+
+        # Cleanup the directory before extract the archive.
+        for item in os.listdir(self.project_path):
+            fullpath = os.path.join(self.project_path, item)
+
+            # Don't remove the tar.gz and the baboon lock files.
+            if arch_name != item and item != '.baboon.lock':
+                try:
+                    if os.path.isdir(fullpath):
+                        shutil.rmtree(fullpath)
+                    else:
+                        os.remove(fullpath)
+                except OSError:
+                    pass
+
+        archive = tarfile.open(arch_path, mode='r')
+        archive.extractall(path=self.project_path)
+        archive.close()
+
+        os.remove(arch_path)
+        transport.send_rsync_finished(self.jid.full)
 
     def _verify_paths(self, file_event):
         """ Verifies if the file_event paths can be written in the
@@ -257,8 +297,8 @@ class RsyncTask(Task):
         transport.streamer.send(self.sid, transport._pack(payload))
 
         # Wait until the rsync is finished.
-        # TODO: It takes sometimes more than 60 sec (i.e. git pack files)
-        self.rsync_finished.wait(60)
+        # TODO: It takes sometimes more than 240 sec (i.e. git pack files)
+        self.rsync_finished.wait(240)
 
         if not self.rsync_finished.is_set():
             self.logger.error('Timeout on rsync detected !')
@@ -545,4 +585,4 @@ class MergeTask(Task):
             # TODO: raise an error !
             pass
 
-        return (proc.returncode, output, errors)
+        r

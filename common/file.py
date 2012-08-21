@@ -12,6 +12,7 @@ class FileEvent(object):
     MODIF = 1
     MOVE = 2
     DELETE = 3
+    FIRST_RSYNC = 4
 
     def __init__(self, project, event_type, src_path, dest_path=None):
         """
@@ -27,4 +28,11 @@ class FileEvent(object):
         if not pending.get(self.project):
             pending[self.project] = []
 
-        pending[self.project].append(self)
+        if hash(self) not in [hash(x) for x in pending[self.project]]:
+            pending[self.project].append(self)
+
+    def __hash__(self):
+        return (hash(self.project) ^
+                hash(self.event_type) ^
+                hash(self.src_path) ^
+                hash(self.dest_path))

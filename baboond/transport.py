@@ -8,6 +8,7 @@ import executor
 import task
 
 from sleekxmpp import ClientXMPP
+from sleekxmpp.jid import JID
 from sleekxmpp.xmlstream.handler.callback import Callback
 from sleekxmpp.xmlstream.matcher import StanzaPath
 
@@ -53,7 +54,7 @@ class Transport(ClientXMPP):
 
         sid = iq['rsync']['sid']  # Registers the SID.
         rid = iq['rsync']['rid']  # Register the RID.
-        sfrom = '%s' % iq['from'].bare  # Registers the bare JID.
+        sfrom = iq['from']  # Registers the bare JID.
         files = iq['rsync']['files']  # Get the files list to sync.
         node = iq['rsync']['node']  # Get the current project name.
 
@@ -61,15 +62,15 @@ class Transport(ClientXMPP):
         reply = iq.reply()
 
         # Verify if the user is a subscriber/owner of the node.
-        is_subscribed = self._verify_subscription(sfrom, node)
-        if not is_subscribed:
-            self._send_forbidden_error(reply, "You are not a contributor on "
-                                       "%s." % node)
-            return
+        #is_subscribed = self._verify_subscription(sfrom, node)
+        #if not is_subscribed:
+            #self._send_forbidden_error(reply, "You are not a contributor on "
+                                       #"%s." % node)
+            #return
 
         # Get the project path.
         project_path = os.path.join(config['server']['working_dir'], node,
-                                    sfrom)
+                                    sfrom.bare)
 
         # Prepare the **kwargs argument for the RsyncTask contructor.
         kwargs = {
@@ -149,7 +150,7 @@ class Transport(ClientXMPP):
         recv = self._unpack(recv)
 
         # Shortcuts to useful data in recv.
-        sfrom = recv['from']  # The bare jid of the requester.
+        sfrom = JID(recv['from']).bare  # The bare jid of the requester.
         node = recv['node']  # The project name.
         deltas = recv['delta']  # A list of delta tuple.
         rid = recv['rid']  # The rsync ID.
@@ -218,6 +219,11 @@ class Transport(ClientXMPP):
         except:
             self.logger.debug('Could not publish to: %s' %
                               project_name)
+
+    def send_rsync_finished(self, to):
+        iq = self.Iq(sto=to, stype='set')
+        iq['rsyncfinished']
+        iq.send()
 
     def _verify_subscription(self, jid, node):
         """ Verify if the bare jid is a subscriber/owner on the node.

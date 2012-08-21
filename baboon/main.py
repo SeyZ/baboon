@@ -1,3 +1,4 @@
+import os
 import sys
 import signal
 
@@ -99,9 +100,17 @@ class Main(object):
             self.monitor = Monitor(self.transport)
             self.monitor.watch()
 
-            # Execute startup rsync if --init is set in CLI.
-            if config['parser']['init']:
-                self.monitor.startup_rsync()
+            for project, project_attrs in config['projects'].iteritems():
+
+                # Execute first rsync if necessary.
+                project_path = os.path.expanduser(project_attrs['path'])
+                timestamp_file = os.path.join(project_path,
+                                              '.baboon-timestamp')
+                if not os.path.exists(timestamp_file):
+                    self.monitor.first_rsync(project, project_path)
+                # Execute startup rsync if --init is set in CLI.
+                elif config['parser']['init']:
+                    self.monitor.startup_rsync(project, project_path)
 
         except BaboonException, err:
             sys.stderr.write("%s\n" % err)
