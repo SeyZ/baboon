@@ -11,6 +11,7 @@ from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 
 from config import config
+from common import archive
 from common.file import FileEvent, pending
 from common.logger import logger
 from common.errors.baboon_exception import BaboonException
@@ -261,10 +262,12 @@ class Monitor(object):
                                            delete=False)
 
         # Create a tar.gz file of the project.
-        archive = tarfile.open(fileobj=temp, mode='w')
-        archive.add(project_path, arcname='.',
-                    exclude=lambda x: x == temp.name)
-        archive.close()
+        tar = tarfile.open(fileobj=temp, mode='w')
+        files = archive.get_ordered_files(project_path)
+        for f in files:
+            tar.add(os.path.join(project_path, f), arcname=f,
+                        filter=archive.reset_file_tarinfo)
+        tar.close()
 
         FileEvent(project, FileEvent.FIRST_RSYNC, temp.name).register()
 

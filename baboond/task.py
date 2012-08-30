@@ -11,7 +11,7 @@ import executor
 
 from transport import transport
 from sleekxmpp.jid import JID
-from common import pyrsync
+from common import pyrsync, archive
 from common.file import FileEvent
 from common.logger import logger
 from common.errors.baboon_exception import BaboonException
@@ -167,19 +167,40 @@ class RsyncTask(Task):
         # transport.
         self.logger.debug('Rsync task %s finished', self.sid)
 
+    def reset_file_tarinfo(self, tarinfo):
+        tarinfo.uid = tarinfo.gid = tarinfo.mtime = 0
+        tarinfo.uname = tarinfo.gname = 'baboon'
+        tarinfo.mode = 0755
+        tarinfo.mtime = 0
+        return tarinfo
+
+    def _create_archive(self, arch_path, arch_name):
+        tar = tarfile.open(name=arch_path, mode='w')
+
+        files = archive.get_ordered_files(self.project_path)
+        for f in files:
+            tar.add(os.path.join(self.project_path, f), arcname=f,
+                    filter=archive.reset_file_tarinfo)
+
+        tar.close()
+
     def _first_rsync(self, src_path):
         """
         """
 
+        self.logger.debug("Received a first rsync with path %s." % src_path)
+
+        self.logger.debug("Creating the archive...")
         arch_name = os.path.basename(src_path)
         arch_path = os.path.join(self.project_path, arch_name)
-        archive = tarfile.open(name=arch_path, mode='w')
-        archive.add(self.project_path, arcname='.',
-                    exclude=lambda x: x == arch_path)
-        archive.close()
+        self._create_archive(arch_path, arch_name)
 
+        self.logger.debug("Computing hashes of the archive %s" % arch_path)
         new_hash = self._get_hash(arch_name)
+        self.logger.debug("Sending hashes...")
         self._send_hash(new_hash)
+
+        self.logger.debug("Cleaning up the directory %s." % self.project_path)
 
         # Cleanup the directory before extract the archive.
         for item in os.listdir(self.project_path):
@@ -195,10 +216,12 @@ class RsyncTask(Task):
                 except OSError:
                     pass
 
+        self.logger.debug("Extracting archive %s." % arch_path)
         archive = tarfile.open(arch_path, mode='r')
         archive.extractall(path=self.project_path)
         archive.close()
 
+        self.logger.debug("Removing archive %s." % arch_path)
         os.remove(arch_path)
         transport.send_rsync_finished(self.jid.full)
 
@@ -283,7 +306,8 @@ class RsyncTask(Task):
             # Computes the block checksums and add the result to the
             # all_hashes list.
             with open(fullpath, 'rb') as unpatched:
-                return (f, pyrsync.blockchecksums(unpatched))
+                return (f, pyrsync.blockchecksums(unpatched,
+                                                  blocksize=8192))
 
     def _send_hash(self, h):
         # Sets the future socket response dict.
@@ -585,4 +609,4 @@ class MergeTask(Task):
             # TODO: raise an error !
             pass
 
-        r
+        return (proc.returncode, output, errors)

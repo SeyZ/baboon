@@ -310,7 +310,8 @@ class WatchTransport(CommonTransport):
             if os.path.exists(fullpath) and os.path.isfile(fullpath):
                 # Computes the local delta of the current file.
                 patchedfile = open(fullpath, 'rb')
-                delta = pyrsync.rsyncdelta(patchedfile, hashes)
+                delta = pyrsync.rsyncdelta(patchedfile, hashes,
+                                           blocksize=8192)
                 delta = (relpath, delta)
 
                 # Appends the result to the list of delta.

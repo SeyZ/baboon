@@ -144,6 +144,7 @@ class Transport(ClientXMPP):
         0065).
         """
 
+        self.logger.debug("Received data over socks5.")
         recv = payload['data']
 
         # Unpacks the recv.
