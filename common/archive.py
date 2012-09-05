@@ -18,6 +18,6 @@ def reset_file_tarinfo(tarinfo):
 
     tarinfo.uid = tarinfo.gid = tarinfo.mtime = 0
     tarinfo.uname = tarinfo.gname = 'baboon'
-    tarinfo.mode = 0755
+    tarinfo.mode = 0755 if tarinfo.isdir() else 0644
     tarinfo.mtime = 0
     return tarinfo
