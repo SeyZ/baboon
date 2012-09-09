@@ -44,7 +44,7 @@ def register():
         transport.open(block=True)
 
         # Persist register information in the user configuration file.
-        if config['parser']['save']:
+        if not config['parser']['nosave']:
             save_user_config()
 
     except CommandException:
@@ -103,7 +103,7 @@ def create():
         config['projects'][project]['scm'] = project_scm
         config['projects'][project]['enable'] = 1
 
-    if config['parser']['save']:
+    if not config['parser']['nosave']:
         save_user_config()
     return success
 
@@ -126,7 +126,7 @@ def delete():
         del config['projects'][project]
 
         # Dump the configuration dict.
-        if config['parser']['save']:
+        if not config['parser']['nosave']:
             save_user_config()
     except KeyError:
         # The project entry does not exist in the configuration file
@@ -161,17 +161,19 @@ def join():
     else:
         cwarn("The project's path does not exist on your system.")
 
-    if config['projects'].get(project):
-        cwarn("The project was already defined in your configuration file")
-        config['projects'][project]['enable'] = 1
-    else:
-        config['projects'][project] = {}
-        config['projects'][project]['path'] = path
-        config['projects'][project]['scm'] = project_scm
-        config['projects'][project]['enable'] = 1
+    if success:
+        if config['projects'].get(project):
+            cwarn("The project was already defined in your configuration file")
+            config['projects'][project]['enable'] = 1
+        else:
+            config['projects'][project] = {}
+            config['projects'][project]['path'] = path
+            config['projects'][project]['scm'] = project_scm
+            config['projects'][project]['enable'] = 1
 
-    if config['parser']['save']:
-        save_user_config()
+        if not config['parser']['nosave']:
+            save_user_config()
+
     return success
 
 
@@ -191,7 +193,7 @@ def unjoin():
     else:
         cwarn("The project was not defined in your configuration file")
 
-    if config['parser']['save']:
+    if not config['parser']['nosave']:
         save_user_config()
     return success
 

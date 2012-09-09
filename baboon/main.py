@@ -28,12 +28,29 @@ class Main(object):
 
         # Call the correct method according to the current arg subparser.
         elif hasattr(commands, self.which):
-            getattr(commands, self.which)()
+            if self.which != 'register':
+                if self.check_user_config():
+                    getattr(commands, self.which)()
+                else:
+                    self.logger.error("Missing user credentials in the"
+                                      " configuration file.")
+            else:
+                getattr(commands, 'register')()
 
         # Wait until the transport is disconnected before exiting Baboon.
         if hasattr(self, 'transport'):
             while True:
                 self.transport.disconnected.wait(5)
+
+    def check_user_config(self):
+        """
+        """
+
+        try:
+            return '' not in (config['user']['jid'], config['user']['passwd'])
+        except KeyError:
+            return False
+
 
     def check_config(self):
         """Some sections and options of the config file are mandatory. Let's be
@@ -108,8 +125,8 @@ class Main(object):
                                               '.baboon-timestamp')
                 if not os.path.exists(timestamp_file):
                     self.monitor.first_rsync(project, project_path)
-                # Execute startup rsync if --init is set in CLI.
-                elif config['parser']['init']:
+                # Execute startup rsync if --no-init is not set in CLI.
+                elif not config['parser']['init']:
                     self.monitor.startup_rsync(project, project_path)
 
         except BaboonException, err:

@@ -41,6 +41,12 @@ class CommonTransport(ClientXMPP):
         # Shortcut to access to the xep_0060 plugin.
         self.pubsub = self.plugin["xep_0060"]
 
+        # Register and configure data form plugin.
+        self.register_plugin('xep_0004')
+
+        # Shortcuts to access to the xep_0004 plugin.
+        self.form = self.plugin['xep_0004']
+
         # Shortcuts to access to the config server information
         self.pubsub_addr = config['server']['pubsub']
         self.server_addr = config['server']['master']
@@ -48,6 +54,9 @@ class CommonTransport(ClientXMPP):
         # Register events
         self.add_event_handler('session_start', self.start)
         self.add_event_handler('stream_error', self.stream_err)
+        self.add_event_handler('message', self.message)
+        self.add_event_handler('message_form', self.message_form)
+        self.add_event_handler('message_xform', self.message_form)
         self.register_handler(Callback('RsyncFinished Handler',
                                        StanzaPath('iq@type=set/rsyncfinished'),
                                        self._handle_rsync_finished))
@@ -133,6 +142,28 @@ class CommonTransport(ClientXMPP):
     def _handle_rsync_finished(self, iq):
         iq.reply().send()
 
+    def message_form(self, form):
+        self.logger.debug("Received a form message: %s" % form)
+        try:
+            expected_type = \
+                'http://jabber.org/protocol/pubsub#subscribe_authorization'
+            if expected_type in form['form']['fields']['FORM_TYPE']['value']:
+                node = form['form']['fields']['pubsub#node']['value']
+                user = form['form']['fields']['pubsub#subscriber_jid']['value']
+
+                self.logger.info("%s wants to join the %s project !" % (user,
+                                                                       node))
+                self.logger.info("You can accept the invitation request by "
+                                 "running: $ baboon accept %s %s" % (node,
+                                                                     user))
+                self.logger.info("Or you can reject it by running: $ baboon "
+                                 "reject %s %s" % (node, user))
+        except KeyError:
+            pass
+
+    def message(self, msg):
+        self.logger.info("Received: %s" % msg)
+
 
 @logger
 class WatchTransport(CommonTransport):
@@ -148,6 +179,7 @@ class WatchTransport(CommonTransport):
 
         super(WatchTransport, self).__init__()
 
+        self.register_plugin('xep_0050')  # Ad-hoc command
         self.register_plugin('xep_0065')  # Socks5 Bytestreams
         self.add_event_handler('socks_recv', self.on_recv)
 
@@ -159,6 +191,9 @@ class WatchTransport(CommonTransport):
 
         self.pending_rsyncs = {}
 
+        # Shortcut to access to the xep_0050 plugin.
+        self.adhoc = self.plugin["xep_0050"]
+
         # Shortcut to access to the xep_0065 plugin.
         self.streamer = self.plugin["xep_0065"]
 
@@ -169,6 +204,10 @@ class WatchTransport(CommonTransport):
         # Registers the SID to retrieve later to send/recv data to the
         # good socket stored in self.streamer.proxy_threads dict.
         self.sid = streamhost_used['socks']['sid']
+
+        # Retrieve the list of pending users.
+        for project in config['projects']:
+            self._get_pending_users(project)
 
     def close(self):
         """ Closes the XMPP connection.
@@ -346,16 +385,31 @@ class WatchTransport(CommonTransport):
         except IqError as e:
             self.logger.error(e.iq['error']['text'])
 
+    def _get_pending_users(self, node):
+        """ Build and send the message to get the list of pending users on the
+        node.
+        """
 
+        # Build the IQ.
+        iq = self.Iq(sto=self.pubsub_addr, stype='set')
+        iq['command']['action'] = 'execute'
+        iq['command']['sessionid'] = 'pubsub-get-pending:20031021T150901Z-600'
+        iq['command']['node'] = 'http://jabber.org/protocol/pubsub#get-pending'
+        iq['command']['form'].add_field(var='pubsub#node', value=node)
+
+        # Send the IQ to the pubsub server !
+        try:
+            iq.send()
+        except IqError:
+            pass
+
+
+@logger
 class AdminTransport(CommonTransport):
 
     def __init__(self, logger_enabled=True):
 
         super(AdminTransport, self).__init__()
-
-        self.register_plugin('xep_0004')  # Data form
-        self.form = self.plugin['xep_0004']
-
         self.logger.disabled = not logger_enabled
 
     def create_project(self, project):
