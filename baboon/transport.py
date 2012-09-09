@@ -226,9 +226,9 @@ class WatchTransport(CommonTransport):
         Raises a BaboonException if there's a problem.
         """
 
-        #TODO: temporary, related to issue #51
-        import time
-        time.sleep(5)
+        # Verify if the connection is established. Otherwise, wait...
+        if not self.connected.is_set():
+            self.connected.wait()
 
         #TODO: make this an int while checking config file
         max_stanza_size = int(config['server']['max_stanza_size'])
