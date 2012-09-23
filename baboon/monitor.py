@@ -242,35 +242,6 @@ class Monitor(object):
 
         self.dancer.start()
 
-    def first_rsync(self, project, project_path):
-        """
-        1. Client: create tmp targz file in project folder with temp name
-        2. Client: add all files from folder in targz, except targz
-        3. Client: generate a FIRST_RSYNC file event
-        4. Server: create targz file in project folder with same name as above
-        5. Server: add all files from folder in targz, except targz
-        5. Server: calculate hash and send it back using transport
-        6. - sync takes place
-        7. Server: remove project except targz
-        8. Server: untar targz
-        9. Server: delete targz
-        10. Client: delete targz
-        """
-
-        # Create a temporary file.
-        temp = tempfile.NamedTemporaryFile(prefix='baboon', dir=project_path,
-                                           delete=False)
-
-        # Create a tar.gz file of the project.
-        tar = tarfile.open(fileobj=temp, mode='w')
-        files = archive.get_ordered_files(project_path)
-        for f in files:
-            tar.add(os.path.join(project_path, f), arcname=f,
-                        filter=archive.reset_file_tarinfo)
-        tar.close()
-
-        FileEvent(project, FileEvent.FIRST_RSYNC, temp.name).register()
-
     def startup_rsync(self, project, project_path):
         """
         """

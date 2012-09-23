@@ -124,7 +124,19 @@ class Main(object):
                 timestamp_file = os.path.join(project_path,
                                               '.baboon-timestamp')
                 if not os.path.exists(timestamp_file):
-                    self.monitor.first_rsync(project, project_path)
+                    git_url = config['parser']['git-url']
+                    if git_url:
+                        self.transport.first_git_init(project, git_url)
+                        # Write the .baboon-timestamp file.
+                        timestamp_file = os.path.join(
+                            config['projects'][project]['path'],
+                            '.baboon-timestamp')
+                        open(timestamp_file, 'w').close()
+                    else:
+                        raise BaboonException("The project is not yet "
+                                              "initialized. Please, add the "
+                                              "--git-url option with the url "
+                                              "of your public git repository.")
                 # Execute startup rsync if --no-init is not set in CLI.
                 elif not config['parser']['init']:
                     self.monitor.startup_rsync(project, project_path)

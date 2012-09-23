@@ -18,6 +18,7 @@ from config import config
 from common.logger import logger
 from common import pyrsync
 from common.stanza import rsync
+from common.errors.baboon_exception import BaboonException
 
 
 @logger
@@ -140,6 +141,7 @@ class CommonTransport(ClientXMPP):
                               msg['pubsub_event'])
 
     def _handle_rsync_finished(self, iq):
+        self.logger.info("First rsync finished")
         iq.reply().send()
 
     def message_form(self, form):
@@ -214,10 +216,29 @@ class WatchTransport(CommonTransport):
         """
 
         # Close the proxy socket.
-        self.streamer.close()
+        if hasattr(self, 'streamer') and self.streamer:
+            self.streamer.close()
 
         # Disconnect...
         super(WatchTransport, self).close()
+
+    def first_git_init(self, project, url):
+        """
+        """
+
+        # Verify if the connection is established. Otherwise, wait...
+        if not self.connected.is_set():
+            self.connected.wait()
+
+        iq = self.Iq(sto=config['server']['master'], stype='set')
+        iq['git-init']['node'] = project
+        iq['git-init']['url'] = url
+
+        try:
+            iq.send()
+            self.logger.info("The repository is now correctly initialized.")
+        except Exception as e:
+            raise BaboonException(e.iq['error']['text'])
 
     def rsync(self, project, files=None):
         """ Starts a rsync transaction, rsync and stop the
@@ -277,8 +298,6 @@ class WatchTransport(CommonTransport):
                 iq['rsync'].add_create_file(f.src_path)
             elif f.event_type == FileEvent.DELETE:
                 iq['rsync'].add_delete_file(f.src_path)
-            elif f.event_type == FileEvent.FIRST_RSYNC:
-                iq['rsync'].add_first_rsync(f.src_path)
 
         return iq
 

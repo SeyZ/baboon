@@ -4,14 +4,21 @@ from sleekxmpp import Iq
 from common.file import FileEvent
 
 
+class GitInit(ElementBase):
+    name = 'git-init'
+    namespace = 'baboon'
+    plugin_attrib = 'git-init'
+    interfaces = set(('node', 'url',))
+
+
 class Rsync(ElementBase):
     name = 'rsync'
     namespace = 'baboon'
     plugin_attrib = 'rsync'
     interfaces = set(('sid', 'rid', 'node', 'files', 'create_files',
-        'move_files', 'delete_files', 'first_rsync'))
+        'move_files', 'delete_files'))
     sub_interfaces = set(('files', 'create_files', 'move_files',
-        'delete_files', 'first_rsync'))
+        'delete_files'))
 
     def get_files(self):
 
@@ -29,8 +36,6 @@ class Rsync(ElementBase):
                 file_event_type = FileEvent.MOVE
             elif tag_name == 'delete_file':
                 file_event_type = FileEvent.DELETE
-            elif tag_name == 'first_rsync':
-                file_event_type = FileEvent.FIRST_RSYNC
 
             file_event = FileEvent(self['node'], file_event_type, element.text)
             files.append(file_event)
@@ -73,11 +78,6 @@ class Rsync(ElementBase):
         for f in files:
             self.add_move_file(f)
 
-    def add_first_rsync(self, f):
-        file_xml = ET.Element('{%s}first_rsync' % self.namespace)
-        file_xml.text = f
-        self.xml.append(file_xml)
-
 
 class RsyncFinished(ElementBase):
     name = 'rsyncfinished'
@@ -99,6 +99,7 @@ class MergeStatus(ElementBase):
     interfaces = set(('node', 'status'))
     plugin_attrib = 'status'
 
+register_stanza_plugin(Iq, GitInit)
 register_stanza_plugin(Iq, Rsync)
 register_stanza_plugin(Iq, RsyncFinished)
 register_stanza_plugin(Iq, MergeVerification)

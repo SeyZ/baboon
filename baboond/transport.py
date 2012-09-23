@@ -14,6 +14,7 @@ from sleekxmpp.xmlstream.matcher import StanzaPath
 
 from config import config
 from common.stanza.rsync import MergeStatus
+from common.eventbus import eventbus
 from common.logger import logger
 from common import pyrsync
 
@@ -35,6 +36,10 @@ class Transport(ClientXMPP):
         self.add_event_handler('session_start', self.start)
         self.add_event_handler('socks_recv', self.on_recv)
 
+        self.register_handler(Callback('First Git Init Handler',
+                                       StanzaPath('iq@type=set/git-init'),
+                                       self._handle_git_init))
+
         self.register_handler(Callback('RsyncStart Handler',
                                        StanzaPath('iq@type=set/rsync'),
                                        self._handle_rsync))
@@ -48,6 +53,56 @@ class Transport(ClientXMPP):
         self.use_ipv6 = False
         if self.connect(use_ssl=False, use_tls=False):
             self.process()
+
+    def _handle_git_init(self, iq):
+        self.logger.info("Received a first git initialization !")
+
+        node = iq['git-init']['node']
+        url = iq['git-init']['url']
+        sfrom = iq['from'].bare
+
+        # Create a new GitInitTask
+        git_init_task = task.GitInitTask(node, url, sfrom)
+
+        # Register the BaboonId of this GitInitTask in the
+        # self.pending_git_init_tasks dict.
+        self.pending_git_init_tasks[git_init_task.bid] = iq
+
+        # Add the GitInitTask to the list of tasks to execute.
+        executor.tasks.put(git_init_task)
+
+        # Register the callbacks.
+        eventbus.register_once('git-init-success', self._on_git_init_success)
+        eventbus.register_once('git-init-failure', self._on_git_init_failure)
+
+    def _on_git_init_success(self, bid):
+        """ Called when a git init task has been terminated successfuly.
+        """
+
+        # Retrieve the IQ associated to this BaboonId and send the response.
+        iq = self.pending_git_init_tasks[bid]
+        iq.reply().send()
+
+        # Remove the entry in the pending dict.
+        del self.pending_git_init_tasks[bid]
+
+    def _on_git_init_failure(self, bid, error):
+        """ Called when a git init task has been terminated with an error.
+        """
+
+        self.logger.error(error)
+
+        # Retrieve the IQ associated to this BaboonId and send the response.
+        iq = self.pending_git_init_tasks[bid]
+        reply = iq.reply().error()
+        reply['error']['code'] = '409'
+        reply['error']['type'] = 'cancel'
+        reply['error']['condition'] = 'conflict'
+        reply['error']['text'] = error
+        reply.send()
+
+        # Remove the entry in the pending dict.
+        del self.pending_git_init_tasks[bid]
 
     def _handle_rsync(self, iq):
         self.logger.info('Received rsync stanza !')
@@ -133,6 +188,9 @@ class Transport(ClientXMPP):
         # Declare a pending_rsyncs dict with key -> SID and value the
         # rsync_task object.
         self.pending_rsyncs = {}
+
+        # Declare a pending git_init_task in a dict.
+        self.pending_git_init_tasks = {}
 
     def close(self):
         self.streamer.close()

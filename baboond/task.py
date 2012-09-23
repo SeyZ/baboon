@@ -5,13 +5,14 @@ import subprocess
 import threading
 import shutil
 import tempfile
-import tarfile
+import uuid
 
 import executor
 
 from transport import transport
 from sleekxmpp.jid import JID
-from common import pyrsync, archive
+from common import pyrsync
+from common.eventbus import eventbus
 from common.file import FileEvent
 from common.logger import logger
 from common.errors.baboon_exception import BaboonException
@@ -95,6 +96,79 @@ class AlertTask(Task):
 
 
 @logger
+class GitInitTask(Task):
+    """
+    """
+
+    def __init__(self, project, url, jid):
+        """
+        """
+
+        super(GitInitTask, self).__init__(4)
+
+        # Generate the current GitInitTask unique baboon id
+        self.bid = uuid.uuid4()
+
+        self.project = project
+        self.url = url
+        self.jid = jid
+        self.project_cwd = os.path.join(config['server']['working_dir'],
+                                        self.project)
+
+    def run(self):
+        self.logger.debug('A new git init task has been started.')
+        self._create_missing_dirs(self.project_cwd)
+        ret_code = self._exec_cmd('git clone %s %s' % (self.url, self.jid),
+                                  self.project_cwd)[0]
+
+        if not ret_code:
+            self.logger.debug('Git init task finished.')
+            eventbus.fire('git-init-success', self.bid)
+        else:
+            eventbus.fire('git-init-failure', self.bid,
+                          "Cannot initialize the git repository.")
+
+    def _create_missing_dirs(self, path):
+        """ Creates all missing directories of path.
+        """
+
+        if not os.path.exists(path):
+            try:
+                # Creates all the parent directories.
+                os.makedirs(path)
+            except OSError:
+                pass
+
+
+    def _exec_cmd(self, cmd, cwd=None):
+        """ Execute the cmd command in a subprocess. Returns the
+        returncode.
+        """
+
+        # If cwd is None, set cwd to self.master_cwd.
+        if cwd is None:
+            cwd = self.master_cwd
+
+        # Open a subprocess
+        proc = subprocess.Popen(cmd,
+                                stdin=subprocess.PIPE,
+                                stdout=subprocess.PIPE,
+                                stderr=subprocess.STDOUT,
+                                shell=True,
+                                cwd=cwd
+                                )
+        # Run the command
+        output, errors = proc.communicate()
+
+        if proc.returncode != 0:
+            # TODO: raise an error !
+            pass
+
+        return (proc.returncode, output, errors)
+
+
+
+@logger
 class RsyncTask(Task):
     """ A rsync task to sync the baboon client repository with
     relative repository server-side.
@@ -102,7 +176,7 @@ class RsyncTask(Task):
 
     def __init__(self, sid, rid, sfrom, project, project_path, files):
 
-        super(RsyncTask, self).__init__(3)
+        super(RsyncTask, self).__init__(4)
 
         self.sid = sid
         self.rid = rid
@@ -132,11 +206,11 @@ class RsyncTask(Task):
         for f in self.files:
 
             # Verify if the file can be written in the self.project_path.
-            #path_valid = self._verify_paths(f)
-            #if not path_valid:
-                #self.logger.error("The file path cannot be written in %s." %
-                                  #self.project)
-                #return
+            path_valid = self._verify_paths(f)
+            if not path_valid:
+                self.logger.error("The file path cannot be written in %s." %
+                                  self.project)
+                return
 
             if f.event_type == FileEvent.CREATE:
                 self.logger.debug('[%s] - Need to create %s.' %
@@ -155,10 +229,6 @@ class RsyncTask(Task):
                 self.logger.debug('[%s] - Need to move %s to %s.' %
                                  (self.project_path, f.src_path, f.dest_path))
                 self._move_file(f.src_path, f.dest_path)
-            elif f.event_type == FileEvent.FIRST_RSYNC:
-                self.logger.debug('[%s] - First RSYNC' % (self.project_path))
-                self._first_rsync(f.src_path)
-                break
 
         # Remove the .baboon.lock file.
         os.remove(lock_file)
@@ -166,64 +236,6 @@ class RsyncTask(Task):
         # TODO: Remove the rsync_task in the pending_rsyncs dict of the
         # transport.
         self.logger.debug('Rsync task %s finished', self.sid)
-
-    def reset_file_tarinfo(self, tarinfo):
-        tarinfo.uid = tarinfo.gid = tarinfo.mtime = 0
-        tarinfo.uname = tarinfo.gname = 'baboon'
-        tarinfo.mode = 0755
-        tarinfo.mtime = 0
-        return tarinfo
-
-    def _create_archive(self, arch_path, arch_name):
-        tar = tarfile.open(name=arch_path, mode='w')
-
-        files = archive.get_ordered_files(self.project_path)
-        for f in files:
-            tar.add(os.path.join(self.project_path, f), arcname=f,
-                    filter=archive.reset_file_tarinfo)
-
-        tar.close()
-
-    def _first_rsync(self, src_path):
-        """
-        """
-
-        self.logger.debug("Received a first rsync with path %s." % src_path)
-
-        self.logger.debug("Creating the archive...")
-        arch_name = os.path.basename(src_path)
-        arch_path = os.path.join(self.project_path, arch_name)
-        self._create_archive(arch_path, arch_name)
-
-        self.logger.debug("Computing hashes of the archive %s" % arch_path)
-        new_hash = self._get_hash(arch_name)
-        self.logger.debug("Sending hashes...")
-        self._send_hash(new_hash)
-
-        self.logger.debug("Cleaning up the directory %s." % self.project_path)
-
-        # Cleanup the directory before extract the archive.
-        for item in os.listdir(self.project_path):
-            fullpath = os.path.join(self.project_path, item)
-
-            # Don't remove the tar.gz and the baboon lock files.
-            if arch_name != item and item != '.baboon.lock':
-                try:
-                    if os.path.isdir(fullpath):
-                        shutil.rmtree(fullpath)
-                    else:
-                        os.remove(fullpath)
-                except OSError:
-                    pass
-
-        self.logger.debug("Extracting archive %s." % arch_path)
-        archive = tarfile.open(arch_path, mode='r')
-        archive.extractall(path=self.project_path)
-        archive.close()
-
-        self.logger.debug("Removing archive %s." % arch_path)
-        os.remove(arch_path)
-        transport.send_rsync_finished(self.jid.full)
 
     def _verify_paths(self, file_event):
         """ Verifies if the file_event paths can be written in the
@@ -424,7 +436,7 @@ class MergeTask(Task):
 
         # The priority is greater than EndTask and RsyncTask in order
         # to have a lower priority.
-        super(MergeTask, self).__init__(4)
+        super(MergeTask, self).__init__(5)
 
         # See the __init__ documentation.
         self.project_name = project_name

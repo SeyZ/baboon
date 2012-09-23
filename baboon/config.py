@@ -94,7 +94,10 @@ class ArgumentParser(object):
                                   "config file")
         start_parser.add_argument('--no-init', dest='init',
                                   default=False, action='store_true',
-                                  help="execute initial rsync")
+                                  help="avoid to execute initial rsync")
+
+        start_parser.add_argument('--git-url', dest='git-url',
+                                  help="execute initial rsync a git url")
 
         # logging args
         parser.add_argument('-d', '--debug', help="set logging to DEBUG",

@@ -12,7 +12,6 @@ class FileEvent(object):
     MODIF = 1
     MOVE = 2
     DELETE = 3
-    FIRST_RSYNC = 4
 
     def __init__(self, project, event_type, src_path, dest_path=None):
         """
