@@ -6,6 +6,7 @@ from plugins import *
 from config import config
 from commands import commands
 from transport import WatchTransport
+from initializor import MetadirController
 from monitor import Monitor
 from common.logger import logger
 from common.errors.baboon_exception import BaboonException
@@ -119,27 +120,12 @@ class Main(object):
 
             for project, project_attrs in config['projects'].iteritems():
 
-                # Execute first rsync if necessary.
                 project_path = os.path.expanduser(project_attrs['path'])
-                timestamp_file = os.path.join(project_path,
-                                              '.baboon-timestamp')
-                if not os.path.exists(timestamp_file):
-                    git_url = config['parser']['git-url']
-                    if git_url:
-                        self.transport.first_git_init(project, git_url)
-                        # Write the .baboon-timestamp file.
-                        timestamp_file = os.path.join(
-                            config['projects'][project]['path'],
-                            '.baboon-timestamp')
-                        open(timestamp_file, 'w').close()
-                    else:
-                        raise BaboonException("The project is not yet "
-                                              "initialized. Please, add the "
-                                              "--git-url option with the url "
-                                              "of your public git repository.")
-                # Execute startup rsync if --no-init is not set in CLI.
-                elif not config['parser']['init']:
-                    self.monitor.startup_rsync(project, project_path)
+
+                # For each project, verify if the .baboon metadir is valid and
+                # take some decisions about needed actions on the repository.
+                MetadirController(self.transport, project, project_path,
+                            self.monitor.handler.exclude).go()
 
         except BaboonException, err:
             sys.stderr.write("%s\n" % err)

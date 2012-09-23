@@ -13,6 +13,7 @@ from watchdog.events import FileSystemEventHandler
 from config import config
 from common import archive
 from common.file import FileEvent, pending
+from common.eventbus import eventbus
 from common.logger import logger
 from common.errors.baboon_exception import BaboonException
 
@@ -156,6 +157,9 @@ class Dancer(Thread):
 
         Thread.__init__(self)
 
+        # Ensure the transport is connected.
+        transport.connected.wait()
+
         self.transport = transport
         self.sleeptime = sleeptime
         self.stop = False
@@ -171,21 +175,13 @@ class Dancer(Thread):
             with lock:
                 for project, files in pending.iteritems():
                     try:
-                        # Starts the rsync.
+                        # Start the rsync.
                         self.transport.rsync(project, files=files)
 
-                        cur_project_path = config['projects'][project]['path']
-                        timestamp_file = join(cur_project_path,
-                                              '.baboon-timestamp')
+                        # Fire an event to warn that there was a rsync.
+                        eventbus.fire('rsync-finished-success', project, files)
 
-                        if not exists(timestamp_file):
-                            open(timestamp_file, 'w').close()
-
-                        # Update the last modification date of the
-                        # .baboon-timestamp_file.
-                        os.utime(timestamp_file, None)
-
-                        # Asks to baboon to verify if there's a conflict
+                        # Ask to baboon to verify if there's a conflict
                         # or not.
                         self.transport.merge_verification(project)
 
