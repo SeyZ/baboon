@@ -1,4 +1,5 @@
 import os
+import shutil
 import time
 import shelve
 
@@ -103,6 +104,7 @@ class MetadirController(object):
         if git_url:
             self.transport.first_git_init(self.project, git_url)
         else:
+            shutil.rmtree(join(self.project_path, MetadirController.METADIR))
             raise BaboonException("The project is not yet "
                                   "initialized. Please, add the "
                                   "--git-url option with the url "
