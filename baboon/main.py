@@ -40,8 +40,10 @@ class Main(object):
 
         # Wait until the transport is disconnected before exiting Baboon.
         if hasattr(self, 'transport'):
-            while True:
+            while not self.transport.disconnected.is_set():
                 self.transport.disconnected.wait(5)
+
+        self.sigint_handler()
 
     def check_user_config(self):
         """
@@ -111,7 +113,6 @@ class Main(object):
         self.monitor = None
 
         try:
-
             self.transport = WatchTransport()
             self.transport.open()
 
@@ -127,7 +128,7 @@ class Main(object):
                 MetadirController(self.transport, project, project_path,
                             self.monitor.handler.exclude).go()
 
-        except BaboonException, err:
+        except BaboonException as err:
             sys.stderr.write("%s\n" % err)
             # Try to close the transport properly. If the transport is
             # not correctly started, the close() method has no effect.
@@ -140,7 +141,7 @@ class Main(object):
             # Exits with a fail return code
             sys.exit(1)
 
-    def sigint_handler(self, signal, frame):
+    def sigint_handler(self, signal=None, frame=None):
         """ Handler method for the SIGINT signal.
         XMPP connection and service monitoring are correctly closed.
         Closing baboon in a clean way.

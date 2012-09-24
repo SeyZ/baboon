@@ -181,6 +181,9 @@ class WatchTransport(CommonTransport):
 
         super(WatchTransport, self).__init__()
 
+        # Shortcuts to access to the config server information
+        self.streamer_addr = config['server']['streamer']
+
         self.register_plugin('xep_0050')  # Ad-hoc command
         self.register_plugin('xep_0065')  # Socks5 Bytestreams
         self.add_event_handler('socks_recv', self.on_recv)
@@ -200,8 +203,16 @@ class WatchTransport(CommonTransport):
         self.streamer = self.plugin["xep_0065"]
 
         # Negotiates the bytestream
-        streamhost_used = self.streamer.handshake(config['server']['master'],
-                                                  config['server']['streamer'])
+        try:
+            streamhost_used = self.streamer.handshake(self.server_addr,
+                                                      self.streamer_addr)
+        except IqError as e:
+            self.logger.error("Cannot established the socket connection. "
+                              "Exiting...")
+            # If the socks5 bytestream can't be established, disconnect the
+            # XMPP connection clearly.
+            self.close()
+            return
 
         # Registers the SID to retrieve later to send/recv data to the
         # good socket stored in self.streamer.proxy_threads dict.
@@ -230,7 +241,7 @@ class WatchTransport(CommonTransport):
         if not self.connected.is_set():
             self.connected.wait()
 
-        iq = self.Iq(sto=config['server']['master'], stype='set')
+        iq = self.Iq(sto=self.server_addr, stype='set')
         iq['git-init']['node'] = project
         iq['git-init']['url'] = url
 
@@ -284,7 +295,7 @@ class WatchTransport(CommonTransport):
     def _build_iq(self, project, files):
         """Build a single rsync stanza.
         """
-        iq = self.Iq(sto=config['server']['master'], stype='set')
+        iq = self.Iq(sto=self.server_addr, stype='set')
 
         # Generate a new rsync ID.
         iq['rsync']['sid'] = self.sid
