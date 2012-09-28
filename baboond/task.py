@@ -616,6 +616,10 @@ class MergeTask(Task):
                                 )
         # Run the command
         output, errors = proc.communicate()
+        self.logger.debug("Commande executed:")
+        self.logger.debug(cmd)
+        self.logger.debug("Result:")
+        self.logger.debug(output)
 
         if proc.returncode != 0:
             # TODO: raise an error !

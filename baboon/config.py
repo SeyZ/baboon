@@ -85,19 +85,20 @@ class ArgumentParser(object):
         reject_parser.add_argument('project', help="the project name.")
         reject_parser.add_argument('username', help="the username to kick.")
 
+        # Configure the INIT parser.
+        init_parser = subparsers.add_parser('init', help="initialize a new "
+                                             "project.")
+        init_parser.set_defaults(which='init')
+        init_parser.add_argument('project', help="the project name.")
+        init_parser.add_argument('git-url', help="specify the git url to "
+                                 "fetch in order to initialize the project.")
+
         # Configure the START parser.
-        start_parser = subparsers.add_parser('start',
-                                             help="start Baboon !")
+        start_parser = subparsers.add_parser('start', help="start Baboon !")
         start_parser.set_defaults(which='start')
-        start_parser.add_argument('--config', dest='configpath',
-                                  help="override the default location of the "
-                                  "config file")
         start_parser.add_argument('--no-init', dest='init',
                                   default=False, action='store_true',
                                   help="avoid to execute initial rsync")
-
-        start_parser.add_argument('--git-url', dest='git-url',
-                                  help="execute initial rsync a git url")
 
         # logging args
         parser.add_argument('-d', '--debug', help="set logging to DEBUG",
@@ -105,6 +106,9 @@ class ArgumentParser(object):
                             dest='loglevel',
                             const=logging.DEBUG,
                             default=logging.INFO)
+        parser.add_argument('--config', dest='configpath',
+                            help="override the default location of the "
+                            "config file")
 
         # Add the nosave option to some of the parsers.
         no_save_subparsers = (register_parser, create_parser, delete_parser,

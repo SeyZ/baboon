@@ -1,6 +1,7 @@
 import os
 import shutil
 
+from baboon.initializor import MetadirController
 from baboon.transport import RegisterTransport, AdminTransport
 from baboon.fmt import cinput, confirm_cinput, cwarn
 from baboon.fmt import csuccess, cerr
@@ -234,6 +235,25 @@ def kick():
     print "Kick in progress..."
     with AdminTransport(logger_enabled=False) as transport:
         ret_status, msg = transport.kick(project, username)
+        return _on_action_finished(ret_status, msg)
+
+
+def init():
+    """ Initialialize a new project.
+    """
+
+    project = config['parser']['project']
+    project_path = config['projects'][project]['path']
+    url = config['parser']['git-url']
+
+    print "Initialize the project %s..." % project
+    with AdminTransport(logger_enabled=False) as transport:
+        ret_status, msg = transport.first_git_init(project, url)
+
+        metadir_controller = MetadirController(project, project_path)
+        metadir_controller.init_index()
+        metadir_controller.create_baboon_index()
+
         return _on_action_finished(ret_status, msg)
 
 

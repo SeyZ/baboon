@@ -51,8 +51,9 @@ class Config(object):
         elsewhere : return None
         """
 
-        if hasattr(self, 'configpath') and self.configpath:
-            return self.configpath
+        config_path = self.attrs['parser'].get('configpath')
+        if config_path:
+            return config_path
 
         etc_path = '/etc/baboonrc/%s' % self.config_name
         user_path = '%s/.%s' % (os.path.expanduser('~'), self.config_name)

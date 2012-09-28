@@ -20,6 +20,8 @@ class Main(object):
         # Exit baboon when receiving a sigint signal.
         signal.signal(signal.SIGINT, self.sigint_handler)
 
+        self.metadirs = []
+
         self.which = config['parser']['which']
 
         # The start command is a special command. Call it from this class
@@ -125,8 +127,10 @@ class Main(object):
 
                 # For each project, verify if the .baboon metadir is valid and
                 # take some decisions about needed actions on the repository.
-                MetadirController(self.transport, project, project_path,
-                            self.monitor.handler.exclude).go()
+                metadir = MetadirController(project, project_path,
+                                            self.monitor.handler.exclude)
+                self.metadirs.append(metadir)
+                metadir.go()
 
         except BaboonException as err:
             sys.stderr.write("%s\n" % err)
@@ -149,6 +153,9 @@ class Main(object):
         self.logger.debug("Received SIGINT signal")
 
         try:
+            for metadir in self.metadirs:
+                metadir.index.close()
+
             self.transport.close()
             self.monitor.close()
         except AttributeError:

@@ -233,24 +233,6 @@ class WatchTransport(CommonTransport):
         # Disconnect...
         super(WatchTransport, self).close()
 
-    def first_git_init(self, project, url):
-        """
-        """
-
-        # Verify if the connection is established. Otherwise, wait...
-        if not self.connected.is_set():
-            self.connected.wait()
-
-        iq = self.Iq(sto=self.server_addr, stype='set')
-        iq['git-init']['node'] = project
-        iq['git-init']['url'] = url
-
-        try:
-            iq.send()
-            self.logger.info("The repository is now correctly initialized.")
-        except Exception as e:
-            raise BaboonException(e.iq['error']['text'])
-
     def rsync(self, project, files=None):
         """ Starts a rsync transaction, rsync and stop the
         transaction.
@@ -576,6 +558,22 @@ class AdminTransport(CommonTransport):
                 msg = "You don't have the permission to do this."
             elif status_code == 404:
                 msg = "The %s project does not exist." % project
+
+            return (status_code, msg)
+
+    def first_git_init(self, project, url):
+
+        iq = self.Iq(sto=self.server_addr, stype='set')
+        iq['git-init']['node'] = project
+        iq['git-init']['url'] = url
+
+        try:
+            iq.send(timeout=240)
+            return (200, "The project %s is now correctly initialized." %
+                    project)
+        except IqError as e:
+            status_code = int(e.iq['error']['code'])
+            msg = "Something went wrong."
 
             return (status_code, msg)
 

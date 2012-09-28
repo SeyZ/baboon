@@ -18,13 +18,13 @@ class MetadirController(object):
     METADIR = '.baboon'
     GIT_INDEX = 'index'
 
-    def __init__(self, transport, project, project_path, exclude_method=None):
+    def __init__(self, project, project_path, exclude_method=None):
         """
         """
 
-        self.transport = transport
         self.project = project
         self.project_path = project_path
+        self.metadir_path = join(self.project_path, MetadirController.METADIR)
         self.exclude_method = exclude_method
 
         eventbus.register('rsync-finished-success', self._on_rsync_finished)
@@ -33,18 +33,43 @@ class MetadirController(object):
         """
         """
 
-        already_exists = self._create_missing_metadir()
-        self.index = shelve.open(join(self.project_path,
-                                      MetadirController.METADIR,
+        # Verify (and create if necessary) if baboon metadir exists.
+        already_exists = exists(self.metadir_path)
+
+        if already_exists:
+            # Initializes the shelve index.
+            self.init_index()
+
+            # Startup initialization.
+            self._startup_init()
+        else:
+            raise BaboonException("The project %s is not yet initialized. "
+                                  "Please, run `baboon init %s <git-url>`." %
+                                  (self.project, self.project))
+
+    def init_index(self):
+        if not exists(self.metadir_path):
+            os.makedirs(self.metadir_path)
+
+        self.index = shelve.open(join(self.metadir_path,
                                       MetadirController.GIT_INDEX),
                                  writeback=True)
-        if not already_exists:
-            # First repository initialization needed.
-            self._first_init()
-            self._create_baboon_index()
-        else:
-            # Startup rsync needed.
-            self._startup_init()
+
+    def create_baboon_index(self):
+        """
+        """
+
+        if not exists(self.metadir_path):
+            os.makedirs(self.metadir_path)
+
+        cur_timestamp = time.time()
+
+        for root, _, files in os.walk(self.project_path):
+            for name in files:
+                fullpath = join(root, name)
+                rel_path = relpath(fullpath, self.project_path)
+
+                self.index[rel_path] = cur_timestamp
 
     def _on_rsync_finished(self, project, files):
         """ When a rsync is finished, update the index dict.
@@ -69,46 +94,6 @@ class MetadirController(object):
 
         # TODO: Verify if it's not a performance issue (maybe on big project).
         self.index.sync()
-
-    def _create_missing_metadir(self):
-        """ Create the baboon metadir if it does not exist in the project path.
-        If the metadir already exists, return True. Otherwise, False.
-        """
-
-        metadir_path = join(self.project_path, MetadirController.METADIR)
-
-        if exists(metadir_path):
-            return True
-        else:
-            os.makedirs(metadir_path)
-            return False
-
-    def _create_baboon_index(self):
-        """
-        """
-
-        cur_timestamp = time.time()
-
-        for root, _, files in os.walk(self.project_path):
-            for name in files:
-                fullpath = join(root, name)
-                rel_path = relpath(fullpath, self.project_path)
-
-                self.index[rel_path] = cur_timestamp
-
-    def _first_init(self):
-        """
-        """
-
-        git_url = config['parser']['git-url']
-        if git_url:
-            self.transport.first_git_init(self.project, git_url)
-        else:
-            shutil.rmtree(join(self.project_path, MetadirController.METADIR))
-            raise BaboonException("The project is not yet "
-                                  "initialized. Please, add the "
-                                  "--git-url option with the url "
-                                  "of your public git repository.")
 
     def _startup_init(self):
         """
