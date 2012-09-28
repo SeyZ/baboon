@@ -27,10 +27,9 @@ it's small. Remember, you're warned in **real time**.
 
 A few keywords:
 * Python
+* XMPP (with XEP-0060 and XEP-0065)
+* Rsync (over XMPP)
 * Git
-* Rsync over XMPP
-* Socks5 proxy (XEP-0065)
-* Pubsub (XEP-0060)
 
 ## Quickstart
 
