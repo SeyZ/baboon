@@ -40,6 +40,7 @@ A few keywords:
 pip install baboon
 baboon register <username>
 baboon create <project_name>
+baboon init <project_name> <git_remote_url>
 baboon start
 ```
 
@@ -49,6 +50,7 @@ baboon start
 pip install baboon
 baboon register <username>
 baboon join <project_name>
+baboon init <project_name> <git_remote_url>
 baboon start
 ```
 
