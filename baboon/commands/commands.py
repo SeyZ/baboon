@@ -254,6 +254,9 @@ def init():
         metadir_controller.init_index()
         metadir_controller.create_baboon_index()
 
+        # Really important, don't forget to close the shelve index !
+        metadir_controller.index.close()
+
         return _on_action_finished(ret_status, msg)
 
 
