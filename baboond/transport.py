@@ -61,6 +61,14 @@ class Transport(ClientXMPP):
         url = iq['git-init']['url']
         sfrom = iq['from'].bare
 
+        reply = iq.reply()
+
+        is_subscribed = self._verify_subscription(sfrom, node)
+        if not is_subscribed:
+            self._send_forbidden_error(reply, "you are not a contributor on "
+                                       "%s." % node)
+            return
+
         # Create a new GitInitTask
         git_init_task = task.GitInitTask(node, url, sfrom)
 
@@ -117,11 +125,11 @@ class Transport(ClientXMPP):
         reply = iq.reply()
 
         # Verify if the user is a subscriber/owner of the node.
-        #is_subscribed = self._verify_subscription(sfrom, node)
-        #if not is_subscribed:
-            #self._send_forbidden_error(reply, "You are not a contributor on "
-                                       #"%s." % node)
-            #return
+        is_subscribed = self._verify_subscription(sfrom, node)
+        if not is_subscribed:
+            self._send_forbidden_error(reply, "you are not a contributor on "
+                                       "%s." % node)
+            return
 
         # Get the project path.
         project_path = os.path.join(config['server']['working_dir'], node,
