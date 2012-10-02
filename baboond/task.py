@@ -6,6 +6,7 @@ import threading
 import shutil
 import tempfile
 import uuid
+import re
 
 from sleekxmpp.jid import JID
 
@@ -89,9 +90,9 @@ class AlertTask(Task):
         msg = 'Everything seems to be perfect'
 
         if self.merge_conflict:
-            msg = 'Conflict detected in: '
+            msg = 'Conflict detected with %s in: ' % self.username
             for f in self.conflict_files:
-                msg += f + ', '
+                msg += f + '\n'
 
         transport.alert(self.project_name, self.username, msg)
 
@@ -545,6 +546,9 @@ class MergeTask(Task):
         # there's no conflict.
         ret = 0
 
+        # The future result string of the `git apply --check` command.
+        patch_output = ""
+
         # If the diff is not empty, check if it can be applied in the user_cwd.
         # Otherwise, it means that there's no change, so there's no possible
         # conflict.
@@ -559,8 +563,8 @@ class MergeTask(Task):
                 tmpfile.seek(0)
 
                 # Check if the diff can be applied in the master user.
-                ret = self._exec_cmd('git apply --check %s' % tmpfile.name,
-                                     user_cwd)[0]
+                ret, patch_output, _ = self._exec_cmd('git apply --check %s' %
+                                                      tmpfile.name, user_cwd)
             finally:
                 # Automatically delete the temp file.
                 tmpfile.close()
@@ -577,12 +581,24 @@ class MergeTask(Task):
             # merge conflict.x
             alert_kwargs = {
                 'merge_conflict': True,
-                'conflict_files': []
+                'conflict_files': self._get_conflict_files(patch_output)
             }
 
         # Call the _alert method with alert_args tuple as *args
         # argument and alert_kwargs dict as **kwargs.
         self._alert(*alert_args, **alert_kwargs)
+
+    def _get_conflict_files(self, patch_output):
+        """ Parses the patch_output string and returns a readable list of
+        conflict files.
+        """
+
+        conflict_files = []
+        for i, line in enumerate(patch_output.split('\n')):
+            if not i % 2:
+                conflict_files.append(line)
+
+        return conflict_files
 
     def _alert(self, project_name, username, merge_conflict=False,
                conflict_files=[]):
