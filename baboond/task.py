@@ -7,16 +7,17 @@ import shutil
 import tempfile
 import uuid
 
-import executor
-
-from transport import transport
 from sleekxmpp.jid import JID
+
+import baboond.executor
+
+from baboond.transport import transport
+from baboond.config import config
 from common import pyrsync
 from common.eventbus import eventbus
 from common.file import FileEvent
 from common.logger import logger
 from common.errors.baboon_exception import BaboonException
-from config import config
 
 
 class Task(object):

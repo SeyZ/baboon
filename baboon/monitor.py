@@ -10,8 +10,7 @@ from abc import ABCMeta, abstractmethod, abstractproperty
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 
-from config import config
-from common import archive
+from baboon.config import config
 from common.file import FileEvent, pending
 from common.eventbus import eventbus
 from common.logger import logger

@@ -4,16 +4,16 @@ import subprocess
 import struct
 import tempfile
 import pickle
-import executor
-
-import task
 
 from sleekxmpp import ClientXMPP
 from sleekxmpp.jid import JID
 from sleekxmpp.xmlstream.handler.callback import Callback
 from sleekxmpp.xmlstream.matcher import StanzaPath
 
-from config import config
+import baboond.executor
+import baboond.task
+
+from baboond.config import config
 from common.stanza.rsync import MergeStatus
 from common.eventbus import eventbus
 from common.logger import logger
@@ -165,6 +165,10 @@ class Transport(ClientXMPP):
         sfrom = iq['from'].bare
         node = iq['merge']['node']
 
+        # Get the project path.
+        project_path = os.path.join(config['server']['working_dir'], node,
+                                    sfrom)
+
         # The future reply stanza.
         reply = iq.reply()
 
@@ -176,11 +180,11 @@ class Transport(ClientXMPP):
             return
 
         # Verify if the server-side project is a git repository.
-        project_cwd = os.path.join(config['server']['working_dir'], node)
-        is_git_repo = self._verify_git_repository(project_cwd)
+        is_git_repo = self._verify_git_repository(project_path)
         if not is_git_repo:
             self._send_forbidden_error(reply, "The repository %s seems to be "
-                                       "corruputed." % node)
+                                       "corruputed. Please, (re)run the init "
+                                       "command." % node)
             return
 
         # Prepares the merge verification with this data.
@@ -321,7 +325,7 @@ class Transport(ClientXMPP):
                                 stdout=subprocess.PIPE,
                                 stderr=subprocess.STDOUT, shell=True,
                                 cwd=path)
-        proc.communicate()
+        output, errorss = proc.communicate()
         return proc.returncode == 0
 
     def _send_forbidden_error(self, iq, err_msg):

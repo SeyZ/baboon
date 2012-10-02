@@ -1,7 +1,7 @@
 from threading import Thread
 from Queue import PriorityQueue
 
-from task import EndTask
+from baboond.task import EndTask
 from common.logger import logger
 from common.errors.baboon_exception import BaboonException
 

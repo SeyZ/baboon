@@ -5,7 +5,7 @@ import shelve
 
 from os.path import join, relpath, getmtime, exists
 
-from config import config
+from baboon.config import config
 from common.file import FileEvent
 from common.eventbus import eventbus
 from common.logger import logger
@@ -101,7 +101,7 @@ class MetadirController(object):
 
         cur_files = []
 
-        self.logger.info("Startup...")
+        self.logger.info("Startup initialization...")
         for root, _, files in os.walk(self.project_path):
             for name in files:
                 fullpath = join(root, name)
@@ -136,5 +136,5 @@ class MetadirController(object):
             self.logger.info("Need to delete: %s" % del_file)
             FileEvent(self.project, FileEvent.DELETE, del_file).register()
 
-        self.logger.info("Ok, ready !")
+        self.logger.info("Baboon is ready !")
 

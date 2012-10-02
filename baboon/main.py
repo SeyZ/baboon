@@ -2,12 +2,12 @@ import os
 import sys
 import signal
 
-from plugins import *
-from config import config
-from commands import commands
-from transport import WatchTransport
-from initializor import MetadirController
-from monitor import Monitor
+from baboon.plugins import *
+from baboon.config import config
+from baboon.commands import commands
+from baboon.transport import WatchTransport
+from baboon.initializor import MetadirController
+from baboon.monitor import Monitor
 from common.logger import logger
 from common.errors.baboon_exception import BaboonException
 
@@ -44,8 +44,6 @@ class Main(object):
         if hasattr(self, 'transport'):
             while not self.transport.disconnected.is_set():
                 self.transport.disconnected.wait(5)
-
-        self.sigint_handler()
 
     def check_user_config(self):
         """

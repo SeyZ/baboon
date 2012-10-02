@@ -13,8 +13,8 @@ from sleekxmpp.xmlstream.tostring import tostring
 from sleekxmpp.exceptions import IqError
 from sleekxmpp.plugins.xep_0060.stanza.pubsub_event import EventItem
 
-from monitor import FileEvent
-from config import config
+from baboon.monitor import FileEvent
+from baboon.config import config
 from common.logger import logger
 from common import pyrsync
 from common.stanza import rsync
@@ -110,7 +110,7 @@ class CommonTransport(ClientXMPP):
         self.get_roster()
 
         self.connected.set()
-        self.logger.info('Connected')
+        self.logger.debug('Connected')
 
     def close(self):
         """ Closes the XMPP connection.
@@ -258,7 +258,8 @@ class WatchTransport(CommonTransport):
             # If it's bigger than the max_stanza_size, split it !
             if size >= max_stanza_size:
                 iqs = self._split_iq(size, project, files)
-                self.logger.warning('The xml stanza is too big !')
+                self.logger.warning('The xml stanza has been split %s stanzas.'
+                                    % len(iqs))
             else:
                 # Else the original iq will be the only element to send
                 iqs = [iq]
@@ -266,8 +267,8 @@ class WatchTransport(CommonTransport):
             # Send elements in list
             for iq in iqs:
                 iq.send()
-                self.logger.info('Sent (%d/%d)!' %
-                                 (iqs.index(iq) + 1, len(iqs)))
+                self.logger.debug('Sent (%d/%d)!' %
+                                  (iqs.index(iq) + 1, len(iqs)))
 
         except IqError as e:
             self.logger.error(e.iq['error']['text'])
