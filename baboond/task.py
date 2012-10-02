@@ -87,14 +87,11 @@ class AlertTask(Task):
         self.conflict_files = conflict_files
 
     def run(self):
-        msg = 'Everything seems to be perfect'
+        msg = 'Conflict detected with %s.' % self.username if \
+                self.merge_conflict else 'Everything seems to be perfect'
 
-        if self.merge_conflict:
-            msg = 'Conflict detected with %s in: ' % self.username
-            for f in self.conflict_files:
-                msg += f + '\n'
-
-        transport.alert(self.project_name, self.username, msg)
+        transport.alert(self.project_name, self.username, msg,
+                        self.conflict_files)
 
 
 @logger

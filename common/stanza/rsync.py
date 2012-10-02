@@ -96,8 +96,23 @@ class MergeVerification(ElementBase):
 class MergeStatus(ElementBase):
     name = 'merge_status'
     namespace = 'baboon'
-    interfaces = set(('node', 'status'))
-    plugin_attrib = 'status'
+    interfaces = set(('node', 'status', 'files'))
+    subinterfaces = set(('files',))
+    plugin_attrib = 'merge_status'
+
+    def get_files(self):
+        import pdb
+        pdb.set_trace()
+        return [element.text for element in self.xml.getchildren()]
+
+    def add_file(self, f):
+        file_xml = ET.Element('{%s}file' % self.namespace)
+        file_xml.text = f
+        self.xml.append(file_xml)
+
+    def set_files(self, files):
+        for f in files:
+            self.add_file(f)
 
 register_stanza_plugin(Iq, GitInit)
 register_stanza_plugin(Iq, Rsync)

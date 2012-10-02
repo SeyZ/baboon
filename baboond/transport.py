@@ -280,7 +280,7 @@ class Transport(ClientXMPP):
         data = pickle.loads(data)
         return data
 
-    def alert(self, project_name, username, msg):
+    def alert(self, project_name, username, msg, files=[]):
         """ Broadcast the msg on the pubsub node (written in the
         config file).
         """
@@ -288,6 +288,7 @@ class Transport(ClientXMPP):
         status_msg = MergeStatus()
         status_msg['node'] = project_name
         status_msg['status'] = msg
+        status_msg.set_files(files)
 
         try:
             result = self.pubsub.publish(config['server']['pubsub'],

@@ -131,11 +131,12 @@ class CommonTransport(ClientXMPP):
                               msg['pubsub_event'])
 
             items = msg['pubsub_event']['items']['substanzas']
-
             for item in items:
                 if isinstance(item, EventItem):
                     self.logger.info(item['payload'].get('status'))
-
+                    for err_f in item['payload']:
+                        if err_f.text:
+                            self.logger.warning("> %s" % err_f.text)
         else:
             self.logger.debug("Received pubsub event: \n%s" %
                               msg['pubsub_event'])

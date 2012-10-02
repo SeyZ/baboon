@@ -1,4 +1,5 @@
 import os
+import sys
 import shutil
 
 from baboon.initializor import MetadirController
@@ -243,7 +244,15 @@ def init():
     """
 
     project = config['parser']['project']
-    project_path = config['projects'][project]['path']
+
+    project_path = None
+    try:
+        project_path = config['projects'][project]['path']
+    except KeyError:
+        cerr("Failed to find the %s project in the configuration file." %
+             project)
+        sys.exit(1)
+
     url = config['parser']['git-url']
 
     print "Initialize the project %s..." % project
