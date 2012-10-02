@@ -114,9 +114,15 @@ class GitInitTask(Task):
         self.jid = jid
         self.project_cwd = os.path.join(config['server']['working_dir'],
                                         self.project)
+        self.user_cwd = os.path.join(self.project_cwd, self.jid)
 
     def run(self):
         self.logger.debug('A new git init task has been started.')
+
+        # If the project directory already exists, delete it.
+        if os.path.exists(self.user_cwd):
+            shutil.rmtree(self.user_cwd)
+
         self._create_missing_dirs(self.project_cwd)
         ret_code = self._exec_cmd('git clone %s %s' % (self.url, self.jid),
                                   self.project_cwd)[0]

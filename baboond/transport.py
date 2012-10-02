@@ -1,5 +1,6 @@
 import os
 import shutil
+import subprocess
 import struct
 import tempfile
 import pickle
@@ -61,12 +62,10 @@ class Transport(ClientXMPP):
         url = iq['git-init']['url']
         sfrom = iq['from'].bare
 
-        reply = iq.reply()
-
         is_subscribed = self._verify_subscription(sfrom, node)
         if not is_subscribed:
-            self._send_forbidden_error(reply, "you are not a contributor on "
-                                       "%s." % node)
+            self._send_forbidden_error(iq.reply(), "you are not a contributor "
+                                       "on %s." % node)
             return
 
         # Create a new GitInitTask
@@ -125,7 +124,7 @@ class Transport(ClientXMPP):
         reply = iq.reply()
 
         # Verify if the user is a subscriber/owner of the node.
-        is_subscribed = self._verify_subscription(sfrom, node)
+        is_subscribed = self._verify_subscription(sfrom.bare, node)
         if not is_subscribed:
             self._send_forbidden_error(reply, "you are not a contributor on "
                                        "%s." % node)
@@ -135,7 +134,7 @@ class Transport(ClientXMPP):
         project_path = os.path.join(config['server']['working_dir'], node,
                                     sfrom.bare)
 
-        # Prepare the **kwargs argument for the RsyncTask contructor.
+        # Prepare the **kwargs argument for the RsyncTask constructor.
         kwargs = {
             'sid': sid,
             'rid': rid,
@@ -174,6 +173,14 @@ class Transport(ClientXMPP):
         if not is_subscribed:
             self._send_forbidden_error(reply, "You are not a contributor on "
                                        "%s." % node)
+            return
+
+        # Verify if the server-side project is a git repository.
+        project_cwd = os.path.join(config['server']['working_dir'], node)
+        is_git_repo = self._verify_git_repository(project_cwd)
+        if not is_git_repo:
+            self._send_forbidden_error(reply, "The repository %s seems to be "
+                                       "corruputed." % node)
             return
 
         # Prepares the merge verification with this data.
@@ -305,10 +312,17 @@ class Transport(ClientXMPP):
                 if jid == subscription['jid']:
                     return True
         except Exception as e:
-            import pdb
-            pdb.set_trace()
+            pass
 
         return False
+
+    def _verify_git_repository(self, path):
+        proc = subprocess.Popen('git status', stdin=subprocess.PIPE,
+                                stdout=subprocess.PIPE,
+                                stderr=subprocess.STDOUT, shell=True,
+                                cwd=path)
+        proc.communicate()
+        return proc.returncode == 0
 
     def _send_forbidden_error(self, iq, err_msg):
         """ Send an error iq with the err_msg as text.
