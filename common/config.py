@@ -57,7 +57,9 @@ class Config(object):
 
         etc_path = '/etc/baboonrc/%s' % self.config_name
         user_path = '%s/.%s' % (os.path.expanduser('~'), self.config_name)
-        curdir_path = '%s/conf/%s' % (os.getcwd(), self.config_name)
+
+        mod_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        curdir_path = '%s/conf/%s' % (mod_path, self.config_name)
 
         for loc in etc_path, user_path, curdir_path:
             if os.path.isfile(loc):
