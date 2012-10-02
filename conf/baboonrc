@@ -6,7 +6,7 @@ max_stanza_size = 65535
 
 #[user]
 #jid=<your_full_jid>
-#password=<your_password>
+#passwd=<your_password>
 
 # Example of project definition
 #[awesome_project] 	    # The project name on the baboon server
