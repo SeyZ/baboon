@@ -10,8 +10,8 @@ from sleekxmpp.jid import JID
 from sleekxmpp.xmlstream.handler.callback import Callback
 from sleekxmpp.xmlstream.matcher import StanzaPath
 
-import baboond.executor
-import baboond.task
+import executor
+import task
 
 from baboond.config import config
 from common.stanza.rsync import MergeStatus

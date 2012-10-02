@@ -9,7 +9,7 @@ import uuid
 
 from sleekxmpp.jid import JID
 
-import baboond.executor
+import executor
 
 from baboond.transport import transport
 from baboond.config import config
