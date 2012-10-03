@@ -71,8 +71,8 @@ class AlertTask(Task):
     merge.
     """
 
-    def __init__(self, project_name, username, merge_conflict=False,
-                 conflict_files=[]):
+    def __init__(self, project_name, username, dest_username,
+                 merge_conflict=False, conflict_files=[]):
         """ Initialize the AlertTask. By default, there's no merge
         conflict.
         """
@@ -83,12 +83,15 @@ class AlertTask(Task):
 
         self.project_name = project_name
         self.username = username
+        self.dest_username = dest_username
         self.merge_conflict = merge_conflict
         self.conflict_files = conflict_files
 
     def run(self):
-        msg = 'Conflict detected with %s.' % self.username if \
-                self.merge_conflict else 'Everything seems to be perfect'
+        conflict_msg = 'Conflict detected with %s and %s.' % \
+                (self.username, self.dest_username)
+        good_msg = 'Everything seems to be perfect.'
+        msg =  conflict_msg if self.merge_conflict else good_msg
 
         transport.alert(self.project_name, self.username, msg,
                         self.conflict_files)
@@ -567,7 +570,7 @@ class MergeTask(Task):
                 tmpfile.close()
 
         # Build the *args for the _alert method.
-        alert_args = (self.project_name, self.username)
+        alert_args = (self.project_name, self.username, user)
 
         # Build the **kwargs for the _alert method if there's no
         # conflict.
@@ -597,13 +600,14 @@ class MergeTask(Task):
 
         return conflict_files
 
-    def _alert(self, project_name, username, merge_conflict=False,
-               conflict_files=[]):
+    def _alert(self, project_name, username, dest_username,
+               merge_conflict=False, conflict_files=[]):
         """ Creates a alert task to warn to the user the state of the
         merge.
         """
 
-        executor.tasks.put(AlertTask(project_name, username, merge_conflict,
+        executor.tasks.put(AlertTask(project_name, username, dest_username,
+                                     merge_conflict,
                                      conflict_files=conflict_files))
 
     def _get_user_dirs(self):
