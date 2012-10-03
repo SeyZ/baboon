@@ -12,10 +12,10 @@ from sleekxmpp.xmlstream.matcher import StanzaPath
 
 from baboond.dispatcher import dispatcher
 from baboond.config import config
-from common.stanza.rsync import MergeStatus
-from common.eventbus import eventbus
-from common.logger import logger
-from common import pyrsync
+from babooncommon.stanza.rsync import MergeStatus
+from babooncommon.eventbus import eventbus
+from babooncommon.logger import logger
+from babooncommon import pyrsync
 
 
 @logger

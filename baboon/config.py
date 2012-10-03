@@ -6,7 +6,7 @@ import logging.config
 from ConfigParser import RawConfigParser, MissingSectionHeaderError
 
 from baboon.fmt import cerr
-from common.config import Config
+from babooncommon.config import Config
 from logconf import LOGGING
 
 

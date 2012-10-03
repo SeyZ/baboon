@@ -1,7 +1,7 @@
 from re import match
 from getpass import getpass
 from termcolor import colored, cprint
-from common.errors.baboon_exception import CommandException
+from babooncommon.errors.baboon_exception import CommandException
 
 
 # Fix Python 2.x. input

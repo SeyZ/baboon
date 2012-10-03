@@ -1,7 +1,7 @@
 from sleekxmpp.xmlstream import register_stanza_plugin, ElementBase, ET
 from sleekxmpp import Iq
 
-from common.file import FileEvent
+from babooncommon.file import FileEvent
 
 
 class GitInit(ElementBase):

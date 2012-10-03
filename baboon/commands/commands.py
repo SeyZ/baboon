@@ -8,7 +8,7 @@ from baboon.fmt import cinput, confirm_cinput, cwarn
 from baboon.fmt import csuccess, cerr
 
 from baboon.config import config, SCMS
-from common.errors.baboon_exception import CommandException
+from babooncommon.errors.baboon_exception import CommandException
 
 
 def register():

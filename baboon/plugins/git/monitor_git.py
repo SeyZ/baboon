@@ -3,7 +3,7 @@ import re
 import fnmatch
 
 from baboon.monitor import EventHandler
-from common.errors.baboon_exception import BaboonException
+from babooncommon.errors.baboon_exception import BaboonException
 
 
 class EventHandlerGit(EventHandler):

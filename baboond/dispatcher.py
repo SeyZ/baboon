@@ -1,7 +1,7 @@
 from executor import Executor
 
-from common.logger import logger
-from common.errors.baboon_exception import BaboonException
+from babooncommon.logger import logger
+from babooncommon.errors.baboon_exception import BaboonException
 
 @logger
 class Dispatcher(object):

@@ -1,8 +1,8 @@
 from threading import Thread
 from Queue import PriorityQueue
 
-from common.logger import logger
-from common.errors.baboon_exception import BaboonException
+from babooncommon.logger import logger
+from babooncommon.errors.baboon_exception import BaboonException
 
 
 @logger
@@ -45,11 +45,14 @@ class Executor(Thread):
 
             # Run it !
             try:
+                self.logger.debug('Running a new task...')
                 task.run()
             except BaboonException as err:
                 self.logger.error(err)
 
             # Mark the task finished
+            self.logger.debug('A task has been finished...')
             self.tasks.task_done()
+            self.logger.debug('Remaining task(s): %s' % self.tasks.qsize())
 
         self.logger.debug('The executor thread is now finished.')

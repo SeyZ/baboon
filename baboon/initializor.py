@@ -6,10 +6,10 @@ import shelve
 from os.path import join, relpath, getmtime, exists
 
 from baboon.config import config
-from common.file import FileEvent
-from common.eventbus import eventbus
-from common.logger import logger
-from common.errors.baboon_exception import BaboonException
+from babooncommon.file import FileEvent
+from babooncommon.eventbus import eventbus
+from babooncommon.logger import logger
+from babooncommon.errors.baboon_exception import BaboonException
 
 
 @logger

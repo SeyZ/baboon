@@ -15,10 +15,10 @@ from sleekxmpp.plugins.xep_0060.stanza.pubsub_event import EventItem
 
 from baboon.monitor import FileEvent
 from baboon.config import config
-from common.logger import logger
-from common import pyrsync
-from common.stanza import rsync
-from common.errors.baboon_exception import BaboonException
+from babooncommon.logger import logger
+from babooncommon import pyrsync
+from babooncommon.stanza import rsync
+from babooncommon.errors.baboon_exception import BaboonException
 
 
 @logger

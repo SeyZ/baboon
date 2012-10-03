@@ -13,11 +13,11 @@ from sleekxmpp.jid import JID
 from baboond.dispatcher import dispatcher
 from baboond.transport import transport
 from baboond.config import config
-from common import pyrsync
-from common.eventbus import eventbus
-from common.file import FileEvent
-from common.logger import logger
-from common.errors.baboon_exception import BaboonException
+from babooncommon import pyrsync
+from babooncommon.eventbus import eventbus
+from babooncommon.file import FileEvent
+from babooncommon.logger import logger
+from babooncommon.errors.baboon_exception import BaboonException
 
 
 class Task(object):

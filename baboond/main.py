@@ -2,7 +2,7 @@ import signal
 
 from baboond.transport import transport
 from baboond.dispatcher import dispatcher
-from common.logger import logger
+from babooncommon.logger import logger
 
 @logger
 class Main(object):

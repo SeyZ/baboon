@@ -8,8 +8,8 @@ from baboon.commands import commands
 from baboon.transport import WatchTransport
 from baboon.initializor import MetadirController
 from baboon.monitor import Monitor
-from common.logger import logger
-from common.errors.baboon_exception import BaboonException
+from babooncommon.logger import logger
+from babooncommon.errors.baboon_exception import BaboonException
 
 
 @logger

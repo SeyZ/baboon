@@ -11,10 +11,10 @@ from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 
 from baboon.config import config
-from common.file import FileEvent, pending
-from common.eventbus import eventbus
-from common.logger import logger
-from common.errors.baboon_exception import BaboonException
+from babooncommon.file import FileEvent, pending
+from babooncommon.eventbus import eventbus
+from babooncommon.logger import logger
+from babooncommon.errors.baboon_exception import BaboonException
 
 lock = Lock()
 

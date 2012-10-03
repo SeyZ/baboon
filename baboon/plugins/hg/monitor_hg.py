@@ -4,7 +4,7 @@ import fnmatch
 
 from baboon.monitor import EventHandler
 from baboon.config import config
-from common.errors.baboon_exception import BaboonException
+from babooncommon.errors.baboon_exception import BaboonException
 
 
 class EventHandlerHg(EventHandler):
