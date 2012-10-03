@@ -10,9 +10,7 @@ from sleekxmpp.jid import JID
 from sleekxmpp.xmlstream.handler.callback import Callback
 from sleekxmpp.xmlstream.matcher import StanzaPath
 
-import executor
-import task
-
+from baboond.dispatcher import dispatcher
 from baboond.config import config
 from common.stanza.rsync import MergeStatus
 from common.eventbus import eventbus
@@ -69,14 +67,15 @@ class Transport(ClientXMPP):
             return
 
         # Create a new GitInitTask
-        git_init_task = task.GitInitTask(node, url, sfrom)
+        from baboond.task import GitInitTask
+        git_init_task = GitInitTask(node, url, sfrom)
 
         # Register the BaboonId of this GitInitTask in the
         # self.pending_git_init_tasks dict.
         self.pending_git_init_tasks[git_init_task.bid] = iq
 
         # Add the GitInitTask to the list of tasks to execute.
-        executor.tasks.put(git_init_task)
+        dispatcher.put(node, git_init_task)
 
         # Register the callbacks.
         eventbus.register_once('git-init-success', self._on_git_init_success)
@@ -148,8 +147,9 @@ class Transport(ClientXMPP):
         self.logger.debug('Prepared rsync task %s' % rid)
 
         # TODO: Don't register the rsync_task globally to the class.
-        rsync_task = task.RsyncTask(**kwargs)
-        executor.tasks.put(rsync_task)
+        from task import RsyncTask
+        rsync_task = RsyncTask(**kwargs)
+        dispatcher.put(node, rsync_task)
 
         # Register the current rsync_task in the pending_rsyncs dict.
         self.pending_rsyncs[rid] = rsync_task
@@ -188,7 +188,8 @@ class Transport(ClientXMPP):
             return
 
         # Prepares the merge verification with this data.
-        executor.tasks.put(task.MergeTask(node, sfrom))
+        from task import MergeTask
+        dispatcher.put(node, MergeTask(node, sfrom))
 
         # Replies to the request.
         reply.send()
@@ -210,6 +211,8 @@ class Transport(ClientXMPP):
 
         # Declare a pending git_init_task in a dict.
         self.pending_git_init_tasks = {}
+
+        self.logger.info("The transport is now listening...")
 
     def close(self):
         self.streamer.close()

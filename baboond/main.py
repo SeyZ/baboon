@@ -1,28 +1,19 @@
 import signal
 
-from executor import Scheduler, tasks
-from task import EndTask
+from baboond.transport import transport
+from baboond.dispatcher import dispatcher
 from common.logger import logger
-
-# Import all baboond plugins.
-import plugins
-
 
 @logger
 class Main(object):
 
     def __init__(self):
-        """ Initializes baboonsrv
+        """ Initializes baboond.
         """
 
         signal.signal(signal.SIGINT, self.signal_handler)
-
-        # Initializes the scheduler thread.
-        e = Scheduler()
-        e.start()
-
         signal.pause()
-        e.join()
 
     def signal_handler(self, signal, frame):
-        tasks.put(EndTask())
+        dispatcher.close()
+        transport.close()

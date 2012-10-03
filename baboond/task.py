@@ -10,8 +10,7 @@ import re
 
 from sleekxmpp.jid import JID
 
-import executor
-
+from baboond.dispatcher import dispatcher
 from baboond.transport import transport
 from baboond.config import config
 from common import pyrsync
@@ -606,9 +605,9 @@ class MergeTask(Task):
         merge.
         """
 
-        executor.tasks.put(AlertTask(project_name, username, dest_username,
-                                     merge_conflict,
-                                     conflict_files=conflict_files))
+        dispatcher.put(project_name, AlertTask(project_name, username,
+                                               dest_username, merge_conflict,
+                                               conflict_files=conflict_files))
 
     def _get_user_dirs(self):
         """ A generator that returns the next user directory in the
