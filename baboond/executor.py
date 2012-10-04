@@ -1,5 +1,11 @@
+import sys
+
 from threading import Thread
-from Queue import PriorityQueue
+
+if sys.version_info < (3, 0):
+    from Queue import PriorityQueue
+else:
+    from queue import PriorityQueue
 
 from babooncommon.logger import logger
 from babooncommon.errors.baboon_exception import BaboonException

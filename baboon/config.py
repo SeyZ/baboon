@@ -3,11 +3,14 @@ import argparse
 import logging
 import logging.config
 
-from ConfigParser import RawConfigParser, MissingSectionHeaderError
+if sys.version_info < (3, 0):
+    from ConfigParser import RawConfigParser, MissingSectionHeaderError
+else:
+    from configparser import RawConfigParser, MissingSectionHeaderError
 
 from baboon.fmt import cerr
+from baboon.logconf import LOGGING
 from babooncommon.config import Config
-from logconf import LOGGING
 
 
 SCMS = ('git',)

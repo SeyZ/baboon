@@ -497,7 +497,7 @@ class MergeTask(Task):
                                                 args=(user, ))
                 merge_thread.start()
                 merge_threads.append(merge_thread)
-            except BaboonException, e:
+            except BaboonException as e:
                 self.logger.error(e)
 
         # Wait all merge threads are finished.

@@ -7,7 +7,7 @@ class CommandException(Exception):
         self.msg = msg
 
     def __repr__(self):
-        print "%s - %s" (self.status_code, self.msg)
+        print("%s - %s" % (self.status_code, self.msg))
 
 
 class BaboonException(Exception):

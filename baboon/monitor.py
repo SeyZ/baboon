@@ -184,7 +184,7 @@ class Dancer(Thread):
                         # or not.
                         self.transport.merge_verification(project)
 
-                    except BaboonException, e:
+                    except BaboonException as e:
                         self.logger.error(e)
 
                 # Clears the pending dict.
@@ -204,7 +204,7 @@ class Monitor(object):
         watched project.
         """
 
-        from plugins.git.monitor_git import EventHandlerGit
+        from baboon.plugins.git.monitor_git import EventHandlerGit
 
         self.transport = transport
         self.dancer = Dancer(self.transport, sleeptime=1)
@@ -214,7 +214,10 @@ class Monitor(object):
         self.monitors = {}
 
         try:
-            for project, project_attrs in config['projects'].iteritems():
+            # Avoid to use iteritems (python 2.x) or items (python 3.x) in
+            # order to support both versions.
+            for project in sorted(config['projects']):
+                project_attrs = config['projects'][project]
                 project_path = os.path.expanduser(project_attrs['path'])
                 self.handler = EventHandlerGit(project_path, transport)
 
@@ -222,7 +225,7 @@ class Monitor(object):
                 monitor.schedule(self.handler, project_path, recursive=True)
 
                 self.monitors[project_path] = monitor
-        except OSError, err:
+        except OSError as err:
             self.logger.error(err)
             raise BaboonException(err)
 

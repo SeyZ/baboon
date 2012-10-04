@@ -2,6 +2,8 @@ import os
 import re
 import fnmatch
 
+from functools import cmp_to_key
+
 from baboon.monitor import EventHandler
 from babooncommon.errors.baboon_exception import BaboonException
 
@@ -114,7 +116,7 @@ class EventHandlerGit(EventHandler):
             raise BaboonException(format(err))
 
         # Sort the line in order to have inverse pattern first
-        lines.sort(self._gitline_comparator)
+        lines = sorted(lines, key=cmp_to_key(self._gitline_comparator))
 
         # For each git pattern, convert it to regexp pattern
         for line in lines:

@@ -6,7 +6,10 @@ if sys.version_info < (2, 7):
 else:
     from logging.config import dictConfig
 
-from ConfigParser import RawConfigParser
+if sys.version_info < (3, 0):
+    from ConfigParser import RawConfigParser
+else:
+    from configparser import RawConfigParser
 
 
 class Config(object):

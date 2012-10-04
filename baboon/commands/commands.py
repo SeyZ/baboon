@@ -33,7 +33,7 @@ def register():
                'password must be at least 6 characters long.')], secret=True,
                 possible_err='The password must match !')
 
-        print "\nRegistration in progress..."
+        print("\nRegistration in progress...")
 
         # RegisterTransport uses the config attributes to register.
         config['user'] = {
@@ -52,7 +52,7 @@ def register():
     except CommandException:
         pass
     except KeyboardInterrupt:
-        print "\nBye !"
+        print("\nBye !")
     finally:
         # Check if the transport exists and if its connected.
         if transport and transport.connected.is_set():
@@ -68,7 +68,7 @@ def projects():
         subscriptions = transport.get_project_users(project) or []
 
     for subscription in subscriptions:
-        print "%s" % subscription['jid']
+        print("%s" % subscription['jid'])
 
 
 def create():
@@ -82,7 +82,7 @@ def create():
              "'--path' option.")
         return
 
-    print "Creation in progress..."
+    print("Creation in progress...")
     with AdminTransport(logger_enabled=False) as transport:
         ret_status, msg = transport.create_project(project)
         success = _on_action_finished(ret_status, msg)
@@ -116,7 +116,7 @@ def delete():
 
     project = config['parser']['project']
 
-    print "Deletion in progress..."
+    print("Deletion in progress...")
     with AdminTransport(logger_enabled=False) as transport:
         ret_status, msg = transport.delete_project(project)
         success = _on_action_finished(ret_status, msg)
@@ -150,7 +150,7 @@ def join():
 
     project_scm = ''
 
-    print "Join in progress..."
+    print("Join in progress...")
     with AdminTransport(logger_enabled=False) as transport:
         ret_status, msg = transport.join_project(project)
         success = _on_action_finished(ret_status, msg)
@@ -185,7 +185,7 @@ def unjoin():
 
     project = config['parser']['project']
 
-    print "Unjoin in progress..."
+    print("Unjoin in progress...")
     with AdminTransport(logger_enabled=False) as transport:
         ret_status, msg = transport.unjoin_project(project)
         success = _on_action_finished(ret_status, msg)
@@ -207,7 +207,7 @@ def accept():
     project = config['parser']['project']
     username = config['parser']['username']
 
-    print "Acceptation in progress..."
+    print("Acceptation in progress...")
     with AdminTransport(logger_enabled=False) as transport:
         ret_status, msg = transport.accept_pending(project, username)
         return _on_action_finished(ret_status, msg)
@@ -220,7 +220,7 @@ def reject():
     project = config['parser']['project']
     username = config['parser']['username']
 
-    print "Rejection in progress..."
+    print("Rejection in progress...")
     with AdminTransport(logger_enabled=False) as transport:
         ret_status, msg = transport.reject(project, username)
         return _on_action_finished(ret_status, msg)
@@ -233,7 +233,7 @@ def kick():
     project = config['parser']['project']
     username = config['parser']['username']
 
-    print "Kick in progress..."
+    print("Kick in progress...")
     with AdminTransport(logger_enabled=False) as transport:
         ret_status, msg = transport.kick(project, username)
         return _on_action_finished(ret_status, msg)
@@ -255,7 +255,7 @@ def init():
 
     url = config['parser']['git-url']
 
-    print "Initialize the project %s..." % project
+    print("Initialize the project %s..." % project)
     with AdminTransport(logger_enabled=False) as transport:
         ret_status, msg = transport.first_git_init(project, url)
 
