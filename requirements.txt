@@ -1,8 +1,4 @@
-GitPython>=0.3.2.RC1
 dnspython>=1.9.4
-hgapi>=1.1.0
 watchdog>=0.6.0
 sleekxmpp>=1.0
-mock>=0.8.0
-nose>=1.1.2
 termcolor>=1.1.0
