@@ -2,9 +2,9 @@ import os
 import sys
 import signal
 
+from baboon import commands
 from baboon.plugins import *
 from baboon.config import config
-from baboon.commands import commands
 from baboon.transport import WatchTransport
 from baboon.initializor import MetadirController
 from baboon.monitor import Monitor
