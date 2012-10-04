@@ -2,14 +2,14 @@ import os
 import sys
 import signal
 
-from baboon import commands
-from baboon.plugins import *
-from baboon.config import config
-from baboon.transport import WatchTransport
-from baboon.initializor import MetadirController
-from baboon.monitor import Monitor
-from babooncommon.logger import logger
-from babooncommon.errors.baboon_exception import BaboonException
+from baboon.baboon import commands
+from baboon.baboon.plugins import *
+from baboon.baboon.config import config
+from baboon.baboon.transport import WatchTransport
+from baboon.baboon.initializor import MetadirController
+from baboon.baboon.monitor import Monitor
+from baboon.common.logger import logger
+from baboon.common.errors.baboon_exception import BaboonException
 
 
 @logger

@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 try:
-    from baboon.main import Main
+    from baboon.baboon.main import Main
 
     if __name__ == "__main__":
         Main()

@@ -13,12 +13,12 @@ from sleekxmpp.xmlstream.tostring import tostring
 from sleekxmpp.exceptions import IqError
 from sleekxmpp.plugins.xep_0060.stanza.pubsub_event import EventItem
 
-from baboon.monitor import FileEvent
-from baboon.config import config
-from babooncommon.logger import logger
-from babooncommon import pyrsync
-from babooncommon.stanza import rsync
-from babooncommon.errors.baboon_exception import BaboonException
+from baboon.baboon.monitor import FileEvent
+from baboon.baboon.config import config
+from baboon.common.logger import logger
+from baboon.common import pyrsync
+from baboon.common.stanza import rsync
+from baboon.common.errors.baboon_exception import BaboonException
 
 
 @logger

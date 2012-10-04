@@ -2,13 +2,13 @@ import os
 import sys
 import shutil
 
-from baboon.initializor import MetadirController
-from baboon.transport import RegisterTransport, AdminTransport
-from baboon.fmt import cinput, confirm_cinput, cwarn
-from baboon.fmt import csuccess, cerr
+from baboon.baboon.initializor import MetadirController
+from baboon.baboon.transport import RegisterTransport, AdminTransport
+from baboon.baboon.fmt import cinput, confirm_cinput, cwarn
+from baboon.baboon.fmt import csuccess, cerr
 
-from baboon.config import config, SCMS
-from babooncommon.errors.baboon_exception import CommandException
+from baboon.baboon.config import config, SCMS
+from baboon.common.errors.baboon_exception import CommandException
 
 
 def register():

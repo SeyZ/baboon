@@ -4,8 +4,8 @@ import fnmatch
 
 from functools import cmp_to_key
 
-from baboon.monitor import EventHandler
-from babooncommon.errors.baboon_exception import BaboonException
+from baboon.baboon.monitor import EventHandler
+from baboon.common.errors.baboon_exception import BaboonException
 
 
 class EventHandlerGit(EventHandler):

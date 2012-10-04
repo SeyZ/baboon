@@ -2,7 +2,7 @@ import argparse
 import logging
 import logging.config
 
-from babooncommon.config import Config
+from baboon.common.config import Config
 from logconf import LOGGING
 
 

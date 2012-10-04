@@ -1,14 +1,15 @@
 
+
 LOGGING = {
     'version': 1,
     'formatters': {
         'verbose': {
-            'format': '%(message)s',
+            'format': '%(asctime)-20s%(levelname)-18s %(message)s'
+            ' (%(threadName)s/%(funcName)s:%(lineno)s)',
             'datefmt': '%Y/%m/%d %H:%M:%S'
-
         },
         'simple': {
-            'format': '%(message)s'
+            'format': '%(levelname)s %(message)s'
         },
     },
     'handlers': {
@@ -30,7 +31,7 @@ LOGGING = {
         },
         'console': {
             'level': 'DEBUG',
-            'class': 'babooncommon.logconf.ConsoleUnixColoredHandler',
+            'class': 'baboon.common.logconf.ConsoleUnixColoredHandler',
             'formatter': 'verbose',
             'stream': 'ext://sys.stdout',
         }

@@ -2,7 +2,7 @@ import os
 import sys
 
 if sys.version_info < (2, 7):
-    from babooncommon.thirdparty.dictconfig import dictConfig
+    from baboon.common.thirdparty.dictconfig import dictConfig
 else:
     from logging.config import dictConfig
 

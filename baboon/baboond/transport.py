@@ -10,12 +10,12 @@ from sleekxmpp.jid import JID
 from sleekxmpp.xmlstream.handler.callback import Callback
 from sleekxmpp.xmlstream.matcher import StanzaPath
 
-from baboond.dispatcher import dispatcher
-from baboond.config import config
-from babooncommon.stanza.rsync import MergeStatus
-from babooncommon.eventbus import eventbus
-from babooncommon.logger import logger
-from babooncommon import pyrsync
+from baboon.baboond.dispatcher import dispatcher
+from baboon.baboond.config import config
+from baboon.common.stanza.rsync import MergeStatus
+from baboon.common.eventbus import eventbus
+from baboon.common.logger import logger
+from baboon.common import pyrsync
 
 
 @logger
@@ -67,7 +67,7 @@ class Transport(ClientXMPP):
             return
 
         # Create a new GitInitTask
-        from baboond.task import GitInitTask
+        from baboon.baboond.task import GitInitTask
         git_init_task = GitInitTask(node, url, sfrom)
 
         # Register the BaboonId of this GitInitTask in the

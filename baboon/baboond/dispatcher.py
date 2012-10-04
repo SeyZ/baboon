@@ -1,7 +1,7 @@
 from executor import Executor
 
-from babooncommon.logger import logger
-from babooncommon.errors.baboon_exception import BaboonException
+from baboon.common.logger import logger
+from baboon.common.errors.baboon_exception import BaboonException
 
 @logger
 class Dispatcher(object):
@@ -40,7 +40,7 @@ class Dispatcher(object):
         """ Stop all executor threads.
         """
 
-        from baboond.task import EndTask
+        from baboon.baboond.task import EndTask
 
         for executor in self.executors.values():
             executor.tasks.put(EndTask())

@@ -8,9 +8,9 @@ if sys.version_info < (3, 0):
 else:
     from configparser import RawConfigParser, MissingSectionHeaderError
 
-from baboon.fmt import cerr
-from baboon.logconf import LOGGING
-from babooncommon.config import Config
+from baboon.baboon.fmt import cerr
+from baboon.baboon.logconf import LOGGING
+from baboon.common.config import Config
 
 
 SCMS = ('git',)

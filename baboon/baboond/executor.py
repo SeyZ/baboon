@@ -7,8 +7,8 @@ if sys.version_info < (3, 0):
 else:
     from queue import PriorityQueue
 
-from babooncommon.logger import logger
-from babooncommon.errors.baboon_exception import BaboonException
+from baboon.common.logger import logger
+from baboon.common.errors.baboon_exception import BaboonException
 
 
 @logger
@@ -34,7 +34,7 @@ class Executor(Thread):
         """ Consume on the tasks queue and run each task until an
         endtask.
         """
-        from baboond.task import EndTask
+        from baboon.baboond.task import EndTask
 
         # The endtask is a flag to indicate if it's the end of life of
         # the server or not.

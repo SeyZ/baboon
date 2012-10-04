@@ -10,14 +10,14 @@ import re
 
 from sleekxmpp.jid import JID
 
-from baboond.dispatcher import dispatcher
-from baboond.transport import transport
-from baboond.config import config
-from babooncommon import pyrsync
-from babooncommon.eventbus import eventbus
-from babooncommon.file import FileEvent
-from babooncommon.logger import logger
-from babooncommon.errors.baboon_exception import BaboonException
+from baboon.baboond.dispatcher import dispatcher
+from baboon.baboond.transport import transport
+from baboon.baboond.config import config
+from baboon.common import pyrsync
+from baboon.common.eventbus import eventbus
+from baboon.common.file import FileEvent
+from baboon.common.logger import logger
+from baboon.common.errors.baboon_exception import BaboonException
 
 
 class Task(object):
