@@ -5,7 +5,7 @@ code manager ? Do you want to get rid of "Merge Hells" ?
 
 Baboon is **the** solution for you ! It's a lightweight daemon that detects
 merge conflicts before they actually happen. In fact, it detects them in
-**real time**
+**real time**.
 
 ## How does it work ?
 As soon as Baboon is installed and configured (a matter of seconds, honest,
