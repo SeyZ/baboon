@@ -8,10 +8,6 @@ requires = []
 with open('requirements.txt', 'r') as f:
     requires = f.readlines()
 
-# Take the latest develop version of SleekXMPP
-sleekxmpp_link = 'https://github.com/fritzy/SleekXMPP/tarball/develop' +
-'#egg=sleekxmpp-1.1.5beta'
-
 long_description = """Do you waste your time in resolving merge conflicts with
 your favorite source code manager ? Do you want to get rid of "Merge Hells" ?
 Baboon is the solution for you ! It's a lightweight daemon that detects merge
@@ -31,20 +27,21 @@ setup(name='baboon',
       install_requires=[requires],
       scripts=['bin/baboon', 'bin/baboond'],
       data_files=['{0}/baboon/conf'.format(get_python_lib()), [
-          'baboon/conf/baboondrc', 'baboon/conf/baboonrc'])],
-      dependency_links=[sleekxmpp_link],
-      classifiers: ['Development Status :: 5 - Production/Stable',
-                    'Environment :: Console',
-                    'Intended Audience :: Developers',
-                    'Intended Audience :: Information Technology',
-                    'License :: OSI Approved :: MIT License',
-                    'Operating System :: POSIX :: BSD',
-                    'Operating System :: POSIX :: Linux',
-                    'Operating System :: POSIX :: Other',
-                    'Programming Language :: Cython',
-                    'Programming Language :: Python',
-                    'Programming Language :: Python :: 2.6',
-                    'Programming Language :: Python :: 2.7',
-                    'Topic :: Software Development :: Quality Assurance'
-                   ],
-      )
+          'baboon/conf/baboondrc', 'baboon/conf/baboonrc']],
+      dependency_links=['https://github.com/fritzy/SleekXMPP/tarball/develop' \
+                        '#egg=sleekxmpp-1.1.5beta'],
+      classifiers=['Development Status :: 5 - Production/Stable',
+                   'Environment :: Console',
+                   'Intended Audience :: Developers',
+                   'Intended Audience :: Information Technology',
+                   'License :: OSI Approved :: MIT License',
+                   'Operating System :: POSIX :: BSD',
+                   'Operating System :: POSIX :: Linux',
+                   'Operating System :: POSIX :: Other',
+                   'Programming Language :: Cython',
+                   'Programming Language :: Python',
+                   'Programming Language :: Python :: 2.6',
+                   'Programming Language :: Python :: 2.7',
+                   'Topic :: Software Development :: Quality Assurance'
+                  ],
+     )
