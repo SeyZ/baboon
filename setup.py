@@ -26,8 +26,8 @@ setup(name='baboon',
       packages=find_packages(),
       install_requires=[requires],
       scripts=['bin/baboon', 'bin/baboond'],
-      data_files=['{0}/baboon/conf'.format(get_python_lib()), [
-          'baboon/conf/baboondrc', 'baboon/conf/baboonrc']],
+      data_files=[('{0}/baboon/conf'.format(get_python_lib()), [
+          'baboon/conf/baboondrc', 'baboon/conf/baboonrc'])],
       dependency_links=['https://github.com/fritzy/SleekXMPP/tarball/develop' \
                         '#egg=sleekxmpp-1.1.5beta'],
       classifiers=['Development Status :: 5 - Production/Stable',
