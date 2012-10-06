@@ -1,8 +1,13 @@
 import os
+import sys
 import re
 import fnmatch
 
-from functools import cmp_to_key
+if sys.version_info < (2, 7):
+    # Python < 2.7 doesn't have the cmp_to_key function.
+    from baboon.baboon.utils import cmp_to_key
+else:
+    from functools import cmp_to_key
 
 from baboon.baboon.monitor import EventHandler
 from baboon.common.errors.baboon_exception import BaboonException

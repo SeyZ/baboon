@@ -1,3 +1,4 @@
+import os
 import sys
 import argparse
 import logging
@@ -102,7 +103,6 @@ class ArgumentParser(object):
         start_parser.add_argument('--no-init', dest='init',
                                   default=False, action='store_true',
                                   help="avoid to execute initial rsync")
-
         # logging args
         parser.add_argument('-d', '--debug', help="set logging to DEBUG",
                             action='store_const',
@@ -123,6 +123,10 @@ class ArgumentParser(object):
                                    help="don't overwrite config file")
 
         self.args = parser.parse_args()
+
+        # Ensure the path is an abspath.
+        if hasattr(self.args, 'path'):
+            self.args.path = os.path.abspath(self.args.path)
 
 
 class BaboonConfig(Config):
