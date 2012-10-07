@@ -125,7 +125,7 @@ class ArgumentParser(object):
         self.args = parser.parse_args()
 
         # Ensure the path is an abspath.
-        if hasattr(self.args, 'path'):
+        if hasattr(self.args, 'path') and self.args.path:
             self.args.path = os.path.abspath(self.args.path)
 
 
