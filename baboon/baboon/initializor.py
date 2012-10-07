@@ -138,3 +138,9 @@ class MetadirController(object):
 
         self.logger.info("Baboon is ready !")
 
+    def delete(self):
+        """ Deletes the metadir from the project.
+        """
+
+        if os.path.exists(self.metadir_path):
+            shutil.rmtree(self.metadir_path)

@@ -438,6 +438,7 @@ class AdminTransport(CommonTransport):
             node_config_form = node_config['pubsub_owner']['default']['config']
             node_config_form.field['pubsub#access_model'].set_value(
                 'authorize')
+            node_config_form.field['pubsub#notify_delete'].set_value(True)
 
             # Create the node (name == project).
             self.pubsub.create_node(self.pubsub_addr, project,
@@ -468,7 +469,6 @@ class AdminTransport(CommonTransport):
 
         try:
             self.pubsub.delete_node(self.pubsub_addr, project)
-
             return (200, 'The project %s is successfuly deleted.' % project)
         except IqError as e:
             status_code = int(e.iq['error']['code'])

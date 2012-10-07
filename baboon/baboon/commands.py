@@ -124,6 +124,10 @@ def delete():
             return success
 
     try:
+        # Delete the metadir directory.
+        project_path = config['projects'][project]['path']
+        MetadirController(project, project_path).delete()
+
         # Delete the project entry in the configuration dict.
         del config['projects'][project]
 
@@ -133,6 +137,8 @@ def delete():
     except KeyError:
         # The project entry does not exist in the configuration file
         cwarn("The project was not found in your configuration file")
+    except OSError:
+        cwarn("Cannot delete the .baboon directory.")
 
     return success
 

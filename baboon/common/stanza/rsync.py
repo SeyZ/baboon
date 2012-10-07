@@ -101,8 +101,6 @@ class MergeStatus(ElementBase):
     plugin_attrib = 'merge_status'
 
     def get_files(self):
-        import pdb
-        pdb.set_trace()
         return [element.text for element in self.xml.getchildren()]
 
     def add_file(self, f):
