@@ -104,6 +104,9 @@ class ArgumentParser(object):
                                   default=False, action='store_true',
                                   help="avoid to execute initial rsync")
         # logging args
+        parser.add_argument('--hostname', dest='hostname', default="hostame",
+                            help="Override the default baboon-project.org "
+                            "hostname.")
         parser.add_argument('-d', '--debug', help="set logging to DEBUG",
                             action='store_const',
                             dest='loglevel',
@@ -176,11 +179,12 @@ class BaboonConfig(Config):
         # Some hardcoded server values, if we've found an empty server section.
         # Shouldn't happen.
         if not self.attrs.get('server'):
+            hostname = config['parser']['hostname']
             self.attrs['server'] = {}
             self.attrs['server']['max_stanza_size'] = 65535
-            self.attrs['server']['pubsub'] = 'pubsub.baboon-project.org'
-            self.attrs['server']['streamer'] = 'streamer.baboon-project.org'
-            self.attrs['server']['master'] = 'admin@baboon-project.org/baboond'
+            self.attrs['server']['pubsub'] = 'pubsub.%s' % hostname
+            self.attrs['server']['streamer'] = 'streamer.%s' % hostname
+            self.attrs['server']['master'] = 'admin@%s/baboond' % hostname
 
 
 config = BaboonConfig(ArgumentParser(), LOGGING).attrs

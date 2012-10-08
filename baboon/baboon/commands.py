@@ -26,7 +26,7 @@ def register():
             'can only contains alphanumeric and underscore characters')])
 
         # Transform the username to a baboon-project JID.
-        username += '@baboon-project.org'
+        username += '@%s' % config['parser']['hostname']
 
         # Get the password from stdin.
         passwd = confirm_cinput('Password: ', validations=[('^\w{6,}$', 'The '
