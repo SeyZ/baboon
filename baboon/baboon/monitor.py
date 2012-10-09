@@ -180,10 +180,6 @@ class Dancer(Thread):
                         # Fire an event to warn that there was a rsync.
                         eventbus.fire('rsync-finished-success', project, files)
 
-                        # Ask to baboon to verify if there's a conflict
-                        # or not.
-                        self.transport.merge_verification(project)
-
                     except BaboonException as e:
                         self.logger.error(e)
 

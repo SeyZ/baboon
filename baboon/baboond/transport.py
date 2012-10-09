@@ -47,6 +47,8 @@ class Transport(ClientXMPP):
                                        StanzaPath('iq@type=set/merge'),
                                        self._handle_merge_verification))
 
+        eventbus.register('rsync-finished-success', self._on_rsync_finished)
+
         # Connect to the XMPP server using IPv4 only and without
         # SSL/TLS support for now.
         self.use_ipv6 = False
@@ -194,6 +196,16 @@ class Transport(ClientXMPP):
         # Replies to the request.
         reply.send()
 
+    def _on_rsync_finished(self, rid, *args, **kwargs):
+        cur_rsync_task = self.pending_rsyncs.get(rid)
+        if cur_rsync_task:
+            self.logger.debug("RsyncTask %s finished." % rid)
+            iq = self.Iq(sto=cur_rsync_task.jid, stype='set')
+            iq['rsyncfinished']['node'] = cur_rsync_task.project
+            iq.send(block=False)
+        else:
+            self.logger.error("Could not find a rsync task with RID: %s" % rid)
+
     def start(self, event):
         """ Handler for the session_start sleekxmpp event.
         """
@@ -301,11 +313,6 @@ class Transport(ClientXMPP):
         except:
             self.logger.debug('Could not publish to: %s' %
                               project_name)
-
-    def send_rsync_finished(self, to):
-        iq = self.Iq(sto=to, stype='set')
-        iq['rsyncfinished']
-        iq.send()
 
     def _verify_subscription(self, jid, node):
         """ Verify if the bare jid is a subscriber/owner on the node.

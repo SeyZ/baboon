@@ -242,6 +242,8 @@ class RsyncTask(Task):
 
         # TODO: Remove the rsync_task in the pending_rsyncs dict of the
         # transport.
+        eventbus.fire('rsync-finished-success', rid=self.rid,
+                      project=self.project)
         self.logger.debug('Rsync task %s finished', self.sid)
 
     def _verify_paths(self, file_event):

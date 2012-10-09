@@ -82,7 +82,7 @@ class Rsync(ElementBase):
 class RsyncFinished(ElementBase):
     name = 'rsyncfinished'
     namespace = 'baboon'
-    interfaces = set(tuple())
+    interfaces = set(('node', ))
     plugin_attrib = 'rsyncfinished'
 
 

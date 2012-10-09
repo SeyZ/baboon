@@ -3,6 +3,7 @@ import sys
 import pickle
 import struct
 import uuid
+import time
 
 from threading import Event
 
@@ -33,6 +34,9 @@ class CommonTransport(ClientXMPP):
 
         self.connected = Event()
         self.disconnected = Event()
+        self.rsync_running = Event()
+        self.rsync_finished = Event()
+        self.wait_close = False
 
         # Register and configure pubsub plugin.
         self.register_plugin('xep_0060')
@@ -142,8 +146,23 @@ class CommonTransport(ClientXMPP):
                               msg['pubsub_event'])
 
     def _handle_rsync_finished(self, iq):
-        self.logger.info("First rsync finished")
+        """ Called when a rsync is finished.
+        """
+
+        # Retrieve the project context.
+        node = iq['rsyncfinished']['node']
+
+        # Reply to the iq.
+        self.logger.debug("[%s] Sync finished." % node)
         iq.reply().send()
+
+        # Set the rsync flags.
+        self.rsync_running.clear()
+        self.rsync_finished.set()
+
+        # It's time to verify if there's a conflict or not.
+        if not self.wait_close:
+            self.merge_verification(node)
 
     def message_form(self, form):
         self.logger.debug("Received a form message: %s" % form)
@@ -195,8 +214,6 @@ class WatchTransport(CommonTransport):
 
         super(WatchTransport, self).start(event)
 
-        self.pending_rsyncs = {}
-
         # Shortcut to access to the xep_0050 plugin.
         self.adhoc = self.plugin["xep_0050"]
 
@@ -227,6 +244,13 @@ class WatchTransport(CommonTransport):
         """ Closes the XMPP connection.
         """
 
+        # Wait until all syncs are finished.
+        self.wait_close = True
+        if self.rsync_running.is_set():
+            self.logger.info("A sync task is currently running...")
+            self.rsync_finished.wait()
+            self.logger.info("Ok, all syncs are now finished.")
+
         # Close the proxy socket.
         if hasattr(self, 'streamer') and self.streamer:
             self.streamer.close()
@@ -244,6 +268,10 @@ class WatchTransport(CommonTransport):
         # Verify if the connection is established. Otherwise, wait...
         if not self.connected.is_set():
             self.connected.wait()
+
+        # Set the rsync flags.
+        self.rsync_running.set()
+        self.rsync_finished.clear()
 
         #TODO: make this an int while checking config file
         max_stanza_size = int(config['server']['max_stanza_size'])
