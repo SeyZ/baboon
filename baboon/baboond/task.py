@@ -20,6 +20,32 @@ from baboon.common.logger import logger
 from baboon.common.errors.baboon_exception import BaboonException
 
 
+def create_missing_dirs(fullpath, isfile=True):
+    """ Creates all missing parent directories of the fullpath.
+    """
+
+    if isfile:
+        fullpath = os.path.dirname(fullpath)
+
+    try:
+        # Creates all the parent directories.
+        os.makedirs(fullpath)
+    except OSError:
+        pass
+
+
+def exec_cmd(cmd, cwd):
+    """ Execute the cmd command in a subprocess.
+    """
+
+    # Create the process and run it.
+    proc = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+                            stderr=subprocess.STDOUT, shell=True, cwd=cwd)
+    output, errors = proc.communicate()
+
+    return (proc.returncode, output, errors)
+
+
 class Task(object):
     """ The base class for all kind of tasks.
     """
@@ -48,26 +74,24 @@ class EndTask(Task):
     """
 
     def __init__(self):
-        """ Initialize the EndTask.
+        """ Initializes the EndTask.
         """
 
-        # The priority is 1. It means that it's the higher possible
-        # priority for baboonsrv.
+        # The priority is 1. It means that it's the higher possible priority
+        # for baboonsrv.
         super(EndTask, self).__init__(1)
 
     def run(self):
-        # Shutdowns Baboond.
+        """ Shutdowns Baboond.
+        """
 
         # Closes the transport
         transport.close()
-
-        # Bye !
         self.logger.info('Bye !')
 
 
 class AlertTask(Task):
-    """ A high priority task to alert baboon client the state of the
-    merge.
+    """ A high priority task to alert baboon client the state of the merge.
     """
 
     def __init__(self, project_name, username, dest_username,
@@ -87,22 +111,24 @@ class AlertTask(Task):
         self.conflict_files = conflict_files
 
     def run(self):
+        """ Build the appropriate message and publish it to the node.
+        """
+
         conflict_msg = 'Conflict detected with %s and %s.' % \
                 (self.username, self.dest_username)
         good_msg = 'Everything seems to be perfect.'
         msg =  conflict_msg if self.merge_conflict else good_msg
 
-        transport.alert(self.project_name, self.username, msg,
-                        self.conflict_files)
+        transport.alert(self.project_name, msg, self.conflict_files)
 
 
 @logger
 class GitInitTask(Task):
-    """
+    """ The first git initialization task. In other words, the first git clone.
     """
 
     def __init__(self, project, url, jid):
-        """
+        """ Initializes the GitInitTask.
         """
 
         super(GitInitTask, self).__init__(4)
@@ -124,55 +150,15 @@ class GitInitTask(Task):
         if os.path.exists(self.user_cwd):
             shutil.rmtree(self.user_cwd)
 
-        self._create_missing_dirs(self.project_cwd)
-        ret_code = self._exec_cmd('git clone %s %s' % (self.url, self.jid),
-                                  self.project_cwd)[0]
-
+        create_missing_dirs(self.project_cwd, isfile=False)
+        ret_code, output, _ = exec_cmd('git clone %s %s' % (self.url, self.jid),
+                                  self.project_cwd)
         if not ret_code:
             self.logger.debug('Git init task finished.')
             eventbus.fire('git-init-success', self.bid)
         else:
             eventbus.fire('git-init-failure', self.bid,
                           "Cannot initialize the git repository.")
-
-    def _create_missing_dirs(self, path):
-        """ Creates all missing directories of path.
-        """
-
-        if not os.path.exists(path):
-            try:
-                # Creates all the parent directories.
-                os.makedirs(path)
-            except OSError:
-                pass
-
-
-    def _exec_cmd(self, cmd, cwd=None):
-        """ Execute the cmd command in a subprocess. Returns the
-        returncode.
-        """
-
-        # If cwd is None, set cwd to self.master_cwd.
-        if cwd is None:
-            cwd = self.master_cwd
-
-        # Open a subprocess
-        proc = subprocess.Popen(cmd,
-                                stdin=subprocess.PIPE,
-                                stdout=subprocess.PIPE,
-                                stderr=subprocess.STDOUT,
-                                shell=True,
-                                cwd=cwd
-                                )
-        # Run the command
-        output, errors = proc.communicate()
-
-        if proc.returncode != 0:
-            # TODO: raise an error !
-            pass
-
-        return (proc.returncode, output, errors)
-
 
 
 @logger
@@ -207,16 +193,16 @@ class RsyncTask(Task):
 
         # Lock the repository with a .baboon.lock file.
         lock_file = os.path.join(self.project_path, '.baboon.lock')
-        self._create_missing_dirs(lock_file)
+        create_missing_dirs(lock_file)
         open(lock_file, 'w').close()
 
         for f in self.files:
-
             # Verify if the file can be written in the self.project_path.
             path_valid = self._verify_paths(f)
             if not path_valid:
                 self.logger.error("The file path cannot be written in %s." %
                                   self.project)
+                eventbus.fire('rsync-finished-failure', rid=self.rid)
                 return
 
             if f.event_type == FileEvent.CREATE:
@@ -240,10 +226,9 @@ class RsyncTask(Task):
         # Remove the .baboon.lock file.
         os.remove(lock_file)
 
-        # TODO: Remove the rsync_task in the pending_rsyncs dict of the
-        # transport.
-        eventbus.fire('rsync-finished-success', rid=self.rid,
-                      project=self.project)
+        # Fire the rsync-finished-success event.
+        eventbus.fire('rsync-finished-success', rid=self.rid)
+
         self.logger.debug('Rsync task %s finished', self.sid)
 
     def _verify_paths(self, file_event):
@@ -272,17 +257,23 @@ class RsyncTask(Task):
         """
 
         fullpath = os.path.join(self.project_path, f)
-        self._create_missing_dirs(fullpath)
+        create_missing_dirs(fullpath)
         open(fullpath, 'w').close()
 
     def _move_file(self, src, dest):
+        """ Move the src path to the dest path.
+        """
+
         src_fullpath = os.path.join(self.project_path, src)
         dest_fullpath = os.path.join(self.project_path, dest)
 
         shutil.move(src_fullpath, dest_fullpath)
-        self.logger.info('Move done !')
+        self.logger.debug("Moving %s to %s done." % (src_fullpath,
+                                                     dest_fullpath))
 
     def _delete_file(self, f):
+        """ Delete the file f from the project path.
+        """
 
         fullpath = os.path.join(self.project_path, f)
 
@@ -310,14 +301,16 @@ class RsyncTask(Task):
                 pass
 
     def _get_hash(self, f):
+        """ Computes the hash of the file f.
+        """
+
         fullpath = os.path.join(self.project_path, f)
 
         # If the file has no write permission, set it.
         self._add_perm(fullpath, stat.S_IWUSR)
 
-        # Verifies if all parent directories of the fullpath is
-        # created.
-        self._create_missing_dirs(fullpath)
+        # Verifies if all parent directories of the fullpath is created.
+        create_missing_dirs(fullpath)
 
         # If the file does not exist, create it
         if not os.path.exists(fullpath):
@@ -327,10 +320,12 @@ class RsyncTask(Task):
             # Computes the block checksums and add the result to the
             # all_hashes list.
             with open(fullpath, 'rb') as unpatched:
-                return (f, pyrsync.blockchecksums(unpatched,
-                                                  blocksize=8192))
+                return (f, pyrsync.blockchecksums(unpatched, blocksize=8192))
 
     def _send_hash(self, h):
+        """ Sends over the transport streamer the hash h.
+        """
+
         # Sets the future socket response dict.
         payload = {
             'sid': self.sid,
@@ -373,7 +368,7 @@ class RsyncTask(Task):
 
             # Verifies if all parent directories of the fullpath is
             # created.
-            self._create_missing_dirs(fullpath)
+            create_missing_dirs(fullpath)
 
             # If the file does not exist, create it
             if not os.path.exists(fullpath):
@@ -401,17 +396,6 @@ class RsyncTask(Task):
         if os.path.exists(fullpath) and not os.access(fullpath, os.W_OK):
             cur_perm = stat.S_IMODE(os.stat(fullpath).st_mode)
             os.chmod(fullpath, cur_perm | stat.S_IWUSR)
-
-    def _create_missing_dirs(self, fullpath):
-        """ Creates all missing parent directories of the fullpath.
-        """
-
-        if not os.path.exists(os.path.dirname(fullpath)):
-            try:
-                # Creates all the parent directories.
-                os.makedirs(os.path.dirname(fullpath))
-            except OSError:
-                pass
 
     def _clean_directory(self, basepath, destpath):
         """ Deletes all empty directories from the destpath to
@@ -519,14 +503,15 @@ class MergeTask(Task):
             return
 
         # Add the master_cwd remote.
-        self._exec_cmd('git remote add %s %s' %
-                       (self.username, self.master_cwd), user_cwd)
+        exec_cmd('git remote add %s %s' % (self.username, self.master_cwd),
+                 user_cwd)
 
         # Fetch the master_cwd repository.
-        self._exec_cmd('git fetch %s' % self.username, user_cwd)
+        exec_cmd('git fetch %s' % self.username, user_cwd)
 
         # Get the current user branch
-        out_branch = self._exec_cmd('git symbolic-ref -q HEAD')[1]
+        _, out_branch, _ = exec_cmd('git symbolic-ref -q HEAD',
+                                    self.master_cwd)
 
         # out_branch looks like something like :
         # refs/head/master\n. Parse it to only retrieve the branch
@@ -535,13 +520,12 @@ class MergeTask(Task):
 
         # Get the merge-base hash commit between the master user and the
         # current user.
-        mergebase_hash = self._exec_cmd('git merge-base -a HEAD %s/%s' %
-                                        (self.username, cur_branch),
-                                        user_cwd)[1].rstrip('\r\n')
+        mergebase_hash = exec_cmd('git merge-base -a HEAD %s/%s' %
+                                  (self.username, cur_branch),
+                                  user_cwd)[1].rstrip('\r\n')
 
         # Get the diff between the master_cwd and the mergebase_hash.
-        diff = self._exec_cmd('git diff %s' % mergebase_hash,
-                              self.master_cwd)[1]
+        _, diff, _ = exec_cmd('git diff %s' % mergebase_hash, self.master_cwd)
 
         # Set the return code of the merge task to 0 by default. It means
         # there's no conflict.
@@ -564,8 +548,8 @@ class MergeTask(Task):
                 tmpfile.seek(0)
 
                 # Check if the diff can be applied in the master user.
-                ret, patch_output, _ = self._exec_cmd('git apply --check %s' %
-                                                      tmpfile.name, user_cwd)
+                ret, patch_output, _ = exec_cmd('git apply --check %s' %
+                                                tmpfile.name, user_cwd)
             finally:
                 # Automatically delete the temp file.
                 tmpfile.close()
@@ -621,33 +605,3 @@ class MergeTask(Task):
             if folder_fullpath != self.master_cwd and \
                     os.path.isdir(folder_fullpath):
                 yield folder_name
-
-    def _exec_cmd(self, cmd, cwd=None):
-        """ Execute the cmd command in a subprocess. Returns the
-        returncode.
-        """
-
-        # If cwd is None, set cwd to self.master_cwd.
-        if cwd is None:
-            cwd = self.master_cwd
-
-        # Open a subprocess
-        proc = subprocess.Popen(cmd,
-                                stdin=subprocess.PIPE,
-                                stdout=subprocess.PIPE,
-                                stderr=subprocess.STDOUT,
-                                shell=True,
-                                cwd=cwd
-                                )
-        # Run the command
-        output, errors = proc.communicate()
-        self.logger.debug("Commande executed:")
-        self.logger.debug(cmd)
-        self.logger.debug("Result:")
-        self.logger.debug(output)
-
-        if proc.returncode != 0:
-            # TODO: raise an error !
-            pass
-
-        return (proc.returncode, output, errors)

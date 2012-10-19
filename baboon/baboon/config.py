@@ -1,4 +1,5 @@
 import os
+import shutil
 import sys
 import argparse
 import logging
@@ -9,182 +10,202 @@ if sys.version_info < (3, 0):
 else:
     from configparser import RawConfigParser, MissingSectionHeaderError
 
-from baboon.baboon.fmt import cerr
-from baboon.baboon.logconf import LOGGING
-from baboon.common.config import Config
-
+from baboon.baboon.fmt import cerr, cwarn, csuccess
+from baboon.baboon.logconf import LOGGING, PARSER
+from baboon.common.config import get_config_args, get_config_file
+from baboon.common.config import init_config_log
+from baboon.common.errors.baboon_exception import ConfigException
 
 SCMS = ('git',)
 
 
-class ArgumentParser(object):
-    def __init__(self):
-        parser = argparse.ArgumentParser(description='Baboon ! Ook !')
+def check_server(add_mandatory_fields=[]):
+    """ Checks the server section in the config dict. The add_mandatory_fields
+    list allows to add more mandatory fields.
+    """
 
-        subparsers = parser.add_subparsers()
-
-        # Configure the REGISTER parser.
-        register_parser = subparsers.add_parser('register', help="create an "
-                                                "account.")
-        register_parser.set_defaults(which='register')
-
-        register_parser.add_argument('username', nargs='?', help="your "
-                                     "username.")
-
-        # Configure the PROJECTS parser.
-        project_parser = subparsers.add_parser('projects', help="list all "
-                                               "owned and subscribed "
-                                               "projects.")
-        project_parser.set_defaults(which='projects')
-
-        project_parser.add_argument('project', help="the project name.")
-        project_parser.add_argument('-a', '--all', action='store_true',
-                                    help="display maximum information.")
-
-        # Configure the CREATE parser.
-        create_parser = subparsers.add_parser('create', help="create a "
-                                              "project.")
-        create_parser.set_defaults(which='create')
-        create_parser.add_argument('project', help="the project name.")
-        create_parser.add_argument('-p', '--path', action='store',
-                                   help="the project's path.")
-
-        # Configure the DELETE parser.
-        delete_parser = subparsers.add_parser('delete', help="delete a "
-                                              "project.")
-        delete_parser.set_defaults(which='delete')
-        delete_parser.add_argument('project', help="the project name.")
-
-        # Configure the JOIN parser.
-        join_parser = subparsers.add_parser('join', help="join a project.")
-        join_parser.set_defaults(which='join')
-        join_parser.add_argument('project', help="the project name.")
-        join_parser.add_argument('-p', '--path', action='store',
-                                 help="the project's path.")
-
-        # Configure the UNJOIN parser.
-        unjoin_parser = subparsers.add_parser('unjoin', help="unjoin a "
-                                              "project.")
-        unjoin_parser.set_defaults(which='unjoin')
-        unjoin_parser.add_argument('project', help="the project name.")
-
-        # Configure the ACCEPT parser.
-        accept_parser = subparsers.add_parser('accept', help="accept a user "
-                                              "to join a project.")
-        accept_parser.set_defaults(which='accept')
-        accept_parser.add_argument('project', help="the project name.")
-        accept_parser.add_argument('username', help="the username to accept.")
-
-        # Configure the REJECT parser.
-        reject_parser = subparsers.add_parser('reject', help="kick a user "
-                                              "from a project.")
-        reject_parser.set_defaults(which='reject')
-        reject_parser.add_argument('project', help="the project name.")
-        reject_parser.add_argument('username', help="the username to reject.")
-
-        # Configure the KICK parser.
-        reject_parser = subparsers.add_parser('kick', help="kick a user "
-                                              "from a project.")
-        reject_parser.set_defaults(which='kick')
-        reject_parser.add_argument('project', help="the project name.")
-        reject_parser.add_argument('username', help="the username to kick.")
-
-        # Configure the INIT parser.
-        init_parser = subparsers.add_parser('init', help="initialize a new "
-                                             "project.")
-        init_parser.set_defaults(which='init')
-        init_parser.add_argument('project', help="the project name.")
-        init_parser.add_argument('git-url', help="specify the git url to "
-                                 "fetch in order to initialize the project.")
-
-        # Configure the START parser.
-        start_parser = subparsers.add_parser('start', help="start Baboon !")
-        start_parser.set_defaults(which='start')
-        start_parser.add_argument('--no-init', dest='init',
-                                  default=False, action='store_true',
-                                  help="avoid to execute initial rsync")
-        # logging args
-        parser.add_argument('--hostname', dest='hostname', default="hostame",
-                            help="Override the default baboon-project.org "
-                            "hostname.")
-        parser.add_argument('-d', '--debug', help="set logging to DEBUG",
-                            action='store_const',
-                            dest='loglevel',
-                            const=logging.DEBUG,
-                            default=logging.INFO)
-        parser.add_argument('--config', dest='configpath',
-                            help="override the default location of the "
-                            "config file")
-
-        # Add the nosave option to some of the parsers.
-        no_save_subparsers = (register_parser, create_parser, delete_parser,
-                              join_parser, unjoin_parser)
-
-        for subparser in no_save_subparsers:
-            subparser.add_argument('--nosave', action='store_true',
-                                   dest='nosave', default=False,
-                                   help="don't overwrite config file")
-
-        self.args = parser.parse_args()
-
-        # Ensure the path is an abspath.
-        if hasattr(self.args, 'path') and self.args.path:
-            self.args.path = os.path.abspath(self.args.path)
+    mandatory_keys = set(['master', 'pubsub'] + add_mandatory_fields)
+    _check_config_section('server', mandatory_keys)
 
 
-class BaboonConfig(Config):
+def check_user(add_mandatory_fields=[]):
+    """ Checks the user section in the config dict. The add_mandatory_fields
+    list allows to add more mandatory fields.
+    """
 
-    def __init__(self, arg_parser, logconf):
-        super(BaboonConfig, self).__init__(ArgumentParser(), LOGGING)
-
-    def _init_config_file(self):
-        """ Override the initialization of the configuration file. Here's we
-        parse the configuration file and we transform all sections in dict into
-        self.attrs except for the projects. The projects are put in the
-        'projects' key.
-
-        example:
-            self.attrs['user']['jid'] => chuck.norris@baboon-project.org
-            self.attrs['projects']['linux_kernel'] => {path: ~/workspace/linux}
-        """
-
-        known_section = ('user', 'server')
-        self.attrs['projects'] = {}
-
-        filename = self._get_config_path()
-        # Check if we found a location for the config file
-        # If not, let's go brutal.
-        if not filename:
-            cerr("Configuration file not found. Quitting.")
-            sys.exit(1)
-
-        # Parse the file if found.
-        # Check if it looks like a real python config file.
-        parser = RawConfigParser()
-        try:
-            parser.read(filename)
-        except MissingSectionHeaderError:
-            cerr("Config file not properly formatted. %s" % filename)
-            sys.exit(1)
-
-        # Fill the config dict whit what we found in the config file
-        for section in parser.sections():
-            if section in known_section:
-                self.attrs[section] = dict(parser.items(section))
-            else:
-                # The current section in the name of a project.
-                self.attrs['projects'][section] = dict(parser.items(section))
-
-        # I highly doubt this portion of code :)
-        # Some hardcoded server values, if we've found an empty server section.
-        # Shouldn't happen.
-        if not self.attrs.get('server'):
-            hostname = config['parser']['hostname']
-            self.attrs['server'] = {}
-            self.attrs['server']['max_stanza_size'] = 65535
-            self.attrs['server']['pubsub'] = 'pubsub.%s' % hostname
-            self.attrs['server']['streamer'] = 'streamer.%s' % hostname
-            self.attrs['server']['master'] = 'admin@%s/baboond' % hostname
+    mandatory_keys = set(['jid', 'passwd'] + add_mandatory_fields)
+    _check_config_section('user', mandatory_keys)
 
 
-config = BaboonConfig(ArgumentParser(), LOGGING).attrs
+def check_project(add_mandatory_fields=[]):
+    """ Checks if there's at least one configured project. The
+    add_mandatory_fields list allows to add more mandatory fields to validate
+    all configured projects.
+    """
+
+    mandatory_keys = set(['path', 'scm', 'enable'] + add_mandatory_fields)
+    projects = config.get('projects', {})
+
+    # Ensure there's at least one project.
+    if not len(projects):
+        raise ConfigException("No project configured.")
+
+    # For all projects, ensure all mandatory fields are present.
+    mandatory_keys = set(['path', 'scm', 'enable'] + add_mandatory_fields)
+    for project in projects:
+        _check_config_section(project, mandatory_keys, prefix='projects')
+
+
+def check_config():
+    """ Checks all the mandatory fields in all sections.
+    """
+
+    check_server()
+    check_user()
+    check_project()
+
+
+def dump():
+    """ Dumps the config dict to the user's configuration file ~/.baboonrc. If
+    the file already exists, it's copied to ~/.baboonrc.old and the original
+    file is overwritten.
+    """
+
+    baboonrc_path = os.path.expanduser('~/.baboonrc')
+    baboonrc_old_path = os.path.expanduser('~/.baboonrc.old')
+
+    try:
+        # Dump the config file.
+        with open(baboonrc_path, 'w') as fd:
+            print >>fd, get_dumped_user()
+            print >>fd, get_dumped_server()
+            print >>fd, get_dumped_projects()
+            print >>fd, get_dumped_example_project()
+
+            csuccess("The new configuration file is written in ~/.baboonrc\n")
+    except EnvironmentError as err:
+        cerr("Cannot dump the configuration. Cause:\n%s" % err)
+
+def get_dumped_server():
+    """ Returns a dumped representation of the server section.
+    """
+
+    return '\n'.join(_get_dumped_section('server')) + '\n'
+
+
+def get_dumped_user():
+    """ Returns a dumped representation of the user section.
+    """
+
+    return '\n'.join(_get_dumped_section('user')) + '\n'
+
+
+def get_dumped_projects():
+    """ Returns a dumped representation of the projects section.
+    """
+
+    content = []
+    for project, opts in config['projects'].iteritems():
+        dumped_section = _get_dumped_section(project, prefix='projects')
+        content.append('\n'.join(dumped_section) + '\n')
+
+    return '\n'.join(content)
+
+
+def get_dumped_example_project():
+    """ Returns a dumped representation of project configuration example.
+    """
+
+    return """# Example of project definition.
+#[awesome_project] \t# The project name on the baboon server.
+#path = /pathto/project # The project path of your system.
+#scm = git \t\t# The source code manager you use for this project.
+#enable = 1 \t\t# You want baboon to actually watch this project.
+"""
+
+def get_baboon_config():
+    """ Returns the baboon full dict configuration.
+    """
+
+    arg_attrs = get_config_args(PARSER)
+    file_attrs = get_config_file(arg_attrs, 'baboonrc')
+    init_config_log(arg_attrs, LOGGING)
+
+    config = {
+        'parser': arg_attrs,
+        'projects': {}
+    }
+
+    # The known section tuple contains the list of sections to put directly
+    # as a root key in the config dict. Other sections will be interpreted as a
+    # project and placed into the 'projects' key.
+    known_section = ('server', 'user')
+    for key in file_attrs:
+        if key in known_section:
+            config[key] = file_attrs[key]
+        else:
+            # It's a project, add the attributes to the projects key.
+            config['projects'][key] = file_attrs[key]
+
+    # If a hostname has been defined in the command line, we need to override
+    # all fields that depend on it.
+    depend_hostnames = {}
+    if 'server' in config:
+        depend_hostnames['server'] = ['pubsub', 'streamer', 'master']
+    if 'user' in config:
+        depend_hostnames['user'] = ['jid']
+
+    # Search and replace default hostname by hostname defined from the command
+    # line.
+    for section, fields in depend_hostnames.iteritems():
+        for field in fields:
+            try:
+                cur_value = config[section][field]
+                config[section][field] = cur_value.replace(
+                    'baboon-project.org', config['parser']['hostname'])
+            except KeyError:
+                # Just pass the keyerror exception. If it's a mandatory field,
+                # the error will be raised correctly later.
+                pass
+
+    return config
+
+
+def _check_config_section(section, mandatory_keys, prefix=None):
+
+    # If the prefix is provided, use the config['prefix'] src dict instead of
+    # directly the src config. Useful for projects sections.
+    src = config[prefix] if prefix else config
+
+    # Ensure the section exists.
+    if section not in src:
+        raise ConfigException("'%s' section is missing." % section)
+
+    try:
+        # Ensure all mandatory keys exist with a non-empty value. If not,
+        # raised a appropriate message exception.
+        for key, value in [(x, src[section][x]) for x in mandatory_keys]:
+            if not value:
+                raise ConfigException("Value of the '%s' field cannot be "
+                                      "empty." % key)
+    except KeyError as err:
+        raise ConfigException("'%s' field required in the '%s' section " %
+                              (err.message, section))
+
+
+def _get_dumped_section(section, prefix=None):
+
+    try:
+        src = config[prefix] if prefix else config
+
+        content = ['[%s]' % section]
+        for option, value in src['%s' % section].iteritems():
+            content.append('%s = %s' % (option, value))
+
+        return content
+    except KeyError:
+        # Ignore all the section content if a KeyError exception is raised.
+        return ''
+
+
+config = get_baboon_config()

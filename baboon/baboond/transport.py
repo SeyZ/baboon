@@ -5,6 +5,8 @@ import struct
 import tempfile
 import pickle
 
+from os.path import join
+
 from sleekxmpp import ClientXMPP
 from sleekxmpp.jid import JID
 from sleekxmpp.xmlstream.handler.callback import Callback
@@ -31,41 +33,99 @@ class Transport(ClientXMPP):
 
         self.register_plugin('xep_0060')  # PubSub
         self.register_plugin('xep_0065')  # Socks5 Bytestreams
+        self.pubsub_addr = config['server']['pubsub']
+        self.working_dir = config['server']['working_dir']
 
-        self.add_event_handler('session_start', self.start)
-        self.add_event_handler('socks_recv', self.on_recv)
+        # Some shortcuts
+        self.pubsub = self.plugin['xep_0060']
+        self.streamer = self.plugin['xep_0065']
 
-        self.register_handler(Callback('First Git Init Handler',
-                                       StanzaPath('iq@type=set/git-init'),
-                                       self._handle_git_init))
+        self.pending_rsyncs = {}   # {SID => RsyncTask}
+        self.pending_git_init_tasks = {}  # {BID => GitInitTask}
 
-        self.register_handler(Callback('RsyncStart Handler',
-                                       StanzaPath('iq@type=set/rsync'),
-                                       self._handle_rsync))
+        # Bind all handlers to corresponding events.
+        self._bind()
 
-        self.register_handler(Callback('MergeVerification Handler',
-                                       StanzaPath('iq@type=set/merge'),
-                                       self._handle_merge_verification))
-
-        eventbus.register('rsync-finished-success', self._on_rsync_finished)
-
-        # Connect to the XMPP server using IPv4 only and without
-        # SSL/TLS support for now.
+        # Start the XMPP connection.
         self.use_ipv6 = False
         if self.connect(use_ssl=False, use_tls=False):
             self.process()
 
-    def _handle_git_init(self, iq):
-        self.logger.info("Received a first git initialization !")
+    def close(self):
+        """ Disconnect from the XMPP server.
+        """
 
+        self.streamer.close()
+        self.disconnect()
+
+        self.logger.info("Disconnected from the XMPP server.")
+
+    def alert(self, node, msg, files=[]):
+        """ Build a MergeStatus stanza and publish it to the pubsub node.
+        """
+
+        # Build the MergeStatus stanza.
+        status_msg = MergeStatus()
+        status_msg['node'] = node
+        status_msg['status'] = msg
+        status_msg.set_files(files)
+
+        try:
+            result = self.pubsub.publish(self.pubsub_addr, node,
+                                         payload=status_msg)
+            self.logger.debug("Published a msg to the node: %s" % node)
+        except:
+            self.logger.debug("Could not publish to: %s" % node)
+
+    def _bind(self):
+        """ Registers needed handlers.
+        """
+
+        self.add_event_handler('session_start', self._on_session_start)
+        self.add_event_handler('socks_recv', self._on_socks5_data)
+
+        self.register_handler(Callback('First Git Init Handler',
+                                       StanzaPath('iq@type=set/git-init'),
+                                       self._on_git_init_stanza))
+
+        self.register_handler(Callback('RsyncStart Handler',
+                                       StanzaPath('iq@type=set/rsync'),
+                                       self._on_rsync_stanza))
+
+        self.register_handler(Callback('MergeVerification Handler',
+                                       StanzaPath('iq@type=set/merge'),
+                                       self._on_merge_stanza))
+
+        eventbus.register('rsync-finished-success', self._on_rsync_success)
+        eventbus.register('rsync-finished-failure', self._on_rsync_failure)
+        eventbus.register('git-init-success', self._on_git_init_success)
+        eventbus.register('git-init-failure', self._on_git_init_failure)
+
+    def _on_session_start(self, event):
+        """ Handler for the session_start sleekxmpp event.
+        """
+
+        self.send_presence()
+        self.get_roster()
+
+        self.logger.info("Connected to the XMPP server.")
+
+
+    def _on_git_init_stanza(self, iq):
+        """ Called when a GitInit stanza is received. This handler creates a
+        new GitInitTask if permissions are good.
+        """
+
+        self.logger.info("Received a git init stanza.")
+
+        # Get the useful data.
         node = iq['git-init']['node']
         url = iq['git-init']['url']
         sfrom = iq['from'].bare
 
-        is_subscribed = self._verify_subscription(sfrom, node)
+        # Ensure permissions.
+        is_subscribed = self._verify_subscription(iq, sfrom, node)
         if not is_subscribed:
-            self._send_forbidden_error(iq.reply(), "you are not a contributor "
-                                       "on %s." % node)
             return
 
         # Create a new GitInitTask
@@ -79,9 +139,98 @@ class Transport(ClientXMPP):
         # Add the GitInitTask to the list of tasks to execute.
         dispatcher.put(node, git_init_task)
 
-        # Register the callbacks.
-        eventbus.register_once('git-init-success', self._on_git_init_success)
-        eventbus.register_once('git-init-failure', self._on_git_init_failure)
+    def _on_rsync_stanza(self, iq):
+        """ Called when a Rsync stanza is received. This handler creates a
+        new RsyncTask if permissions are good.
+        """
+
+        self.logger.info('Received a rsync stanza.')
+
+        # Get the useful data.
+        node = iq['rsync']['node']
+        sid = iq['rsync']['sid']
+        rid = iq['rsync']['rid']
+        files = iq['rsync']['files']
+        sfrom = iq['from']
+        project_path = join(self.working_dir, node, sfrom.bare)
+
+        # Verify if the user is a subscriber/owner of the node.
+        is_subscribed = self._verify_subscription(iq, sfrom.bare, node)
+        if not is_subscribed:
+            return
+
+        # The future reply iq.
+        reply = iq.reply()
+
+        # Create the new RsyncTask.
+        from task import RsyncTask
+        rsync_task = RsyncTask(sid, rid, sfrom, node, project_path, files)
+        dispatcher.put(node, rsync_task)
+
+        # Register the current rsync_task in the pending_rsyncs dict.
+        self.pending_rsyncs[rid] = rsync_task
+
+        # Reply to the IQ
+        reply['rsync']
+        reply.send()
+
+    def _on_merge_stanza(self, iq):
+        """ Called when a MergeVerification stanza is received. This handler
+        creates a new MergeTask if permissions are good.
+        """
+
+        # Get the useful data.
+        sfrom = iq['from'].bare
+        node = iq['merge']['node']
+        project_path = join(self.working_dir, node, sfrom)
+
+        # Verify if the user is a subscriber/owner of the node.
+        is_subscribed = self._verify_subscription(iq, sfrom, node)
+        if not is_subscribed:
+            return
+
+        # Verify if the server-side project is a git repository.
+        is_git_repo = self._verify_git_repository(iq, node, project_path)
+        if not is_git_repo:
+            return
+
+        # The future reply iq.
+        reply = iq.reply()
+
+        # Prepare the merge verification with this data.
+        from task import MergeTask
+        dispatcher.put(node, MergeTask(node, sfrom))
+
+        # Reply to the request.
+        reply.send()
+
+    def _on_socks5_data(self, payload):
+        """ Called when receiving data over the socks5 socket (xep
+        0065).
+        """
+
+        self.logger.debug("Received data over socks5 socket.")
+
+        # Unpack the payload.
+        data = self._unpack(payload['data'])
+
+        # Get the useful data.
+        node = data['node']
+        rid = data['rid']
+        sfrom = JID(data['from'])
+        deltas = data['delta']
+        project_path = join(self.working_dir, node, sfrom.bare)
+
+        # Patch files with corresponding deltas.
+        for relpath, delta in deltas:
+            self._patch_file(join(project_path, relpath), delta)
+
+        cur_rsync_task = self.pending_rsyncs.get(rid)
+        if cur_rsync_task:
+            cur_rsync_task.rsync_finished.set()
+        else:
+            self.logger.error('Rsync task %s not found.' % rid)
+            # TODO: Handle this error.
 
     def _on_git_init_success(self, bid):
         """ Called when a git init task has been terminated successfuly.
@@ -89,6 +238,10 @@ class Transport(ClientXMPP):
 
         # Retrieve the IQ associated to this BaboonId and send the response.
         iq = self.pending_git_init_tasks[bid]
+        if not iq:
+            self.logger.error("IQ associated with the %s BID not found." % bid)
+
+        # Send the reply iq.
         iq.reply().send()
 
         # Remove the entry in the pending dict.
@@ -98,10 +251,16 @@ class Transport(ClientXMPP):
         """ Called when a git init task has been terminated with an error.
         """
 
+        # Display the error message.
         self.logger.error(error)
 
         # Retrieve the IQ associated to this BaboonId and send the response.
         iq = self.pending_git_init_tasks[bid]
+        if not iq:
+            self.logger.error("IQ associated with the %s BID not found." % bid)
+            return
+
+        # Send the reply error iq.
         reply = iq.reply().error()
         reply['error']['code'] = '409'
         reply['error']['type'] = 'cancel'
@@ -112,91 +271,9 @@ class Transport(ClientXMPP):
         # Remove the entry in the pending dict.
         del self.pending_git_init_tasks[bid]
 
-    def _handle_rsync(self, iq):
-        self.logger.info('Received rsync stanza !')
-
-        sid = iq['rsync']['sid']  # Registers the SID.
-        rid = iq['rsync']['rid']  # Register the RID.
-        sfrom = iq['from']  # Registers the bare JID.
-        files = iq['rsync']['files']  # Get the files list to sync.
-        node = iq['rsync']['node']  # Get the current project name.
-
-        # The future reply stanza.
-        reply = iq.reply()
-
-        # Verify if the user is a subscriber/owner of the node.
-        is_subscribed = self._verify_subscription(sfrom.bare, node)
-        if not is_subscribed:
-            self._send_forbidden_error(reply, "you are not a contributor on "
-                                       "%s." % node)
-            return
-
-        # Get the project path.
-        project_path = os.path.join(config['server']['working_dir'], node,
-                                    sfrom.bare)
-
-        # Prepare the **kwargs argument for the RsyncTask constructor.
-        kwargs = {
-            'sid': sid,
-            'rid': rid,
-            'sfrom': sfrom,
-            'project': node,
-            'project_path': project_path,
-            'files': files,
-        }
-
-        # Put the rsync task in the tasks queue.
-        self.logger.debug('Prepared rsync task %s' % rid)
-
-        # TODO: Don't register the rsync_task globally to the class.
-        from task import RsyncTask
-        rsync_task = RsyncTask(**kwargs)
-        dispatcher.put(node, rsync_task)
-
-        # Register the current rsync_task in the pending_rsyncs dict.
-        self.pending_rsyncs[rid] = rsync_task
-
-        # Replies to the IQ
-        reply['rsync']
-        reply.send()
-
-    def _handle_merge_verification(self, iq):
-        """ Creates a merge verification task.
+    def _on_rsync_success(self, rid, *args, **kwargs):
+        """ Called when a rsync task has been terminated successfuly.
         """
-
-        sfrom = iq['from'].bare
-        node = iq['merge']['node']
-
-        # Get the project path.
-        project_path = os.path.join(config['server']['working_dir'], node,
-                                    sfrom)
-
-        # The future reply stanza.
-        reply = iq.reply()
-
-        # Verify if the user is a subscriber/owner of the node.
-        is_subscribed = self._verify_subscription(sfrom, node)
-        if not is_subscribed:
-            self._send_forbidden_error(reply, "You are not a contributor on "
-                                       "%s." % node)
-            return
-
-        # Verify if the server-side project is a git repository.
-        is_git_repo = self._verify_git_repository(project_path)
-        if not is_git_repo:
-            self._send_forbidden_error(reply, "The repository %s seems to be "
-                                       "corruputed. Please, (re)run the init "
-                                       "command." % node)
-            return
-
-        # Prepares the merge verification with this data.
-        from task import MergeTask
-        dispatcher.put(node, MergeTask(node, sfrom))
-
-        # Replies to the request.
-        reply.send()
-
-    def _on_rsync_finished(self, rid, *args, **kwargs):
         cur_rsync_task = self.pending_rsyncs.get(rid)
         if cur_rsync_task:
             self.logger.debug("RsyncTask %s finished." % rid)
@@ -206,86 +283,17 @@ class Transport(ClientXMPP):
         else:
             self.logger.error("Could not find a rsync task with RID: %s" % rid)
 
-    def start(self, event):
-        """ Handler for the session_start sleekxmpp event.
+    def _on_rsync_failure(self, rid, *args, **kwargs):
+        """ Called when a rsync task has been terminated with an error.
         """
-
-        self.send_presence()
-        self.get_roster()
-
-        # Registers the plugins.
-        self.pubsub = self.plugin['xep_0060']
-        self.streamer = self.plugin['xep_0065']
-
-        # Declare a pending_rsyncs dict with key -> SID and value the
-        # rsync_task object.
-        self.pending_rsyncs = {}
-
-        # Declare a pending git_init_task in a dict.
-        self.pending_git_init_tasks = {}
-
-        self.logger.info("The transport is now listening...")
-
-    def close(self):
-        self.streamer.close()
-        self.disconnect()
-        self.logger.debug('Closed the XMPP connection.')
-
-    def on_recv(self, payload):
-        """ Called when receiving data over the socks5 socket (xep
-        0065).
-        """
-
-        self.logger.debug("Received data over socks5.")
-        recv = payload['data']
-
-        # Unpacks the recv.
-        recv = self._unpack(recv)
-
-        # Shortcuts to useful data in recv.
-        sfrom = JID(recv['from']).bare  # The bare jid of the requester.
-        node = recv['node']  # The project name.
-        deltas = recv['delta']  # A list of delta tuple.
-        rid = recv['rid']  # The rsync ID.
-
-        # Sets the current working directory.
-        project_path = os.path.join(config['server']['working_dir'], node,
-                                    sfrom)
-
-        for elem in deltas:
-            # Unpacks the tuple.
-            relpath = elem[0]
-            delta = elem[1]
-
-            # Sets the current file fullpath.
-            path = os.path.join(project_path, relpath)
-
-            # Sets the file cursor of the unpatched file at the
-            # beginning.
-            unpatched = open(path, 'rb')
-            unpatched.seek(0)
-
-            # Saves the new file in a temporary file. Avoids to delete
-            # the file when it's closed.
-            save_fd = tempfile.NamedTemporaryFile(delete=False)
-
-            # Let's go for the patch !
-            pyrsync.patchstream(unpatched, save_fd, delta)
-
-            # Closes the file (data are flushed).
-            save_fd.close()
-
-            # Renames the temporary file to the good file path.
-            shutil.move(save_fd.name, path)
-
-        # Get the rsync task associated to the sid to set() the rsync_finished
-        # Event.
         cur_rsync_task = self.pending_rsyncs.get(rid)
         if cur_rsync_task:
-            cur_rsync_task.rsync_finished.set()
-        else:
-            self.logger.error('Rsync task %s not found.' % rid)
-            # TODO: Handle this error.
+            self.logger.debug("RsyncTask %s finished with an error." % rid)
+
+            # TODO: Add a status (success/error) to the rsyncfinished iq.
+            iq = self.Iq(sto=cur_rsync_task.jid, stype='set')
+            iq['rsyncfinished']['node'] = cur_rsync_task.project
+            iq.send(block=False)
 
     def _pack(self, data):
         data = pickle.dumps(data)
@@ -295,32 +303,12 @@ class Transport(ClientXMPP):
         data = pickle.loads(data)
         return data
 
-    def alert(self, project_name, username, msg, files=[]):
-        """ Broadcast the msg on the pubsub node (written in the
-        config file).
-        """
-
-        status_msg = MergeStatus()
-        status_msg['node'] = project_name
-        status_msg['status'] = msg
-        status_msg.set_files(files)
-
-        try:
-            result = self.pubsub.publish(config['server']['pubsub'],
-                                         project_name, payload=status_msg)
-            id = result['pubsub']['publish']['item']['id']
-            self.logger.debug('Published at item id: %s' % id)
-        except:
-            self.logger.debug('Could not publish to: %s' %
-                              project_name)
-
-    def _verify_subscription(self, jid, node):
+    def _verify_subscription(self, iq, jid, node):
         """ Verify if the bare jid is a subscriber/owner on the node.
         """
 
         try:
-            ret = self.pubsub.get_node_subscriptions(
-                config['server']['pubsub'], node)
+            ret = self.pubsub.get_node_subscriptions(self.pubsub_addr, node)
             subscriptions = ret['pubsub_owner']['subscriptions']
 
             for subscription in subscriptions:
@@ -329,15 +317,51 @@ class Transport(ClientXMPP):
         except Exception as e:
             pass
 
+        eventbus.fire('rsync-finished-failure')
+        err_msg = "you are not a contributor on %s." % node
+        self._send_forbidden_error(iq.reply(), err_msg)
+
         return False
 
-    def _verify_git_repository(self, path):
+    def _verify_git_repository(self, iq, node, path):
+        """
+        """
+
         proc = subprocess.Popen('git status', stdin=subprocess.PIPE,
                                 stdout=subprocess.PIPE,
                                 stderr=subprocess.STDOUT, shell=True,
                                 cwd=path)
         output, errorss = proc.communicate()
-        return proc.returncode == 0
+
+        if not proc.returncode:
+            return True
+        else:
+            err_msg = "The repository %s seems to be corrupted. Please, (re)" \
+                    " run the init command." % node
+            self._send_forbidden_error(iq.reply(), err_msg)
+
+            return False
+
+    def _patch_file(self, fullpath, delta):
+        """ Patch the fullpath file with the delta.
+        """
+
+        # Open the unpatched file with the cursor at the beginning.
+        unpatched = open(fullpath, 'rb')
+        unpatched.seek(0)
+
+        # Save the new file in a temporary file. Avoid to delete the file
+        # when it's closed.
+        save_fd = tempfile.NamedTemporaryFile(delete=False)
+
+        # Patch the file with the delta.
+        pyrsync.patchstream(unpatched, save_fd, delta)
+
+        # Close the file (data are flushed).
+        save_fd.close()
+
+        # Rename the temporary file to the good file path.
+        shutil.move(save_fd.name, fullpath)
 
     def _send_forbidden_error(self, iq, err_msg):
         """ Send an error iq with the err_msg as text.
@@ -348,5 +372,6 @@ class Transport(ClientXMPP):
         iq['error']['condition'] = 'forbidden'
         iq['error']['text'] = err_msg
         iq.send()
+
 
 transport = Transport()

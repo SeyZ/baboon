@@ -83,17 +83,24 @@ class MetadirController(object):
 
         cur_timestamp = time.time()
 
-        for f in files:
-            if f.event_type == FileEvent.MOVE:
-                del self.index[f.src_path]
-                self.index[f.dest_path] = cur_timestamp
-            elif f.event_type == FileEvent.DELETE:
-                del self.index[f.src_path]
-            else:
-                self.index[f.src_path] = cur_timestamp
+        try:
+            for f in files:
+                if f.event_type == FileEvent.MOVE:
+                    del self.index[f.src_path]
+                    self.index[f.dest_path] = cur_timestamp
+                elif f.event_type == FileEvent.DELETE:
+                    del self.index[f.src_path]
+                else:
+                    self.index[f.src_path] = cur_timestamp
 
-        # TODO: Verify if it's not a performance issue (maybe on big project).
-        self.index.sync()
+            # TODO: Verify if it's not a performance issue (maybe on big
+            # project).
+            self.index.sync()
+        except ValueError:
+            # If the index shelve is already closed, a ValueError is raised.
+            # In this case, the last rsync will not be persisted on disk. Not
+            # dramatical.
+            pass
 
     def _startup_init(self):
         """
@@ -101,7 +108,7 @@ class MetadirController(object):
 
         cur_files = []
 
-        self.logger.info("Startup initialization...")
+        self.logger.info("[%s] startup initialization..." % self.project)
         for root, _, files in os.walk(self.project_path):
             for name in files:
                 fullpath = join(root, name)
@@ -136,7 +143,7 @@ class MetadirController(object):
             self.logger.info("Need to delete: %s" % del_file)
             FileEvent(self.project, FileEvent.DELETE, del_file).register()
 
-        self.logger.info("Baboon is ready !")
+        self.logger.info("[%s] ready !" % self.project)
 
     def delete(self):
         """ Deletes the metadir from the project.

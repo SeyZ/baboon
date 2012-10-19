@@ -1,5 +1,9 @@
 import os
 import sys
+import argparse
+
+from os.path import join, dirname, abspath, exists
+from baboon.common.errors.baboon_exception import ConfigException
 
 if sys.version_info < (2, 7):
     from baboon.common.thirdparty.dictconfig import dictConfig
@@ -7,101 +11,118 @@ else:
     from logging.config import dictConfig
 
 if sys.version_info < (3, 0):
-    from ConfigParser import RawConfigParser
+    from ConfigParser import RawConfigParser, Error as ConfigParserError
 else:
-    from configparser import RawConfigParser
+    from configparser import RawConfigParser, Error as ConfigParserError
 
 
-class Config(object):
-    """ Singleton configuration class
+def get_config_path(arg_attrs, config_name):
+    """ Gets the configuration path with the priority order:
+    1) config command line argument
+    2) <project_path>/conf/baboonrc
+    3) ~/.baboonrc
+    4) /etc/baboon/baboonrc
+    5) environment variable : BABOONRC
+    Otherwise : return None
+
+    arg_attrs is the parser argument attributes.
+    config_name is the name of the configuration file.
     """
 
-    def __init__(self, arg_parser, logconf, config_name='baboonrc'):
+    # Verify if the config path is specified in the command line.
+    config_path = arg_attrs.get('configpath')
+    if config_path:
+        return config_path
 
-        self.arg_parser = arg_parser
-        self.logconf = logconf
-        self.config_name = config_name
+    mod_path = _get_module_path()
+    curdir_path = '%s/conf/%s' % (mod_path, config_name)
+    user_path = '%s/.%s' % (os.path.expanduser('~'), config_name)
+    etc_path = '/etc/baboonrc/%s' % config_name
 
-        # The dict of all attributes
-        self.attrs = {}
+    # Verify if one of the config paths (etc, user and curdir) exist.
+    for loc in etc_path, user_path, curdir_path:
+        if os.path.isfile(loc):
+            return loc
 
-        # init the configuration
-        self.init_config()
+    # Otherwise, return the env BABOONRC variable or None.
+    return os.environ.get("BABOONRC")
 
-    def init_config(self):
-        """ Initializes:
-        - the argument parser
-        - the baboon configuration file
-        - the watched project configuration file
 
-        and puts all configurations in the config dict
-        """
+def get_config_file(arg_attrs, config_name):
+    """ Returns the dict corresponding to the configuration file.
+    """
 
-        if self.arg_parser:
-            self._init_config_arg()
+    filename = get_config_path(arg_attrs, config_name)
+    if not filename:
+        raise ConfigException("Failed to retrieve the configuration filepath.")
 
-        self._init_logging()
-        self._init_config_file()
-
-    def _get_config_path(self):
-        """ Gets the configuration path with the priority order :
-        1) config command line argument
-        2) <project_path>/conf/baboonrc
-        3) ~/.baboonrc
-        4) /etc/baboon/baboonrc
-        5) environment variable : BABOONRC
-
-        elsewhere : return None
-        """
-
-        config_path = self.attrs['parser'].get('configpath')
-        if config_path:
-            return config_path
-
-        etc_path = '/etc/baboonrc/%s' % self.config_name
-        user_path = '%s/.%s' % (os.path.expanduser('~'), self.config_name)
-
-        mod_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        curdir_path = '%s/conf/%s' % (mod_path, self.config_name)
-
-        for loc in etc_path, user_path, curdir_path:
-            if os.path.isfile(loc):
-                return loc
-
-        # if there's no good path, use the global environment
-        # elsewhere, return None.
-        return os.environ.get("BABOONRC")
-
-    def _init_config_arg(self):
-        """ Parse the command line arguments and inject values into the
-        attrs['parser'] dict.
-        """
-
-        args = self.arg_parser.args
-        self.attrs['parser'] = args.__dict__
-
-    def _init_logging(self):
-        """ Configures the logger level setted in the logging args
-        """
-        try:
-            log_dir = os.path.join(os.getcwd(), 'logs')
-            if not os.path.exists(log_dir):
-                os.mkdir(log_dir)
-        except IOError:
-            sys.stderr.write("Cannot create the logs directory\n")
-            exit(1)
-
-        try:
-            self.logconf['loggers']['baboon']['level'] = self.attrs['parser'][
-                'loglevel']
-            dictConfig(self.logconf)
-        except:
-            sys.stderr.write("Failed to parse the logging config file\n")
-            exit(1)
-
-    def _init_config_file(self):
-        filename = self._get_config_path()
+    try:
         parser = RawConfigParser()
         parser.read(filename)
 
-        self.attrs.update(parser._sections)
+        file_attrs = {}
+        for section in parser.sections():
+            file_attrs[section] = dict(parser.items(section))
+
+        return file_attrs
+    except ConfigParserError:
+        raise ConfigException("Failed to parse the configuration file: %s " %
+                              filename)
+
+
+def init_config_log(arg_attrs, logconf):
+    """ Configures the logger level setted in the logging args
+    """
+
+    # Ensure the log directory exists.
+    try:
+        mod_path = _get_module_path()
+        log_dir = join(mod_path, 'logs')
+        if not os.path.isdir(log_dir):
+            os.makedirs(log_dir)
+    except EnvironmentError:
+        raise ConfigException("Cannot create the logs directory")
+
+    # Configure the logger with the dict logconf.
+    try:
+        logconf['loggers']['baboon']['level'] = arg_attrs['loglevel']
+        dictConfig(logconf)
+    except:
+        raise ConfigException("Failed to parse the logging config file")
+
+
+def get_config_args(parser_dict):
+    """ Builds and returns the argument parser.
+    """
+
+    # Create the new global parser.
+    parser = argparse.ArgumentParser(description=parser_dict['description'])
+
+    # Add arguments to the global parser.
+    for arg in parser_dict['args']:
+        parser.add_argument(*arg['args'], **arg['kwargs'])
+
+    # Iterates over all subparsers.
+    if parser_dict['subparsers']:
+        subparsers = parser.add_subparsers()
+    for item in parser_dict['subparsers']:
+        # Add the new subparser.
+        subparser = subparsers.add_parser(item['name'], help=item['help'])
+        subparser.set_defaults(which=item['name'])
+
+        # Add arguments to the subparser.
+        for arg in item['args']:
+            subparser.add_argument(*arg['args'], **arg['kwargs'])
+
+    args = parser.parse_args()
+
+    # Ensure the path is an abspath.
+    if hasattr(args, 'path') and args.path:
+        args.path = os.path.abspath(args.path)
+
+    # Return a dict, not a Namespace.
+    return args.__dict__
+
+
+def _get_module_path():
+    return dirname(dirname(abspath(__file__)))

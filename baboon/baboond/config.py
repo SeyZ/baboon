@@ -2,21 +2,24 @@ import argparse
 import logging
 import logging.config
 
-from baboon.common.config import Config
-from logconf import LOGGING
+from baboon.common.config import get_config_args, get_config_file
+from baboon.common.config import init_config_log
+from logconf import LOGGING, PARSER
 
 
-class ArgumentParser(object):
-    def __init__(self):
-        parser = argparse.ArgumentParser(description='Baboon ! Ook !')
+def get_baboond_config():
+    """ Returns the baboond full dict configuration.
+    """
 
-        # logging args
-        parser.add_argument('-d', '--debug', help='set logging to DEBUG',
-                            action='store_const',
-                            dest='loglevel',
-                            const=logging.DEBUG,
-                            default=logging.INFO)
+    arg_attrs = get_config_args(PARSER)
+    file_attrs = get_config_file(arg_attrs, 'baboondrc')
+    init_config_log(arg_attrs, LOGGING)
 
-        self.args = parser.parse_args()
+    config = {}
+    config.update(arg_attrs)
+    config.update(file_attrs)
 
-config = Config(ArgumentParser(), LOGGING, 'baboondrc').attrs
+    return config
+
+
+config = get_baboond_config()

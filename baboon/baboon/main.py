@@ -2,9 +2,26 @@ import os
 import sys
 import signal
 
+from baboon.common.errors.baboon_exception import ConfigException
+
+# The config can raise a ConfigException if there's a problem.
+try:
+    from baboon.baboon.config import config
+    from baboon.baboon.config import check_server, check_user, check_project
+except ConfigException as err:
+    # An error as occured while loading the global baboon configuration. So,
+    # there's no logger correctly configured. Load a basic logger to print the
+    # error message.
+    import logging
+
+    logging.basicConfig(format='%(message)s')
+    logger = logging.getLogger(__name__)
+    logger.error(err)
+
+    sys.exit(1)
+
 from baboon.baboon import commands
 from baboon.baboon.plugins import *
-from baboon.baboon.config import config
 from baboon.baboon.transport import WatchTransport
 from baboon.baboon.initializor import MetadirController
 from baboon.baboon.monitor import Monitor
@@ -24,92 +41,26 @@ class Main(object):
 
         self.which = config['parser']['which']
 
-        # The start command is a special command. Call it from this class
-        if self.which == 'start':
-            if self.check_config():
+        try:
+            # The start command is a special command. Call it from this class
+            if self.which == 'start':
                 self.start()
-
-        # Call the correct method according to the current arg subparser.
-        elif hasattr(commands, self.which):
-            if self.which != 'register':
-                if self.check_user_config():
-                    getattr(commands, self.which)()
-                else:
-                    self.logger.error("Missing user credentials in the"
-                                      " configuration file.")
-            else:
-                getattr(commands, 'register')()
+            # Call the correct method according to the current arg subparser.
+            elif hasattr(commands, self.which):
+                getattr(commands, self.which)()
+        except ConfigException as err:
+            self.logger.error(err)
 
         # Wait until the transport is disconnected before exiting Baboon.
         if hasattr(self, 'transport'):
             while not self.transport.disconnected.is_set():
                 self.transport.disconnected.wait(5)
 
-    def check_user_config(self):
-        """
-        """
-
-        try:
-            return '' not in (config['user']['jid'], config['user']['passwd'])
-        except KeyError:
-            return False
-
-
-    def check_config(self):
-        """Some sections and options of the config file are mandatory. Let's be
-        sure they are at least filled. We leave the "filled correctly" to the
-        XMPP server.
-        """
-
-        success = True
-        hint = "An option misses its value"
-        # First, check SERVER and USER sections
-        try:
-            # Of course, values can't be empty
-            success = '' not in (config['server']['master'],
-                                 config['server']['pubsub'],
-                                 config['user']['jid'],
-                                 config['user']['passwd'])
-
-        # And some options are mandatory, else it fails
-        except KeyError as err:
-            success = False
-            hint = err
-
-        if not success:
-            msg = ("Something's missing in your configuration file. "
-                   "Hint: %s") % hint
-            self.logger.error(msg)
-            return success
-
-        # Let's check that at least 1 project is set up
-        # For each set up project, some options are mandatory and cannot be
-        # empty.
-        if len(config.get('projects', {})):
-            for project in config['projects']:
-                try:
-                    success = '' not in (config['projects'][project]['path'],
-                                         config['projects'][project]['scm'])
-
-                    # Give a hint to the user. We're so kind.
-                    if not success:
-                        msg = ("Something's missing in your "
-                               "configuration file. "
-                               "Hint: %s in [%s]" % (hint, project))
-                        self.logger.error(msg)
-                        return success
-
-                except KeyError as err:
-                    success = False
-                    hint = str(err)
-                    hint += " not present for the '%s' project" % project
-        else:
-            success = False
-            hint = "No project is configured."
-
-        return success
-
     def start(self):
+        check_server(add_mandatory_fields=['streamer'])
+        check_user()
+        check_project()
+
         self.monitor = None
 
         try:
@@ -154,8 +105,8 @@ class Main(object):
             for metadir in self.metadirs:
                 metadir.index.close()
 
-            self.transport.close()
             self.monitor.close()
+            self.transport.close()
         except AttributeError:
             # If AttributeError is raise, transport or monitor does not exist.
             # It's not a problem.

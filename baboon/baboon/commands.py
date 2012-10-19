@@ -4,10 +4,10 @@ import shutil
 
 from baboon.baboon.initializor import MetadirController
 from baboon.baboon.transport import RegisterTransport, AdminTransport
-from baboon.baboon.fmt import cinput, confirm_cinput, cwarn
-from baboon.baboon.fmt import csuccess, cerr
+from baboon.baboon.fmt import cinput, confirm_cinput, cwarn, csuccess, cerr
 
-from baboon.baboon.config import config, SCMS
+from baboon.baboon.config import check_config, check_server, check_user
+from baboon.baboon.config import check_project, config, dump, SCMS
 from baboon.common.errors.baboon_exception import CommandException
 
 
@@ -47,7 +47,7 @@ def register():
 
         # Persist register information in the user configuration file.
         if not config['parser']['nosave']:
-            save_user_config()
+            dump()
 
     except CommandException:
         pass
@@ -60,6 +60,8 @@ def register():
 
 
 def projects():
+
+    check_config()
 
     project = config['parser']['project']
     subscriptions = []
@@ -74,6 +76,9 @@ def projects():
 def create():
     """ Create a new project with the project argument name.
     """
+
+    check_server()
+    check_user()
 
     project = config['parser']['project']
     path = config['parser'].get('path')
@@ -106,13 +111,15 @@ def create():
         config['projects'][project]['enable'] = 1
 
     if not config['parser']['nosave']:
-        save_user_config()
+        dump()
     return success
 
 
 def delete():
     """ Delete the project with the project argument name.
     """
+
+    check_config()
 
     project = config['parser']['project']
 
@@ -133,7 +140,7 @@ def delete():
 
         # Dump the configuration dict.
         if not config['parser']['nosave']:
-            save_user_config()
+            dump()
     except KeyError:
         # The project entry does not exist in the configuration file
         cwarn("The project was not found in your configuration file")
@@ -146,6 +153,8 @@ def delete():
 def join():
     """ Join the project with the project argument name.
     """
+
+    check_config()
 
     project = config['parser']['project']
     path = config['parser'].get('path')
@@ -180,7 +189,7 @@ def join():
             config['projects'][project]['enable'] = 1
 
         if not config['parser']['nosave']:
-            save_user_config()
+            dump()
 
     return success
 
@@ -188,6 +197,8 @@ def join():
 def unjoin():
     """ Unjoin the project with the project argument name.
     """
+
+    check_config()
 
     project = config['parser']['project']
 
@@ -202,13 +213,15 @@ def unjoin():
         cwarn("The project was not defined in your configuration file")
 
     if not config['parser']['nosave']:
-        save_user_config()
+        dump()
     return success
 
 
 def accept():
     """ Accept the username to the project.
     """
+
+    check_config()
 
     project = config['parser']['project']
     username = config['parser']['username']
@@ -223,6 +236,8 @@ def reject():
     """ Reject the username to the project.
     """
 
+    check_config()
+
     project = config['parser']['project']
     username = config['parser']['username']
 
@@ -236,6 +251,8 @@ def kick():
     """ Kick the username to the project.
     """
 
+    check_config()
+
     project = config['parser']['project']
     username = config['parser']['username']
 
@@ -248,6 +265,8 @@ def kick():
 def init():
     """ Initialialize a new project.
     """
+
+    check_config()
 
     project = config['parser']['project']
 
@@ -268,11 +287,14 @@ def init():
         metadir_controller = MetadirController(project, project_path)
         metadir_controller.init_index()
         metadir_controller.create_baboon_index()
-
-        # Really important, don't forget to close the shelve index !
         metadir_controller.index.close()
 
-        return _on_action_finished(ret_status, msg)
+        state = _on_action_finished(ret_status, msg)
+        if not state:
+            # On error, remove the metadir directory.
+            metadir_controller.delete()
+
+        return state
 
 
 def _on_action_finished(ret_status, msg, fatal=False):
@@ -283,54 +305,6 @@ def _on_action_finished(ret_status, msg, fatal=False):
         # Print the error message.
         cerr(msg)
         return False
-
-
-def save_user_config():
-    """Saves the config dict to the user's configuration file ~/.baboonrc.
-    If the file already exists, it's copied to ~/.baboonrc.old and the original
-    file is overwritten.
-    """
-    baboonrc_path = os.path.expanduser('~/.baboonrc')
-    baboonrc_old_path = os.path.expanduser('~/.baboonrc.old')
-
-    if os.path.exists(baboonrc_path):
-        cwarn("A baboon configuration file already exists. Saved it as "
-                "~/.baboonrc.old")
-        shutil.copy2(baboonrc_path, baboonrc_old_path)
-
-    csuccess("The new configuration file is written in ~/.baboonrc\n")
-    filecontent = ''
-
-    # Add the server section
-    filecontent += '[server]\n'
-    for option, value in config['server'].iteritems():
-        filecontent += '%s = %s\n' % (option, value)
-    filecontent += '\n'
-
-    # Add the user section
-    filecontent += '[user]\n'
-    for option, value in config['user'].iteritems():
-        filecontent += '%s = %s\n' % (option, value)
-    filecontent += '\n'
-
-    # Add projects
-    for project, project_options in config['projects'].iteritems():
-        filecontent += '[%s]\n' % project
-        for option, value in project_options.iteritems():
-            filecontent += '%s = %s\n' % (option, value)
-        filecontent += '\n'
-
-    # Example of project
-    filecontent += """# Example of project definition
-#[awesome_project] \t# The project name on the baboon server
-#path = /pathto/project # The project path of your system
-#scm = git \t\t# The source code manager you use for this project
-#enable = 1 \t\t# You want baboon to actually watch this project
-"""
-
-    # Write content to file
-    with open(baboonrc_path, 'w') as fd:
-        fd.write(filecontent)
 
 
 def _guess_scm(path):

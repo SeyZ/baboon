@@ -1,4 +1,20 @@
+import logging
 
+
+PARSER = {
+    'description': 'detect merge conflicts in realtime.',
+    'args': [{
+        'args': ('-v', '--verbose'),
+        'kwargs': {
+            'help': 'increase the verbosity.',
+            'action': 'store_const',
+            'dest': 'loglevel',
+            'const': logging.DEBUG,
+            'default': logging.INFO
+        }
+    }],
+    'subparsers': []
+}
 
 LOGGING = {
     'version': 1,

@@ -10,9 +10,13 @@ class CommandException(Exception):
         print("%s - %s" % (self.status_code, self.msg))
 
 
-class BaboonException(Exception):
-    def __init__(self, value):
-        self.value = value
+class BaboonException(BaseException):
+    pass
 
-    def __str__(self):
-        return repr(self.value)
+
+class ForbiddenException(BaboonException):
+    pass
+
+
+class ConfigException(BaboonException):
+    pass
