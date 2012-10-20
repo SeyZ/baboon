@@ -112,29 +112,30 @@ class MetadirController(object):
         for root, _, files in os.walk(self.project_path):
             for name in files:
                 fullpath = join(root, name)
-                relpath = relpath(fullpath, self.project_path)
+                rel_path = relpath(fullpath, self.project_path)
 
                 # Add the current file to the cur_files list.
-                cur_files.append(relpath)
+                cur_files.append(rel_path)
 
                 # Get the last modification timestamp of the current file.
                 cur_timestamp = getmtime(fullpath)
 
                 # Get the last rsync timestamp of the current file.
-                register_timestamp = self.index.get(relpath)
+                register_timestamp = self.index.get(rel_path)
 
                 # If the file is not excluded...
-                if not self.exclude_method or not self.exclude_method(relpath):
+                if not self.exclude_method or not \
+                        self.exclude_method(rel_path):
                     # Verify if it's a new file...
                     if register_timestamp is None:
-                        self.logger.info("Need to create: %s" % relpath)
+                        self.logger.info("Need to create: %s" % rel_path)
                         FileEvent(self.project, FileEvent.CREATE,
-                                  relpath).register()
+                                  rel_path).register()
                     elif (register_timestamp and cur_timestamp >
                           register_timestamp):
-                        self.logger.info("Need to sync: %s" % relpath)
+                        self.logger.info("Need to sync: %s" % rel_path)
                         FileEvent(self.project, FileEvent.MODIF,
-                                  relpath).register()
+                                  rel_path).register()
 
         # Verify if there's no file deleted since the last time.
         for del_file in [x for x in self.index.keys() if x not in cur_files]:
