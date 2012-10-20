@@ -4,7 +4,7 @@ import logging.config
 
 from baboon.common.config import get_config_args, get_config_file
 from baboon.common.config import init_config_log
-from logconf import LOGGING, PARSER
+from dictconf import LOGGING, PARSER
 
 
 def get_baboond_config():

@@ -11,7 +11,7 @@ else:
     from configparser import RawConfigParser, MissingSectionHeaderError
 
 from baboon.baboon.fmt import cerr, cwarn, csuccess
-from baboon.baboon.logconf import LOGGING, PARSER
+from baboon.baboon.dictconf import LOGGING, PARSER
 from baboon.common.config import get_config_args, get_config_file
 from baboon.common.config import init_config_log
 from baboon.common.errors.baboon_exception import ConfigException

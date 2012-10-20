@@ -47,7 +47,7 @@ LOGGING = {
         },
         'console': {
             'level': 'DEBUG',
-            'class': 'baboon.common.logconf.ConsoleUnixColoredHandler',
+            'class': 'baboon.common.loghandler.ConsoleUnixColoredHandler',
             'formatter': 'verbose',
             'stream': 'ext://sys.stdout',
         }
