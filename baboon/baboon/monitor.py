@@ -29,12 +29,9 @@ class EventHandler(FileSystemEventHandler):
 
     __metaclass__ = ABCMeta
 
-    def __init__(self, project_path, transport):
-        """ Take the transport to rsync the changes on baboon server.
-        """
+    def __init__(self, project_path):
 
         super(EventHandler, self).__init__()
-        self.transport = transport
         self.project_path = project_path
 
     @abstractproperty
@@ -150,16 +147,12 @@ class Dancer(Thread):
     rsync + merge verification if pending set() is not empty.
     """
 
-    def __init__(self, transport, sleeptime=1):
+    def __init__(self, sleeptime=1):
         """ Initializes the thread.
         """
 
-        Thread.__init__(self)
+        Thread.__init__(self, name='Dancer')
 
-        # Ensure the transport is connected.
-        transport.connected.wait()
-
-        self.transport = transport
         self.sleeptime = sleeptime
         self.stop = False
 
@@ -174,11 +167,8 @@ class Dancer(Thread):
             with lock:
                 for project, files in pending.iteritems():
                     try:
-                        # Start the rsync.
-                        self.transport.rsync(project, files=files)
-
-                        # Fire an event to warn that there was a rsync.
-                        eventbus.fire('rsync-finished-success', project, files)
+                        eventbus.fire('new-rsync', project=project,
+                                      files=files)
 
                     except BaboonException as e:
                         self.logger.error(e)
@@ -195,15 +185,14 @@ class Dancer(Thread):
 
 @logger
 class Monitor(object):
-    def __init__(self, transport):
+    def __init__(self):
         """ Watches file change events (creation, modification) in the
         watched project.
         """
 
         from baboon.baboon.plugins.git.monitor_git import EventHandlerGit
 
-        self.transport = transport
-        self.dancer = Dancer(self.transport, sleeptime=1)
+        self.dancer = Dancer(sleeptime=1)
 
         # All monitor will be stored in this dict. The key is the project name,
         # the value is the monitor instance.
@@ -215,7 +204,7 @@ class Monitor(object):
             for project in sorted(config['projects']):
                 project_attrs = config['projects'][project]
                 project_path = os.path.expanduser(project_attrs['path'])
-                self.handler = EventHandlerGit(project_path, transport)
+                self.handler = EventHandlerGit(project_path)
 
                 monitor = Observer()
                 monitor.schedule(self.handler, project_path, recursive=True)

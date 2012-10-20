@@ -16,6 +16,7 @@ from sleekxmpp.plugins.xep_0060.stanza.pubsub_event import EventItem
 
 from baboon.baboon.monitor import FileEvent
 from baboon.baboon.config import config
+from baboon.common.eventbus import eventbus
 from baboon.common.logger import logger
 from baboon.common import pyrsync
 from baboon.common.stanza import rsync
@@ -65,6 +66,8 @@ class CommonTransport(ClientXMPP):
         self.register_handler(Callback('RsyncFinished Handler',
                                        StanzaPath('iq@type=set/rsyncfinished'),
                                        self._handle_rsync_finished))
+
+        eventbus.register('new-rsync', self._on_new_rsync)
 
     def __enter__(self):
         """ Adds the support of with statement with all CommonTransport
@@ -144,6 +147,13 @@ class CommonTransport(ClientXMPP):
         else:
             self.logger.debug("Received pubsub event: \n%s" %
                               msg['pubsub_event'])
+
+    def _on_new_rsync(self, project, files, **kwargs):
+        """ Called when a new rsync needs to be started.
+        """
+
+        self.rsync(project, files=files)
+        eventbus.fire('rsync-finished-success', project, files)
 
     def _handle_rsync_finished(self, iq):
         """ Called when a rsync is finished.

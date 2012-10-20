@@ -56,13 +56,14 @@ def check_project(add_mandatory_fields=[]):
         _check_config_section(project, mandatory_keys, prefix='projects')
 
 
-def check_config():
+def check_config(add_mandatory_server_fields=[], add_mandatory_user_fields=[],
+                 add_mandatory_project_fields=[]):
     """ Checks all the mandatory fields in all sections.
     """
 
-    check_server()
-    check_user()
-    check_project()
+    check_server(add_mandatory_fields=add_mandatory_server_fields)
+    check_user(add_mandatory_fields=add_mandatory_user_fields)
+    check_project(add_mandatory_fields=add_mandatory_project_fields)
 
 
 def dump():

@@ -2,7 +2,7 @@ import os
 import sys
 import argparse
 
-from os.path import join, dirname, abspath, exists
+from os.path import join, dirname, abspath, expanduser, exists, isfile, isdir
 from baboon.common.errors.baboon_exception import ConfigException
 
 if sys.version_info < (2, 7):
@@ -36,12 +36,12 @@ def get_config_path(arg_attrs, config_name):
 
     mod_path = _get_module_path()
     curdir_path = '%s/conf/%s' % (mod_path, config_name)
-    user_path = '%s/.%s' % (os.path.expanduser('~'), config_name)
+    user_path = '%s/.%s' % (expanduser('~'), config_name)
     etc_path = '/etc/baboonrc/%s' % config_name
 
     # Verify if one of the config paths (etc, user and curdir) exist.
     for loc in etc_path, user_path, curdir_path:
-        if os.path.isfile(loc):
+        if isfile(loc):
             return loc
 
     # Otherwise, return the env BABOONRC variable or None.
@@ -78,7 +78,7 @@ def init_config_log(arg_attrs, logconf):
     try:
         mod_path = _get_module_path()
         log_dir = join(mod_path, 'logs')
-        if not os.path.isdir(log_dir):
+        if not isdir(log_dir):
             os.makedirs(log_dir)
     except EnvironmentError:
         raise ConfigException("Cannot create the logs directory")
@@ -118,7 +118,7 @@ def get_config_args(parser_dict):
 
     # Ensure the path is an abspath.
     if hasattr(args, 'path') and args.path:
-        args.path = os.path.abspath(args.path)
+        args.path = abspath(expanduser(args.path))
 
     # Return a dict, not a Namespace.
     return args.__dict__

@@ -14,8 +14,8 @@ from baboon.common.errors.baboon_exception import BaboonException
 
 
 class EventHandlerGit(EventHandler):
-    def __init__(self, project_path, transport):
-        super(EventHandlerGit, self).__init__(project_path, transport)
+    def __init__(self, project_path):
+        super(EventHandlerGit, self).__init__(project_path)
 
         # My ignore file name is...
         self.gitignore_path = os.path.join(project_path, '.gitignore')

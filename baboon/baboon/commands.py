@@ -1,14 +1,113 @@
 import os
 import sys
+import logging
 import shutil
 
+from baboon.baboon.monitor import Monitor
+from baboon.baboon.transport import WatchTransport
 from baboon.baboon.initializor import MetadirController
 from baboon.baboon.transport import RegisterTransport, AdminTransport
 from baboon.baboon.fmt import cinput, confirm_cinput, cwarn, csuccess, cerr
 
-from baboon.baboon.config import check_config, check_server, check_user
-from baboon.baboon.config import check_project, config, dump, SCMS
+from baboon.baboon.config import check_config, config, dump, SCMS
+from baboon.common.logger import logger
+from baboon.common.errors.baboon_exception import BaboonException
 from baboon.common.errors.baboon_exception import CommandException
+
+logger = logging.getLogger(__name__)
+
+
+def start():
+    """ Starts baboon client !
+    """
+
+    # Ensure the validity of the configuration file.
+    check_config(add_mandatory_server_fields=['streamer', 'max_stanza_size'])
+
+    metadirs = []
+    monitor = None
+    transport = None
+
+    try:
+        transport = _start_transport()
+        monitor = _start_monitor()
+        metadirs = _start_metadirs(monitor.handler.exclude)
+
+        # Wait until the transport is disconnected before exiting Baboon.
+        _wait_disconnect(transport)
+    except BaboonException as err:
+        logger.error(err)
+        _start_close(monitor, transport, metadirs)
+        sys.exit(1)
+    except KeyboardInterrupt:
+        _start_close(monitor, transport, metadirs)
+        logger.info("Bye !")
+
+
+def _start_transport():
+    """ Builds and returns a new connected WatchTransport.
+    """
+
+    transport = WatchTransport()
+    transport.open()
+    transport.connected.wait()
+
+    return transport
+
+
+def _start_monitor():
+    """ Builds and returns a new watched Monitor.
+    """
+
+    monitor = Monitor()
+    monitor.watch()
+
+    return monitor
+
+
+def _start_metadirs(exclude=None):
+    """ Builds and returns all metadirs. exclude is the exclude_method
+    optionally needed by the MetadirController constructor.
+    """
+
+    metadirs = []
+    for project, project_attrs in config['projects'].iteritems():
+        # For each project, verify if the .baboon metadir is valid and
+        # take some decisions about needed actions on the repository.
+        metadir = MetadirController(project, project_attrs['path'], exclude)
+        metadirs.append(metadir)
+        metadir.go()
+
+    return metadirs
+
+
+def _start_close(monitor, transport, metadirs):
+    """ Clears the monitor, transport and list of metadir before finishing the
+    start command.
+    """
+
+    logger.info("Closing baboon...")
+
+    # Close each metadir shelve index.
+    for metadir in metadirs:
+        metadir.index.close()
+
+    # Close the transport and the monitor. If one of them is not
+    # started, the close() method has no effect.
+    if monitor:
+        monitor.close()
+    if transport:
+        transport.close()
+        transport.disconnected.wait(10)
+
+
+def _wait_disconnect(transport, timeout=5):
+    """ Polls the state of the transport's connection each `timeout` seconds.
+    Exits when the transport is disconnected.
+    """
+
+    while not transport.disconnected.is_set():
+        transport.disconnected.wait(timeout)
 
 
 def register():
