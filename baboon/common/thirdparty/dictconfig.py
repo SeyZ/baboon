@@ -21,6 +21,7 @@ import types
 
 IDENTIFIER = re.compile('^[a-z_][a-z0-9_]*$', re.I)
 
+
 def valid_ident(s):
     m = IDENTIFIER.match(s)
     if not m:
@@ -53,6 +54,7 @@ except ImportError:
 #
 # Each wrapper should have a configurator attribute holding the actual
 # configurator to use for conversion.
+
 
 class ConvertingDict(dict):
     """A converting dictionary wrapper."""
@@ -91,6 +93,7 @@ class ConvertingDict(dict):
                 result.key = key
         return result
 
+
 class ConvertingList(list):
     """A converting list wrapper."""
     def __getitem__(self, key):
@@ -114,6 +117,7 @@ class ConvertingList(list):
                 result.parent = self
         return result
 
+
 class ConvertingTuple(tuple):
     """A converting tuple wrapper."""
     def __getitem__(self, key):
@@ -125,6 +129,7 @@ class ConvertingTuple(tuple):
                 result.parent = self
                 result.key = key
         return result
+
 
 class BaseConfigurator(object):
     """
@@ -139,8 +144,8 @@ class BaseConfigurator(object):
     DIGIT_PATTERN = re.compile(r'^\d+$')
 
     value_converters = {
-        'ext' : 'ext_convert',
-        'cfg' : 'cfg_convert',
+        'ext': 'ext_convert',
+        'cfg': 'cfg_convert',
     }
 
     # We might want to use a different one, e.g. importlib
@@ -199,7 +204,8 @@ class BaseConfigurator(object):
                             d = d[idx]
                         else:
                             try:
-                                n = int(idx) # try as number first (most likely)
+                                # try as number first (mostlikely)
+                                n = int(idx)
                                 d = d[n]
                             except TypeError:
                                 d = d[idx]
@@ -223,11 +229,11 @@ class BaseConfigurator(object):
         elif not isinstance(value, ConvertingList) and isinstance(value, list):
             value = ConvertingList(value)
             value.configurator = self
-        elif not isinstance(value, ConvertingTuple) and\
-                 isinstance(value, tuple):
+        elif not isinstance(value, ConvertingTuple) and \
+                isinstance(value, tuple):
             value = ConvertingTuple(value)
             value.configurator = self
-        elif isinstance(value, basestring): # str for py3k
+        elif isinstance(value, basestring):  # str for py3k
             m = self.CONVERT_PATTERN.match(value)
             if m:
                 d = m.groupdict()
@@ -242,7 +248,8 @@ class BaseConfigurator(object):
     def configure_custom(self, config):
         """Configure an object with a user-supplied factory."""
         c = config.pop('()')
-        if not hasattr(c, '__call__') and hasattr(types, 'ClassType') and type(c) != types.ClassType:
+        if not hasattr(c, '__call__') and hasattr(types, 'ClassType') and \
+                type(c) != types.ClassType:
             c = self.resolve(c)
         props = config.pop('.', None)
         # Check for valid identifiers
@@ -258,6 +265,7 @@ class BaseConfigurator(object):
         if isinstance(value, list):
             value = tuple(value)
         return value
+
 
 class DictConfigurator(BaseConfigurator):
     """
@@ -285,7 +293,7 @@ class DictConfigurator(BaseConfigurator):
                     for name in handlers:
                         if name not in logging._handlers:
                             raise ValueError('No handler found with '
-                                             'name %r'  % name)
+                                             'name %r' % name)
                         else:
                             try:
                                 handler = logging._handlers[name]
@@ -321,7 +329,7 @@ class DictConfigurator(BaseConfigurator):
                 for name in formatters:
                     try:
                         formatters[name] = self.configure_formatter(
-                                                            formatters[name])
+                            formatters[name])
                     except StandardError, e:
                         raise ValueError('Unable to configure '
                                          'formatter %r: %s' % (name, e))
@@ -374,7 +382,7 @@ class DictConfigurator(BaseConfigurator):
                         prefixed = name + "."
                         pflen = len(prefixed)
                         num_existing = len(existing)
-                        i = i + 1 # look at the entry after name
+                        i = i + 1  # look at the entry after name
                         while (i < num_existing) and\
                               (existing[i][:pflen] == prefixed):
                             child_loggers.append(existing[i])
@@ -414,7 +422,7 @@ class DictConfigurator(BaseConfigurator):
     def configure_formatter(self, config):
         """Configure a formatter from a dictionary."""
         if '()' in config:
-            factory = config['()'] # for use in exception handler
+            factory = config['()']  # for use in exception handler
             try:
                 result = self.configure_custom(config)
             except TypeError, te:
@@ -463,24 +471,26 @@ class DictConfigurator(BaseConfigurator):
         filters = config.pop('filters', None)
         if '()' in config:
             c = config.pop('()')
-            if not hasattr(c, '__call__') and hasattr(types, 'ClassType') and type(c) != types.ClassType:
+            if not hasattr(c, '__call__') and hasattr(types, 'ClassType') and \
+                    type(c) != types.ClassType:
                 c = self.resolve(c)
             factory = c
         else:
             klass = self.resolve(config.pop('class'))
             #Special case for handler which refers to another handler
-            if issubclass(klass, logging.handlers.MemoryHandler) and\
-                'target' in config:
+            if issubclass(klass, logging.handlers.MemoryHandler) and \
+                    'target' in config:
                 try:
-                    config['target'] = self.config['handlers'][config['target']]
+                    config['target'] = self.config['handlers'][config[
+                        'target']]
                 except StandardError, e:
                     raise ValueError('Unable to set target handler '
                                      '%r: %s' % (config['target'], e))
-            elif issubclass(klass, logging.handlers.SMTPHandler) and\
-                'mailhost' in config:
+            elif issubclass(klass, logging.handlers.SMTPHandler) and \
+                    'mailhost' in config:
                 config['mailhost'] = self.as_tuple(config['mailhost'])
-            elif issubclass(klass, logging.handlers.SysLogHandler) and\
-                'address' in config:
+            elif issubclass(klass, logging.handlers.SysLogHandler) and \
+                    'address' in config:
                 config['address'] = self.as_tuple(config['address'])
             factory = klass
         kwargs = dict([(k, config[k]) for k in config if valid_ident(k)])
@@ -542,7 +552,9 @@ class DictConfigurator(BaseConfigurator):
         root = logging.getLogger()
         self.common_logger_config(root, config, incremental)
 
+
 dictConfigClass = DictConfigurator
+
 
 def dictConfig(config):
     """Configure logging using a dictionary."""

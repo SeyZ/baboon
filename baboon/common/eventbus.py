@@ -35,7 +35,7 @@ class EventBus(object):
     def fire(self, key, *args, **kwargs):
         try:
             for callback in self._handlers[key]:
-                callback(*args, **kwargs);
+                callback(*args, **kwargs)
                 self.unregister(key, callback)
 
         except KeyError:

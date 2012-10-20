@@ -87,6 +87,7 @@ def dump():
     except EnvironmentError as err:
         cerr("Cannot dump the configuration. Cause:\n%s" % err)
 
+
 def get_dumped_server():
     """ Returns a dumped representation of the server section.
     """
@@ -123,6 +124,7 @@ def get_dumped_example_project():
 #scm = git \t\t# The source code manager you use for this project.
 #enable = 1 \t\t# You want baboon to actually watch this project.
 """
+
 
 def get_baboon_config():
     """ Returns the baboon full dict configuration.

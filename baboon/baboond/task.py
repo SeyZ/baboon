@@ -114,10 +114,10 @@ class AlertTask(Task):
         """ Build the appropriate message and publish it to the node.
         """
 
-        conflict_msg = 'Conflict detected with %s and %s.' % \
-                (self.username, self.dest_username)
+        conflict_msg = 'Conflict detected with %s and %s.' % (
+            self.username, self.dest_username)
         good_msg = 'Everything seems to be perfect.'
-        msg =  conflict_msg if self.merge_conflict else good_msg
+        msg = conflict_msg if self.merge_conflict else good_msg
 
         transport.alert(self.project_name, msg, self.conflict_files)
 
@@ -151,8 +151,8 @@ class GitInitTask(Task):
             shutil.rmtree(self.user_cwd)
 
         create_missing_dirs(self.project_cwd, isfile=False)
-        ret_code, output, _ = exec_cmd('git clone %s %s' % (self.url, self.jid),
-                                  self.project_cwd)
+        ret_code, output, _ = exec_cmd('git clone %s %s' % (
+            self.url, self.jid), self.project_cwd)
         if not ret_code:
             self.logger.debug('Git init task finished.')
             eventbus.fire('git-init-success', self.bid)

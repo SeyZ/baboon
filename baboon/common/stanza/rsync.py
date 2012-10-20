@@ -16,9 +16,9 @@ class Rsync(ElementBase):
     namespace = 'baboon'
     plugin_attrib = 'rsync'
     interfaces = set(('sid', 'rid', 'node', 'files', 'create_files',
-        'move_files', 'delete_files'))
+                      'move_files', 'delete_files'))
     sub_interfaces = set(('files', 'create_files', 'move_files',
-        'delete_files'))
+                          'delete_files'))
 
     def get_files(self):
 

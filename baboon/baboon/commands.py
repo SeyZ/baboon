@@ -121,16 +121,16 @@ def register():
     try:
         # Ask the user from stdin if username is None or empty.
         if not username:
-            username = cinput('Username: ', validations=[('^\w+$', 'Username '
-            'can only contains alphanumeric and underscore characters')])
-
+            username = cinput('Username: ', validations=[(
+                '^\w+$', 'Username can only contains alphanumeric and '
+                'underscore characters')])
         # Transform the username to a baboon-project JID.
         username += '@%s' % config['parser']['hostname']
 
         # Get the password from stdin.
-        passwd = confirm_cinput('Password: ', validations=[('^\w{6,}$', 'The '
-               'password must be at least 6 characters long.')], secret=True,
-                possible_err='The password must match !')
+        passwd = confirm_cinput('Password: ', validations=[(
+            '^\w{6,}$', 'The password must be at least 6 characters long.')],
+            secret=True, possible_err='The password must match !')
 
         print("\nRegistration in progress...")
 

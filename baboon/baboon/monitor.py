@@ -61,7 +61,7 @@ class EventHandler(FileSystemEventHandler):
 
     def on_moved(self, event):
         self.logger.debug('MOVED event from %s to %s' % (event.src_path,
-                                                        event.dest_path))
+                                                         event.dest_path))
 
         with lock:
             project = self._get_project(event.src_path)
@@ -94,7 +94,7 @@ class EventHandler(FileSystemEventHandler):
                 # create the directory (OSError).
                 if os.path.isdir(event.src_path):
                     self.logger.debug('The file %s is now a directory.' %
-                                     rel_path)
+                                      rel_path)
 
                 FileEvent(project, FileEvent.MODIF, rel_path).register()
 
@@ -243,10 +243,10 @@ class Monitor(object):
 
                 # Register a FileEvent.MODIF if the file is not excluded
                 # and the file is more recent than the last rsync.
-                if (not self.handler.exclude(rel_path) and cur_timestamp >
-                    register_timestamp):
-                        FileEvent(project, FileEvent.MODIF,
-                                  rel_path).register()
+                if not self.handler.exclude(rel_path) and \
+                        cur_timestamp > register_timestamp:
+
+                    FileEvent(project, FileEvent.MODIF, rel_path).register()
 
     def close(self):
         """ Stops the monitoring on the watched project

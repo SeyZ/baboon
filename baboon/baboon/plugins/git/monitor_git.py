@@ -40,7 +40,8 @@ class EventHandlerGit(EventHandler):
         # Return True only if rel_path matches an exclude pattern AND does NOT
         # match an include pattern. Else, return False
         if (self._match_excl_regexp(rel_path) and
-            not self._match_incl_regexp(rel_path)):
+                not self._match_incl_regexp(rel_path)):
+
             return True
 
         return False

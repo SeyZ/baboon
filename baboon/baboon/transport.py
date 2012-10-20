@@ -184,7 +184,7 @@ class CommonTransport(ClientXMPP):
                 user = form['form']['fields']['pubsub#subscriber_jid']['value']
 
                 self.logger.info("%s wants to join the %s project !" % (user,
-                                                                       node))
+                                                                        node))
                 self.logger.info("You can accept the invitation request by "
                                  "running: $ baboon accept %s %s" % (node,
                                                                      user))

@@ -3,6 +3,7 @@ from executor import Executor
 from baboon.common.logger import logger
 from baboon.common.errors.baboon_exception import BaboonException
 
+
 @logger
 class Dispatcher(object):
     """ This class has the responsability to dispatch tasks to the good

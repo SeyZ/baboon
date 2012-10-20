@@ -110,7 +110,6 @@ class Transport(ClientXMPP):
 
         self.logger.info("Connected to the XMPP server.")
 
-
     def _on_git_init_stanza(self, iq):
         """ Called when a GitInit stanza is received. This handler creates a
         new GitInitTask if permissions are good.
@@ -336,8 +335,8 @@ class Transport(ClientXMPP):
         if not proc.returncode:
             return True
         else:
-            err_msg = "The repository %s seems to be corrupted. Please, (re)" \
-                    " run the init command." % node
+            err_msg = ("The repository %s seems to be corrupted. Please, "
+                       " (re)run the init command." % node)
             self._send_forbidden_error(iq.reply(), err_msg)
 
             return False

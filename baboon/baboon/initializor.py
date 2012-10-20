@@ -112,31 +112,29 @@ class MetadirController(object):
         for root, _, files in os.walk(self.project_path):
             for name in files:
                 fullpath = join(root, name)
-                rel_path = relpath(fullpath, self.project_path)
+                relpath = relpath(fullpath, self.project_path)
 
                 # Add the current file to the cur_files list.
-                cur_files.append(rel_path)
+                cur_files.append(relpath)
 
                 # Get the last modification timestamp of the current file.
                 cur_timestamp = getmtime(fullpath)
 
                 # Get the last rsync timestamp of the current file.
-                register_timestamp = self.index.get(rel_path)
+                register_timestamp = self.index.get(relpath)
 
                 # If the file is not excluded...
-                if (not self.exclude_method or not
-                    self.exclude_method(rel_path)):
-
+                if not self.exclude_method or not self.exclude_method(relpath):
                     # Verify if it's a new file...
                     if register_timestamp is None:
-                        self.logger.info("Need to create: %s" % rel_path)
+                        self.logger.info("Need to create: %s" % relpath)
                         FileEvent(self.project, FileEvent.CREATE,
-                                  rel_path).register()
+                                  relpath).register()
                     elif (register_timestamp and cur_timestamp >
                           register_timestamp):
-                        self.logger.info("Need to sync: %s" % rel_path)
+                        self.logger.info("Need to sync: %s" % relpath)
                         FileEvent(self.project, FileEvent.MODIF,
-                                  rel_path).register()
+                                  relpath).register()
 
         # Verify if there's no file deleted since the last time.
         for del_file in [x for x in self.index.keys() if x not in cur_files]:

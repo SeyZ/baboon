@@ -4,6 +4,7 @@ from baboon.baboond.transport import transport
 from baboon.baboond.dispatcher import dispatcher
 from baboon.common.logger import logger
 
+
 @logger
 class Main(object):
 
