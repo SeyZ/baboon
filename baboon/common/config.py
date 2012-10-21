@@ -37,7 +37,7 @@ def get_config_path(arg_attrs, config_name):
     mod_path = _get_module_path()
     curdir_path = '%s/conf/%s' % (mod_path, config_name)
     user_path = '%s/.%s' % (expanduser('~'), config_name)
-    etc_path = '/etc/baboonrc/%s' % config_name
+    etc_path = '/etc/baboon/%s' % config_name
 
     # Verify if one of the config paths (etc, user and curdir) exist.
     for loc in etc_path, user_path, curdir_path:
