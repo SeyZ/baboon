@@ -1,5 +1,7 @@
 import logging
 
+from baboon.common.config import get_log_path
+
 
 PARSER = {
     'description': 'detect merge conflicts in realtime.',
@@ -33,14 +35,14 @@ LOGGING = {
             'level': 'DEBUG',
             'class': 'logging.FileHandler',
             'formatter': 'verbose',
-            'filename': 'logs/root.log',
+            'filename': '%s/root.log' % get_log_path(),
             'mode': 'a',
         },
         'sleekxmppfile': {
             'class': 'logging.handlers.RotatingFileHandler',
             'level': 'DEBUG',
             'formatter': 'verbose',
-            'filename': 'logs/sleekxmpp.log',
+            'filename': '%s/sleekxmpp.log' % get_log_path(),
             'mode': 'a',
             'maxBytes': 10485760,
             'backupCount': 5,

@@ -16,10 +16,10 @@ conflicts before they actually happen. In fact, it detects them in real time.
 
 setup(
     name='baboon',
-    version='0.1',
+    version='0.2.0',
     description='Detect merge conflict in realtime.',
     long_description=long_description,
-    author='Sandro Munda, Raphael De Giusti',
+    author='Sandro Munda',
     author_email='munda.sandro@gmail.com',
     license='MIT',
     url='http://baboon-project.org',

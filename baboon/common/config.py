@@ -87,7 +87,9 @@ def init_config_log(arg_attrs, logconf):
     try:
         logconf['loggers']['baboon']['level'] = arg_attrs['loglevel']
         dictConfig(logconf)
-    except:
+    except Exception as err:
+        import pdb
+        pdb.set_trace()
         raise ConfigException("Failed to parse the logging config file")
 
 
@@ -122,6 +124,25 @@ def get_config_args(parser_dict):
 
     # Return a dict, not a Namespace.
     return args.__dict__
+
+
+def get_log_path():
+    """ Returns the correct log directory path.
+    """
+
+    # The log directory to use if there's a problem.
+    fallback_logdir = expanduser('~/')
+
+    if os.name == 'posix':
+        try:
+            var_log = '/var/log/baboon'
+            if not os.path.exists(var_log):
+                os.makedirs(var_log)
+            return var_log if os.path.isdir(var_log) else fallback_logdir
+        except EnvironmentError:
+            pass
+
+    return fallback_logdir
 
 
 def _get_module_path():
