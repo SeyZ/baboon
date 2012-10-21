@@ -525,7 +525,8 @@ class MergeTask(Task):
                                   user_cwd)[1].rstrip('\r\n')
 
         # Get the diff between the master_cwd and the mergebase_hash.
-        _, diff, _ = exec_cmd('git diff %s' % mergebase_hash, self.master_cwd)
+        _, diff, _ = exec_cmd('git diff --binary --full-index %s' %
+                              mergebase_hash, self.master_cwd)
 
         # Set the return code of the merge task to 0 by default. It means
         # there's no conflict.
