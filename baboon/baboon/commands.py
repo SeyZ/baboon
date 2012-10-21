@@ -77,6 +77,7 @@ def register():
 
         # Registration...
         transport = RegisterTransport(callback=_on_register_finished)
+        transport.open(block=True)
     finally:
         # Disconnect the transport if necessary.
         if transport and transport.connected.is_set():
@@ -205,7 +206,7 @@ def accept():
     check_config()
 
     project = config['parser']['project']
-    username = config['parser']['username']
+    username = _get_username()
 
     print("Acceptation in progress...")
     with AdminTransport(logger_enabled=False) as transport:
@@ -221,7 +222,7 @@ def reject():
     check_config()
 
     project = config['parser']['project']
-    username = config['parser']['username']
+    username = _get_username()
 
     print("Rejection in progress...")
     with AdminTransport(logger_enabled=False) as transport:
@@ -237,7 +238,7 @@ def kick():
     check_config()
 
     project = config['parser']['project']
-    username = config['parser']['username']
+    username = _get_username()
 
     print("Kick in progress...")
     with AdminTransport(logger_enabled=False) as transport:
