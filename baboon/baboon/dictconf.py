@@ -47,11 +47,11 @@ PARSER = {
             }]
         }, {
             'name': 'projects',
-            'help': 'list all owned and subscribed projects.',
+            'help': 'list all users in a project.',
             'args': [{
-                'args': ('username',),
+                'args': ('project',),
                 'kwargs': {
-                    'help': 'your username.',
+                    'help': 'the project name.',
                     'nargs': '?'
                 }
             }, {
@@ -70,7 +70,7 @@ PARSER = {
                     'help': 'the project name.'
                 }
             }, {
-                'args': ('-p', '--path'),
+                'args': ('path',),
                 'kwargs': {
                     'help': 'the project path on the filesystem.',
                     'action': 'store'
@@ -110,7 +110,7 @@ PARSER = {
                     'help': 'the project name.'
                 }
             }, {
-                'args': ('-p', '--path'),
+                'args': ('path',),
                 'kwargs': {
                     'help': 'the project path on the filesystem.',
                     'action': 'store'

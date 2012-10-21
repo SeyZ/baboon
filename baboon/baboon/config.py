@@ -72,6 +72,10 @@ def dump():
     file is overwritten.
     """
 
+    # Don't dump the config if the --nosave arg is present.
+    if config['parser'].get('nosave', False):
+        return
+
     baboonrc_path = os.path.expanduser('~/.baboonrc')
     baboonrc_old_path = os.path.expanduser('~/.baboonrc.old')
 

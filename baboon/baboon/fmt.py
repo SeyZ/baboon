@@ -85,17 +85,12 @@ def confirm_cinput(prompt, validations=[], possible_err="", secret=False):
     # Iterates over validations...
     for validation, err in validations:
         if not match(validation, ret):
-            # The input is not valid. Print an error message and set the
-            # valid flag to False to avoid to exit the while True loop.
-            cerr(err)
-            raise CommandException(500, "The password must match validations.")
+            raise CommandException(500, err)
 
     confirm_ret = cinput('Confirm %s' % prompt.lower(), secret=secret)
 
     if ret == confirm_ret:
         return ret
     else:
-        # The values is not the same. Displays the possible_err message and
-        # try again...
-        cerr(possible_err)
-        raise CommandException(500, "Password must match.")
+        # The values are not the same.
+        raise CommandException(500, possible_err)

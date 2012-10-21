@@ -9,12 +9,25 @@ from baboon.baboon.initializor import MetadirController
 from baboon.baboon.transport import RegisterTransport, AdminTransport
 from baboon.baboon.fmt import cinput, confirm_cinput, cwarn, csuccess, cerr
 
+from baboon.baboon.config import check_user, check_server, check_project
 from baboon.baboon.config import check_config, config, dump, SCMS
 from baboon.common.logger import logger
 from baboon.common.errors.baboon_exception import BaboonException
 from baboon.common.errors.baboon_exception import CommandException
 
 logger = logging.getLogger(__name__)
+
+
+def command(fn):
+    def wrapped():
+        try:
+            return fn()
+        except CommandException as err:
+            cerr(err)
+        except KeyboardInterrupt as err:
+            print "Bye !"
+
+    return wrapped
 
 
 def start():
@@ -42,6 +55,218 @@ def start():
     except KeyboardInterrupt:
         _start_close(monitor, transport, metadirs)
         logger.info("Bye !")
+
+
+@command
+def register():
+    """ Ask mandatory information and register the new user.
+    """
+
+    transport = None
+    try:
+        username = _get_username()
+        passwd = _get_passwd()
+
+        print("\nRegistration in progress...")
+
+        # RegisterTransport uses the config attributes to register.
+        config['user'] = {
+            'jid': username,
+            'passwd': passwd
+        }
+
+        # Registration...
+        transport = RegisterTransport(callback=_on_register_finished)
+    finally:
+        # Disconnect the transport if necessary.
+        if transport and transport.connected.is_set():
+            transport.close()
+            transport.disconnected.wait(10)
+
+
+@command
+def projects():
+    """ Lists all users in a project.
+    """
+
+    check_config()
+
+    project = config['parser'].get('project')
+    subs_by_project = []
+
+    with AdminTransport(logger_enabled=False) as transport:
+        # Get all subscriptions
+        subscriptions = _projects_specific(transport, project) if project \
+            else _projects_all(transport)
+
+        # Display the subscriptions in a good format.
+        _projects_print_users(subscriptions)
+
+
+@command
+def create():
+    """ Create a new project with the project argument name.
+    """
+
+    check_server()
+    check_user()
+
+    project = config['parser']['project']
+    path = config['parser']['path']
+    project_scm = _check_scm(path)
+
+    _check_project(project)
+    config['projects'][project] = {
+        'path': path,
+        'scm': project_scm,
+        'enable': 1
+    }
+
+    print("Creation in progress...")
+    with AdminTransport(logger_enabled=False) as transport:
+        ret_status, msg = transport.create_project(project)
+        if not _on_action_finished(ret_status, msg):
+            return
+
+    dump()
+
+
+@command
+def delete():
+    """ Delete the project with the project argument name.
+    """
+
+    check_config()
+
+    project = config['parser']['project']
+    print("Deletion in progress...")
+    with AdminTransport(logger_enabled=False) as transport:
+        ret_status, msg = transport.delete_project(project)
+        _on_action_finished(ret_status, msg)
+
+    project_path = _get_project_path(project)
+    _delete_metadir(project, project_path)
+    del config['projects'][project]
+    dump()
+
+
+@command
+def join():
+    """ Join the project with the project argument name.
+    """
+
+    check_server()
+    check_user()
+
+    project = config['parser']['project']
+    path = config['parser']['path']
+    project_scm = _check_scm(path)
+
+    _check_project(project)
+    config['projects'][project] = {
+        'path': path,
+        'scm': project_scm,
+        'enable': 1
+    }
+
+    print("Join in progress...")
+    with AdminTransport(logger_enabled=False) as transport:
+        ret_status, msg = transport.join_project(project)
+        if not _on_action_finished(ret_status, msg):
+            return
+
+    dump()
+
+
+@command
+def unjoin():
+    """ Unjoin the project with the project argument name.
+    """
+
+    check_config()
+
+    project = config['parser']['project']
+    print("Unjoin in progress...")
+    with AdminTransport(logger_enabled=False) as transport:
+        ret_status, msg = transport.unjoin_project(project)
+        _on_action_finished(ret_status, msg)
+
+    project_path = _get_project_path(project)
+    _delete_metadir(project, project_path)
+    del config['projects'][project]
+    dump()
+
+
+@command
+def accept():
+    """ Accept the username to the project.
+    """
+
+    check_config()
+
+    project = config['parser']['project']
+    username = config['parser']['username']
+
+    print("Acceptation in progress...")
+    with AdminTransport(logger_enabled=False) as transport:
+        ret_status, msg = transport.accept_pending(project, username)
+        _on_action_finished(ret_status, msg)
+
+
+@command
+def reject():
+    """ Reject the username to the project.
+    """
+
+    check_config()
+
+    project = config['parser']['project']
+    username = config['parser']['username']
+
+    print("Rejection in progress...")
+    with AdminTransport(logger_enabled=False) as transport:
+        ret_status, msg = transport.reject(project, username)
+        _on_action_finished(ret_status, msg)
+
+
+@command
+def kick():
+    """ Kick the username to the project.
+    """
+
+    check_config()
+
+    project = config['parser']['project']
+    username = config['parser']['username']
+
+    print("Kick in progress...")
+    with AdminTransport(logger_enabled=False) as transport:
+        ret_status, msg = transport.kick(project, username)
+        _on_action_finished(ret_status, msg)
+
+
+@command
+def init():
+    """ Initialialize a new project.
+    """
+
+    check_config()
+
+    project = config['parser']['project']
+    project_path = _get_project_path(project)
+    url = config['parser']['git-url']
+
+    print("Initialize the project %s..." % project)
+    with AdminTransport(logger_enabled=False) as transport:
+        ret_status, msg = transport.first_git_init(project, url)
+
+        metadir_controller = MetadirController(project, project_path)
+        metadir_controller.init_index()
+        metadir_controller.create_baboon_index()
+        metadir_controller.index.close()
+
+        if not _on_action_finished(ret_status, msg):
+            _delete_metadir(project, project_path)
 
 
 def _start_transport():
@@ -110,290 +335,133 @@ def _wait_disconnect(transport, timeout=5):
         transport.disconnected.wait(timeout)
 
 
-def register():
-    """ Ask mandatory information and register the new user.
+def _get_username():
+    """ Returns the username by getting it from the config or asking it from
+    stdin.
     """
 
-    transport = None
     username = config['parser'].get('username')
-    passwd = None
+    if not username:
+        validations = [('^\w+$', 'Username can only contains alphanumeric and '
+                        'underscore characters')]
+        username = cinput('Username: ', validations=validations)
 
-    try:
-        # Ask the user from stdin if username is None or empty.
-        if not username:
-            username = cinput('Username: ', validations=[(
-                '^\w+$', 'Username can only contains alphanumeric and '
-                'underscore characters')])
-        # Transform the username to a baboon-project JID.
-        username += '@%s' % config['parser']['hostname']
+    # Transform the username to a JID.
+    username += '@%s' % config['parser']['hostname']
 
-        # Get the password from stdin.
-        passwd = confirm_cinput('Password: ', validations=[(
-            '^\w{6,}$', 'The password must be at least 6 characters long.')],
-            secret=True, possible_err='The password must match !')
-
-        print("\nRegistration in progress...")
-
-        # RegisterTransport uses the config attributes to register.
-        config['user'] = {
-            'jid': username,
-            'passwd': passwd
-        }
-
-        # Registration...
-        transport = RegisterTransport(callback=_on_action_finished)
-        transport.open(block=True)
-
-        # Persist register information in the user configuration file.
-        if not config['parser']['nosave']:
-            dump()
-
-    except CommandException:
-        pass
-    except KeyboardInterrupt:
-        print("\nBye !")
-    finally:
-        # Check if the transport exists and if its connected.
-        if transport and transport.connected.is_set():
-            transport.close()
+    return username
 
 
-def projects():
+def _get_passwd():
+    """ Returns the password by getting it from stdin.
+    """
 
-    check_config()
+    validations = [('^\w{6,}$', 'The password must be at least 6 characters '
+                    'long.')]
+    return confirm_cinput('Password: ', validations=validations, secret=True,
+                          possible_err='The password must match !')
 
-    project = config['parser']['project']
+
+def _projects_specific(transport, project):
+    """ Lists all users in a specific project. The transport must be connected.
+    """
+
+    project_users = transport.get_project_users(project) or []
+    return [(project, project_users)]
+
+
+def _projects_all(transport):
+    """ Lists all users in a all projects. The transport must be connected.
+    """
+
     subscriptions = []
+    for project in config['projects']:
+        subscriptions += _projects_specific(transport, project)
 
-    with AdminTransport(logger_enabled=False) as transport:
-        subscriptions = transport.get_project_users(project) or []
-
-    for subscription in subscriptions:
-        print("%s" % subscription['jid'])
+    return subscriptions
 
 
-def create():
-    """ Create a new project with the project argument name.
+def _projects_print_users(subs_by_project):
+    """ Prints the subs_by_project list of tuples.
     """
 
-    check_server()
-    check_user()
-
-    project = config['parser']['project']
-    path = config['parser'].get('path')
-    if not path and not config['parser']['nosave']:
-        cerr("Please specify the project's path on your system with the "
-             "'--path' option.")
-        return
-
-    print("Creation in progress...")
-    with AdminTransport(logger_enabled=False) as transport:
-        ret_status, msg = transport.create_project(project)
-        success = _on_action_finished(ret_status, msg)
-        if not success:
-            return success
-
-    # Check if path exists on the system
-    project_scm = ''
-    if os.path.isdir(path):
-        project_scm = _guess_scm(path)
-    else:
-        cwarn("The project's path does not exist on your system.")
-
-    if config['projects'].get(project):
-        cwarn("The project was already defined in your configuration file")
-        config['projects'][project]['enable'] = 1
-    else:
-        config['projects'][project] = {}
-        config['projects'][project]['path'] = path
-        config['projects'][project]['scm'] = project_scm
-        config['projects'][project]['enable'] = 1
-
-    if not config['parser']['nosave']:
-        dump()
-    return success
+    for project, subs in subs_by_project:
+        print("[%s]" % project)
+        for sub in subs:
+            print(" %s" % sub['jid'])
 
 
-def delete():
-    """ Delete the project with the project argument name.
+def _check_project(project_name):
+    """ Checks if the project is not already defined in the configuration file.
+    If so, raise a CommandException.
     """
 
-    check_config()
+    project = config['projects'].get(project_name)
+    if project:
+        if project.get('enable') == '0':
+            raise CommandException(409, "The project is already defined in "
+                                   "your configuration file, but it's "
+                                   "disabled.")
 
-    project = config['parser']['project']
+        raise CommandException(409, "The project is already defined in your "
+                               "configuration file.")
 
-    print("Deletion in progress...")
-    with AdminTransport(logger_enabled=False) as transport:
-        ret_status, msg = transport.delete_project(project)
-        success = _on_action_finished(ret_status, msg)
-        if not success:
-            return success
+
+def _check_scm(path):
+    """ Checks if the SCM in the path directory is supported. If not, raise a
+    CommandException.
+    """
+
+    # Ensure the path exists.
+    if not os.path.exists(path):
+        raise CommandException(404, "The project's path does not exist on "
+                               "your system.")
+
+    # Ensure the path is a directory.
+    if not os.path.isdir(path):
+        raise CommandException(500, "The project's path is not a directory.")
+
+    # Ensure the scm in the path directory exists and is supported.
+    scm = _get_scm(path)
+    if not scm:
+        raise CommandException(500, "The project isn't managed by a supported "
+                               "source code manager.")
+
+    return scm
+
+
+def _get_project_path(project_name):
+    """ Returns the project path of the project_name. Raised a CommandException
+    if cannot be retrieved.
+    """
 
     try:
-        # Delete the metadir directory.
-        project_path = config['projects'][project]['path']
-        MetadirController(project, project_path).delete()
-
-        # Delete the project entry in the configuration dict.
-        del config['projects'][project]
-
-        # Dump the configuration dict.
-        if not config['parser']['nosave']:
-            dump()
+        project_path = config['projects'][project_name]['path']
+        return project_path
     except KeyError:
-        # The project entry does not exist in the configuration file
-        cwarn("The project was not found in your configuration file")
-    except OSError:
-        cwarn("Cannot delete the .baboon directory.")
-
-    return success
+        raise CommandException(404, "The project path cannot be found in your "
+                               "configuration file.")
 
 
-def join():
-    """ Join the project with the project argument name.
+def _delete_metadir(project_name, project_path):
+    """ Delete the metadir on the project_path. Raised a CommandException on
+    error.
     """
 
-    check_config()
-
-    project = config['parser']['project']
-    path = config['parser'].get('path')
-    if not path:
-        cerr("Please specify the project's path on your system with the "
-             "'--path' option.")
-        return
-
-    project_scm = ''
-
-    print("Join in progress...")
-    with AdminTransport(logger_enabled=False) as transport:
-        ret_status, msg = transport.join_project(project)
-        success = _on_action_finished(ret_status, msg)
-        #if not success:
-        #    return success
-
-    # Check if path exists on the system
-    if os.path.isdir(path):
-        project_scm = _guess_scm(path)
-    else:
-        cwarn("The project's path does not exist on your system.")
-
-    if success:
-        if config['projects'].get(project):
-            cwarn("The project was already defined in your configuration file")
-            config['projects'][project]['enable'] = 1
-        else:
-            config['projects'][project] = {}
-            config['projects'][project]['path'] = path
-            config['projects'][project]['scm'] = project_scm
-            config['projects'][project]['enable'] = 1
-
-        if not config['parser']['nosave']:
-            dump()
-
-    return success
-
-
-def unjoin():
-    """ Unjoin the project with the project argument name.
-    """
-
-    check_config()
-
-    project = config['parser']['project']
-
-    print("Unjoin in progress...")
-    with AdminTransport(logger_enabled=False) as transport:
-        ret_status, msg = transport.unjoin_project(project)
-        success = _on_action_finished(ret_status, msg)
-
-    if config['projects'].get(project):
-        config['projects'][project]['enable'] = 0
-    else:
-        cwarn("The project was not defined in your configuration file")
-
-    if not config['parser']['nosave']:
-        dump()
-    return success
-
-
-def accept():
-    """ Accept the username to the project.
-    """
-
-    check_config()
-
-    project = config['parser']['project']
-    username = config['parser']['username']
-
-    print("Acceptation in progress...")
-    with AdminTransport(logger_enabled=False) as transport:
-        ret_status, msg = transport.accept_pending(project, username)
-        return _on_action_finished(ret_status, msg)
-
-
-def reject():
-    """ Reject the username to the project.
-    """
-
-    check_config()
-
-    project = config['parser']['project']
-    username = config['parser']['username']
-
-    print("Rejection in progress...")
-    with AdminTransport(logger_enabled=False) as transport:
-        ret_status, msg = transport.reject(project, username)
-        return _on_action_finished(ret_status, msg)
-
-
-def kick():
-    """ Kick the username to the project.
-    """
-
-    check_config()
-
-    project = config['parser']['project']
-    username = config['parser']['username']
-
-    print("Kick in progress...")
-    with AdminTransport(logger_enabled=False) as transport:
-        ret_status, msg = transport.kick(project, username)
-        return _on_action_finished(ret_status, msg)
-
-
-def init():
-    """ Initialialize a new project.
-    """
-
-    check_config()
-
-    project = config['parser']['project']
-
-    project_path = None
     try:
-        project_path = config['projects'][project]['path']
-    except KeyError:
-        cerr("Failed to find the %s project in the configuration file." %
-             project)
-        sys.exit(1)
+        MetadirController(project_name, project_path).delete()
+    except EnvironmentError:
+        raise CommandException(500, "Cannot delete the metadir directory.")
 
-    url = config['parser']['git-url']
 
-    print("Initialize the project %s..." % project)
-    with AdminTransport(logger_enabled=False) as transport:
-        ret_status, msg = transport.first_git_init(project, url)
+def _on_register_finished(ret_status, msg, fatal=False):
+    """ Callback for the registration.
+    """
 
-        metadir_controller = MetadirController(project, project_path)
-        metadir_controller.init_index()
-        metadir_controller.create_baboon_index()
-        metadir_controller.index.close()
-
-        state = _on_action_finished(ret_status, msg)
-        if not state:
-            # On error, remove the metadir directory.
-            metadir_controller.delete()
-
-        return state
+    _on_action_finished(ret_status, msg, fatal=fatal)
+    # Dump the configuration file if there's no error.
+    if ret_status == 200:
+        dump()
 
 
 def _on_action_finished(ret_status, msg, fatal=False):
@@ -406,18 +474,10 @@ def _on_action_finished(ret_status, msg, fatal=False):
         return False
 
 
-def _guess_scm(path):
-    """Rough guess of the source code manager the user uses for the project
-    based on the path he provides in the command line. For instance, it checks
-    if a .git folder is present in the project's folder. SCMs are defined in
-    the baboon/config.py file.
+def _get_scm(path):
+    """ Explores the path of the directory and returns the SCM used (one None).
     """
-    project_scm = ''
-    # Detect scm in path
-    for scm in SCMS:
-        if os.path.isdir(os.path.join(path, '.' + scm)):
-            project_scm = scm
-    if not project_scm:
-        cwarn("Your project isn't managed by a supported source code manager.")
 
-    return project_scm
+    for scm in SCMS:
+        if os.path.isdir(os.path.join(path, '.%s' % scm)):
+            return scm
