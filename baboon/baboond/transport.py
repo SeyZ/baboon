@@ -125,6 +125,7 @@ class Transport(ClientXMPP):
         # Ensure permissions.
         is_subscribed = self._verify_subscription(iq, sfrom, node)
         if not is_subscribed:
+            eventbus.fire("rsync-finished-failure")
             return
 
         # Create a new GitInitTask
@@ -156,6 +157,7 @@ class Transport(ClientXMPP):
         # Verify if the user is a subscriber/owner of the node.
         is_subscribed = self._verify_subscription(iq, sfrom.bare, node)
         if not is_subscribed:
+            eventbus.fire('rsync-finished-failure', rid=rid)
             return
 
         # The future reply iq.
@@ -186,6 +188,7 @@ class Transport(ClientXMPP):
         # Verify if the user is a subscriber/owner of the node.
         is_subscribed = self._verify_subscription(iq, sfrom, node)
         if not is_subscribed:
+            eventbus.fire("rsync-finished-failure")
             return
 
         # Verify if the server-side project is a git repository.
@@ -282,9 +285,14 @@ class Transport(ClientXMPP):
         else:
             self.logger.error("Could not find a rsync task with RID: %s" % rid)
 
-    def _on_rsync_failure(self, rid, *args, **kwargs):
+    def _on_rsync_failure(self, *args, **kwargs):
         """ Called when a rsync task has been terminated with an error.
         """
+
+        rid = kwargs.get('rid')
+        if rid is None:
+            return
+
         cur_rsync_task = self.pending_rsyncs.get(rid)
         if cur_rsync_task:
             self.logger.debug("RsyncTask %s finished with an error." % rid)
@@ -316,7 +324,6 @@ class Transport(ClientXMPP):
         except Exception as e:
             pass
 
-        eventbus.fire('rsync-finished-failure')
         err_msg = "you are not a contributor on %s." % node
         self._send_forbidden_error(iq.reply(), err_msg)
 

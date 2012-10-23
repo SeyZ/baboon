@@ -615,6 +615,9 @@ class AdminTransport(CommonTransport):
             status_code = int(e.iq['error']['code'])
             msg = "Something went wrong."
 
+            if status_code == 503:
+                msg = e.iq['error']['text']
+
             return (status_code, msg)
 
     def _allow_pending(self, project, user, allow):
