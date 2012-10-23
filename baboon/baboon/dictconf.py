@@ -256,6 +256,14 @@ LOGGING = {
         'baboon': {
             'handlers': ['console'],
             'level': 'DEBUG',
-        }
+        },
+        'sleekxmpp': {
+            'handlers': ['sleekxmppfile'],
+            'level': 'DEBUG',
+        },
+        'root': {
+            'handlers': ['rootfile'],
+            'level': 'DEBUG',
+        },
     }
 }
