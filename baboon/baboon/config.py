@@ -87,7 +87,7 @@ def dump():
             print >>fd, get_dumped_projects()
             print >>fd, get_dumped_example_project()
 
-            csuccess("The new configuration file is written in ~/.baboonrc\n")
+            csuccess("The configuration file is written in ~/.baboonrc\n")
     except EnvironmentError as err:
         cerr("Cannot dump the configuration. Cause:\n%s" % err)
 
