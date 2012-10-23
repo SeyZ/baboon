@@ -16,7 +16,7 @@ conflicts before they actually happen. In fact, it detects them in real time.
 
 setup(
     name='baboon',
-    version='0.2.0',
+    version='0.1.0',
     description='Detect merge conflict in realtime.',
     long_description=long_description,
     author='Sandro Munda',
