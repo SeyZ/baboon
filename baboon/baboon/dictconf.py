@@ -1,6 +1,13 @@
+import sys
 import logging
 
 from baboon.common.config import get_log_path
+
+# NullHandler does not exist before Python 2.7
+try:
+    from logging import NullHandler
+except ImportError:
+    from baboon.common.config import NullHandler
 
 
 PARSER = {
@@ -231,19 +238,13 @@ LOGGING = {
     'handlers': {
         'rootfile': {
             'level': 'DEBUG',
-            'class': 'logging.FileHandler',
-            'formatter': 'verbose',
-            'filename': '%s/root.log' % get_log_path(),
-            'mode': 'a',
+            'class': NullHandler,
+            'formatter': 'verbose'
         },
         'sleekxmppfile': {
-            'class': 'logging.handlers.RotatingFileHandler',
+            'class': NullHandler,
             'level': 'DEBUG',
-            'formatter': 'verbose',
-            'filename': '%s/sleekxmpp.log' % get_log_path(),
-            'mode': 'a',
-            'maxBytes': 10485760,
-            'backupCount': 5,
+            'formatter': 'verbose'
         },
         'console': {
             'level': 'DEBUG',

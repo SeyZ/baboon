@@ -2,6 +2,7 @@ import os
 import sys
 import argparse
 
+from logging import Handler
 from os.path import join, dirname, abspath, expanduser, exists, isfile, isdir
 from baboon.common.errors.baboon_exception import ConfigException
 
@@ -14,6 +15,20 @@ if sys.version_info < (3, 0):
     from ConfigParser import RawConfigParser, Error as ConfigParserError
 else:
     from configparser import RawConfigParser, Error as ConfigParserError
+
+
+class NullHandler(Handler):
+    """ Reimplemented the NullHandler logger for Python < 2.7
+    """
+
+    def handle(self, record):
+        pass
+
+    def emit(self, record):
+        pass
+
+    def createLock(self):
+        self.lock = None
 
 
 def get_config_path(arg_attrs, config_name):
