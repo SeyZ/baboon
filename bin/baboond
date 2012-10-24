@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-from baboon.baboond.main import Main
+from baboon.baboond.main import main
 
 if __name__ == "__main__":
-    Main()
+    main()

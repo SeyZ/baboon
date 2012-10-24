@@ -5,6 +5,7 @@ import struct
 import tempfile
 import pickle
 
+from threading import Event
 from os.path import join
 
 from sleekxmpp import ClientXMPP
@@ -40,6 +41,7 @@ class Transport(ClientXMPP):
         self.pubsub = self.plugin['xep_0060']
         self.streamer = self.plugin['xep_0065']
 
+        self.disconnected = Event()
         self.pending_rsyncs = {}   # {SID => RsyncTask}
         self.pending_git_init_tasks = {}  # {BID => GitInitTask}
 
@@ -49,6 +51,7 @@ class Transport(ClientXMPP):
         # Start the XMPP connection.
         self.use_ipv6 = False
         if self.connect(use_ssl=False, use_tls=False):
+            self.disconnected.clear()
             self.process()
 
     def close(self):
@@ -56,8 +59,8 @@ class Transport(ClientXMPP):
         """
 
         self.streamer.close()
-        self.disconnect()
-
+        self.disconnect(wait=True)
+        self.disconnected.set()
         self.logger.info("Disconnected from the XMPP server.")
 
     def alert(self, node, msg, files=[]):
@@ -82,6 +85,7 @@ class Transport(ClientXMPP):
         """
 
         self.add_event_handler('session_start', self._on_session_start)
+        self.add_event_handler('failed_auth', self._on_failed_auth)
         self.add_event_handler('socks_recv', self._on_socks5_data)
 
         self.register_handler(Callback('First Git Init Handler',
@@ -109,6 +113,14 @@ class Transport(ClientXMPP):
         self.get_roster()
 
         self.logger.info("Connected to the XMPP server.")
+
+    def _on_failed_auth(self, event):
+        """
+        """
+
+        self.logger.error("Authentication failed.")
+        eventbus.fire('failed-auth')
+        self.close()
 
     def _on_git_init_stanza(self, iq):
         """ Called when a GitInit stanza is received. This handler creates a

@@ -1,20 +1,15 @@
-import signal
-
 from baboon.baboond.transport import transport
 from baboon.baboond.dispatcher import dispatcher
-from baboon.common.logger import logger
+from baboon.common.eventbus import eventbus
 
 
-@logger
-class Main(object):
+def main():
+    """ Initializes baboond.
+    """
 
-    def __init__(self):
-        """ Initializes baboond.
-        """
-
-        signal.signal(signal.SIGINT, self.signal_handler)
-        signal.pause()
-
-    def signal_handler(self, signal, frame):
+    try:
+        while not transport.disconnected.is_set():
+            transport.disconnected.wait(5)
+    except KeyboardInterrupt:
         dispatcher.close()
         transport.close()
