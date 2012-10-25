@@ -22,7 +22,7 @@ def command(fn):
     def wrapped():
         try:
             return fn()
-        except CommandException as err:
+        except (BaboonException, CommandException) as err:
             cerr(err)
         except KeyboardInterrupt as err:
             print "Bye !"

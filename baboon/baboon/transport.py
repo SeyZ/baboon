@@ -38,6 +38,7 @@ class CommonTransport(ClientXMPP):
         self.rsync_running = Event()
         self.rsync_finished = Event()
         self.wait_close = False
+        self.failed_auth = False
 
         # Register and configure pubsub plugin.
         self.register_plugin('xep_0060')
@@ -79,8 +80,12 @@ class CommonTransport(ClientXMPP):
         # Open a new connection.
         self.open()
 
-        # Wait until the connection is established.
-        self.connected.wait()
+        # Wait until the connection is established. Raise a BaboonException if
+        # there's an authentication error.
+        while not self.connected.is_set():
+            if self.failed_auth:
+                raise BaboonException("Authentication failed.")
+            self.connected.wait(1)
 
         # Return the instance itself.
         return self
@@ -116,6 +121,7 @@ class CommonTransport(ClientXMPP):
 
         self.logger.error("Authentication failed.")
         eventbus.fire('failed-auth')
+        self.failed_auth = True
         self.close()
 
     def start(self, event):
