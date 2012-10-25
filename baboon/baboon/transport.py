@@ -59,6 +59,7 @@ class CommonTransport(ClientXMPP):
 
         # Register events
         self.add_event_handler('session_start', self.start)
+        self.add_event_handler('failed_auth', self._on_failed_auth)
         self.add_event_handler('stream_error', self.stream_err)
         self.add_event_handler('message', self.message)
         self.add_event_handler('message_form', self.message_form)
@@ -108,6 +109,14 @@ class CommonTransport(ClientXMPP):
         """
 
         self.logger.error(iq['text'])
+
+    def  _on_failed_auth(self, event):
+        """ Called when authentication failed.
+        """
+
+        self.logger.error("Authentication failed.")
+        eventbus.fire('failed-auth')
+        self.close()
 
     def start(self, event):
         """ Handler for the session_start sleekxmpp event.

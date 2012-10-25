@@ -115,7 +115,7 @@ class Transport(ClientXMPP):
         self.logger.info("Connected to the XMPP server.")
 
     def _on_failed_auth(self, event):
-        """
+        """ Called when authentication failed.
         """
 
         self.logger.error("Authentication failed.")

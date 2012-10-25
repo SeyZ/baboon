@@ -50,9 +50,9 @@ def start():
         _wait_disconnect(transport)
     except BaboonException as err:
         logger.error(err)
-        _start_close(monitor, transport, metadirs)
-        sys.exit(1)
     except KeyboardInterrupt:
+        pass
+    finally:
         _start_close(monitor, transport, metadirs)
         logger.info("Bye !")
 
