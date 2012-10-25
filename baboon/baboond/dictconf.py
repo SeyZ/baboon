@@ -1,13 +1,7 @@
 import sys
 import logging
 
-from baboon.common.config import get_log_path
-
-# NullHandler does not exist before Python 2.7
-try:
-    from logging import NullHandler
-except ImportError:
-    from baboon.common.config import NullHandler
+from baboon.common.config import get_log_path, get_null_handler
 
 
 PARSER = {
@@ -40,12 +34,12 @@ LOGGING = {
     'handlers': {
         'rootfile': {
             'level': 'DEBUG',
-            'class': NullHandler,
+            'class': get_null_handler(),
             'formatter': 'verbose',
         },
         'sleekxmppfile': {
             'level': 'DEBUG',
-            'class': NullHandler,
+            'class': get_null_handler(),
             'formatter': 'verbose',
         },
         'console': {

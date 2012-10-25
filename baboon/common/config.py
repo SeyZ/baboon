@@ -18,17 +18,25 @@ else:
 
 
 class NullHandler(Handler):
-    """ Reimplemented the NullHandler logger for Python < 2.7
+    """ Reimplemented the NullHandler logger for Python < 2.7.
     """
-
-    def handle(self, record):
-        pass
 
     def emit(self, record):
         pass
 
-    def createLock(self):
-        self.lock = None
+
+def get_null_handler():
+    """ Return the module path of the NullHandler. Useful for Python < 2.7.
+    """
+
+    # NullHandler does not exist before Python 2.7
+    null_handler_mod = 'logging.NullHandler'
+    try:
+        from logging import NullHandler
+    except ImportError:
+        null_handler_mod = 'baboon.common.config.NullHandler'
+
+    return null_handler_mod
 
 
 def get_config_path(arg_attrs, config_name):
@@ -99,13 +107,8 @@ def init_config_log(arg_attrs, logconf):
         raise ConfigException("Cannot create the logs directory")
 
     # Configure the logger with the dict logconf.
-    try:
-        logconf['loggers']['baboon']['level'] = arg_attrs['loglevel']
-        dictConfig(logconf)
-    except Exception as err:
-        import pdb
-        pdb.set_trace()
-        raise ConfigException("Failed to parse the logging config file")
+    logconf['loggers']['baboon']['level'] = arg_attrs['loglevel']
+    dictConfig(logconf)
 
 
 def get_config_args(parser_dict):
