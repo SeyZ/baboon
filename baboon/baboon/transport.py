@@ -196,6 +196,16 @@ class CommonTransport(ClientXMPP):
     def message(self, msg):
         self.logger.info("Received: %s" % msg)
 
+    def rsync_error(self, msg):
+        """ On rsync error.
+        """
+
+        self.logger.error(msg)
+
+        # Set the rsync flags.
+        self.rsync_running.clear()
+        self.rsync_finished.set()
+
 
 @logger
 class WatchTransport(CommonTransport):
@@ -310,9 +320,9 @@ class WatchTransport(CommonTransport):
                                   (iqs.index(iq) + 1, len(iqs)))
 
         except IqError as e:
-            self.logger.error(e.iq['error']['text'])
+            self.rsync_error(e.iq['error']['text'])
         except Exception as e:
-            self.logger.error(e)
+            self.rsync_error(e)
 
     def _build_iq(self, project, files):
         """Build a single rsync stanza.
