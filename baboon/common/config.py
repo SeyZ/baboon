@@ -97,15 +97,6 @@ def init_config_log(arg_attrs, logconf):
     """ Configures the logger level setted in the logging args
     """
 
-    # Ensure the log directory exists.
-    try:
-        mod_path = _get_module_path()
-        log_dir = join(mod_path, 'logs')
-        if not isdir(log_dir):
-            os.makedirs(log_dir)
-    except EnvironmentError:
-        raise ConfigException("Cannot create the logs directory")
-
     # Configure the logger with the dict logconf.
     logconf['loggers']['baboon']['level'] = arg_attrs['loglevel']
     dictConfig(logconf)
