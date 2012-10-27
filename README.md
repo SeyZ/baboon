@@ -1,3 +1,8 @@
+**If you have the following error: Cannot create the logs directory.
+Please, upgrade to 0.1.1 !**
+
+http://baboon-project.org
+
 ## What is Baboon ?
 
 Do you waste your time in resolving merge conflicts with your favorite source
