@@ -77,7 +77,9 @@ def dump():
         return
 
     baboonrc_path = os.path.expanduser('~/.baboonrc')
-    baboonrc_old_path = os.path.expanduser('~/.baboonrc.old')
+    # Override the default baboonrc_path if the --config arg is present.
+    if config['parser'].get('configpath'):
+        baboonrc_path = config['parser']['configpath']
 
     try:
         # Dump the config file.
@@ -87,7 +89,8 @@ def dump():
             print >>fd, get_dumped_projects()
             print >>fd, get_dumped_example_project()
 
-            csuccess("The new configuration file is written in ~/.baboonrc\n")
+            csuccess("The new configuration file is written in %s\n" %
+                     baboonrc_path)
     except EnvironmentError as err:
         cerr("Cannot dump the configuration. Cause:\n%s" % err)
 

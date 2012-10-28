@@ -8,6 +8,7 @@ import time
 from threading import Event
 
 from sleekxmpp import ClientXMPP
+from sleekxmpp.jid import JID
 from sleekxmpp.xmlstream.handler import Callback
 from sleekxmpp.xmlstream.matcher import StanzaPath
 from sleekxmpp.xmlstream.tostring import tostring
@@ -196,15 +197,12 @@ class CommonTransport(ClientXMPP):
                 'http://jabber.org/protocol/pubsub#subscribe_authorization'
             if expected_type in form['form']['fields']['FORM_TYPE']['value']:
                 node = form['form']['fields']['pubsub#node']['value']
-                user = form['form']['fields']['pubsub#subscriber_jid']['value']
+                jid = form['form']['fields']['pubsub#subscriber_jid']['value']
+                user = JID(jid).user
 
-                self.logger.info("%s wants to join the %s project !" % (user,
-                                                                        node))
-                self.logger.info("You can accept the invitation request by "
-                                 "running: $ baboon accept %s %s" % (node,
-                                                                     user))
-                self.logger.info("Or you can reject it by running: $ baboon "
-                                 "reject %s %s" % (node, user))
+                self.logger.info(">> %s wants to join the %s project ! <<" % (user, node))
+                self.logger.info(" $ baboon accept %s %s" % (node, user))
+                self.logger.info(" $ baboon reject %s %s" % (node, user))
         except KeyError:
             pass
 

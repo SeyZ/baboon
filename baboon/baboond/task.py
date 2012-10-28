@@ -94,7 +94,7 @@ class AlertTask(Task):
     """ A high priority task to alert baboon client the state of the merge.
     """
 
-    def __init__(self, project_name, username, dest_username,
+    def __init__(self, project_name, jid, dest_jid,
                  merge_conflict=False, conflict_files=[]):
         """ Initialize the AlertTask. By default, there's no merge
         conflict.
@@ -105,8 +105,8 @@ class AlertTask(Task):
         super(AlertTask, self).__init__(2)
 
         self.project_name = project_name
-        self.username = username
-        self.dest_username = dest_username
+        self.username = JID(jid).user
+        self.dest_username = JID(dest_jid).user
         self.merge_conflict = merge_conflict
         self.conflict_files = conflict_files
 
@@ -114,9 +114,10 @@ class AlertTask(Task):
         """ Build the appropriate message and publish it to the node.
         """
 
-        conflict_msg = 'Conflict detected with %s and %s.' % (
-            self.username, self.dest_username)
-        good_msg = 'Everything seems to be perfect.'
+        conflict_msg = '[%s] Conflict detected with %s and %s.' % (
+            self.project_name, self.username, self.dest_username)
+        good_msg = '[%s] No conflict detected with %s and %s.' % (
+            self.project_name, self.username, self.dest_username)
         msg = conflict_msg if self.merge_conflict else good_msg
 
         transport.alert(self.project_name, msg, self.conflict_files)
