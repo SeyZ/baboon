@@ -36,22 +36,23 @@ A few keywords:
 * Rsync (over XMPP)
 * Git
 
+## Installation
+
+```pip install baboon``` or ```easy_install baboon``` 
+
 ## Quickstart
 
-### It's your project
+### New baboon project !
 
 ```
-pip install baboon
 baboon register <nick>
 baboon create <project> <path>
-baboon init <project> <git-url>
 baboon start
 ```
 
-### You're a contributor
+### Existing baboon project !
 
 ```
-pip install baboon
 baboon register <nick>
 baboon join <project> <path>
 baboon init <project> <git-url>
