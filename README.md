@@ -46,7 +46,7 @@ A few keywords:
 
 ```
 baboon register <nick>
-baboon create <project> <path>
+baboon create <project> <project-path>
 baboon start
 ```
 
@@ -54,8 +54,8 @@ baboon start
 
 ```
 baboon register <nick>
-baboon join <project> <path>
-baboon init <project> <git-url>
+baboon join <project> <project-path>
+baboon init <project> <git-project-url>
 baboon start
 ```
 
