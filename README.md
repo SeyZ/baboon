@@ -1,5 +1,4 @@
-**If you have the following error: Cannot create the logs directory.
-Please, upgrade to 0.1.1 !**
+**Baboon project is in active development. Any contributions are welcome. Fork the project !**
 
 http://baboon-project.org
 
@@ -58,11 +57,6 @@ baboon join <project> <project-path>
 baboon init <project> <git-project-url>
 baboon start
 ```
-
-## Contribution
-
-The source code is available on Github (no seriously ?) ! **Any** contributions
-are welcome. Fork the project !
 
 ## License
 
