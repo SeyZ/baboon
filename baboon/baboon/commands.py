@@ -130,8 +130,13 @@ def create():
         if not _on_action_finished(ret_status, msg):
             return
 
-    _auto_init(path)
     dump()
+
+    # Do an init() if the git-url can be guessed.
+    git_url = _get_git_url(path)
+    if git_url:
+        config['parser']['git-url'] = git_url
+        init()
 
 
 @command
@@ -446,22 +451,13 @@ def _get_project_path(project_name):
                                "configuration file.")
 
 
-def _auto_init(path):
-    """ Try to auto-detect the git origin url in the path dir and do an init()
-    with that url.
+def _get_git_url(path):
+    """ Try to auto-detect the git origin url in the path dir. If found, return
+    it.
     """
 
-    err = "Cannot find the git origin url. Please run the init command."
-    if not os.path.isdir(path):
-        cwarn(err)
-        return
-
     ret_code, output, _ = exec_cmd('git config --get remote.origin.url', path)
-    if ret_code == 0:
-        config['parser']['git-url'] = output
-        init()
-    else:
-        cwarn(err)
+    return output if ret_code == 0 else None
 
 
 def _delete_metadir(project_name, project_path):
