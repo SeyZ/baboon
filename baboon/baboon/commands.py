@@ -12,6 +12,7 @@ from baboon.baboon.fmt import cinput, confirm_cinput, cwarn, csuccess, cerr
 from baboon.baboon.config import check_user, check_server, check_project
 from baboon.baboon.config import check_config, config, dump, SCMS
 from baboon.common.logger import logger
+from baboon.common.utils import exec_cmd
 from baboon.common.errors.baboon_exception import BaboonException
 from baboon.common.errors.baboon_exception import CommandException
 
@@ -129,6 +130,7 @@ def create():
         if not _on_action_finished(ret_status, msg):
             return
 
+    _auto_init(path)
     dump()
 
 
@@ -442,6 +444,24 @@ def _get_project_path(project_name):
     except KeyError:
         raise CommandException(404, "The project path cannot be found in your "
                                "configuration file.")
+
+
+def _auto_init(path):
+    """ Try to auto-detect the git origin url in the path dir and do an init()
+    with that url.
+    """
+
+    err = "Cannot find the git origin url. Please run the init command."
+    if not os.path.isdir(path):
+        cwarn(err)
+        return
+
+    ret_code, output, _ = exec_cmd('git config --get remote.origin.url', path)
+    if ret_code == 0:
+        config['parser']['git-url'] = output
+        init()
+    else:
+        cwarn(err)
 
 
 def _delete_metadir(project_name, project_path):

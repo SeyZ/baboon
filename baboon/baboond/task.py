@@ -1,7 +1,6 @@
 import os
 import errno
 import stat
-import subprocess
 import threading
 import shutil
 import tempfile
@@ -14,6 +13,7 @@ from baboon.baboond.dispatcher import dispatcher
 from baboon.baboond.transport import transport
 from baboon.baboond.config import config
 from baboon.common import pyrsync
+from baboon.common.utils import exec_cmd
 from baboon.common.eventbus import eventbus
 from baboon.common.file import FileEvent
 from baboon.common.logger import logger
@@ -32,18 +32,6 @@ def create_missing_dirs(fullpath, isfile=True):
         os.makedirs(fullpath)
     except OSError:
         pass
-
-
-def exec_cmd(cmd, cwd):
-    """ Execute the cmd command in a subprocess.
-    """
-
-    # Create the process and run it.
-    proc = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
-                            stderr=subprocess.STDOUT, shell=True, cwd=cwd)
-    output, errors = proc.communicate()
-
-    return (proc.returncode, output, errors)
 
 
 class Task(object):

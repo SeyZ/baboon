@@ -1,3 +1,4 @@
+import subprocess
 
 
 def cmp_to_key(mycmp):
@@ -30,3 +31,15 @@ def cmp_to_key(mycmp):
             raise TypeError('hash not implemented')
 
     return K
+
+
+def exec_cmd(cmd, cwd):
+    """ Execute the cmd command in a subprocess.
+    """
+
+    # Create the process and run it.
+    proc = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+                            stderr=subprocess.STDOUT, shell=True, cwd=cwd)
+    output, errors = proc.communicate()
+
+    return (proc.returncode, output, errors)
