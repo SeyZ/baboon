@@ -11,6 +11,19 @@ Baboon is **the** solution for you ! It's a lightweight daemon that detects
 merge conflicts before they actually happen. In fact, it detects them in
 **real time**.
 
+## Wanna see Baboon's running ?
+
+```
+$ baboon start
+[synapse-agent 13:37:33] startup initialization...
+[synapse-agent 13:37:36] ready 
+[synapse-agent 13:39:19] No conflict detected with seyz and raphdg.
+[synapse-agent 13:40:13] Conflict detected with seyz and raphdg.
+> error: patch failed: synapse/config.py:23
+> error: patch failed: synapse/resources/resources.py:89
+[synapse-agent 13:44:54] No conflict detected with seyz and raphdg.
+```
+
 ## How does it work ?
 As soon as Baboon is installed and configured (a matter of seconds, honest,
 a minute top) on your project's contributors computers, it starts its job.
