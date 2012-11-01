@@ -323,7 +323,7 @@ class RsyncTask(Task):
             'hashes': [h],
         }
 
-        transport.streamer.send(self.sid, transport._pack(payload))
+        transport.streamer.send(self.sid, payload)
 
         # Wait until the rsync is finished.
         # TODO: It takes sometimes more than 240 sec (i.e. git pack files)

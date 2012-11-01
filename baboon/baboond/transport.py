@@ -225,8 +225,7 @@ class Transport(ClientXMPP):
 
         self.logger.debug("Received data over socks5 socket.")
 
-        # Unpack the payload.
-        data = self._unpack(payload['data'])
+        data = payload['data']
 
         # Get the useful data.
         node = data['node']
@@ -313,14 +312,6 @@ class Transport(ClientXMPP):
             iq = self.Iq(sto=cur_rsync_task.jid, stype='set')
             iq['rsyncfinished']['node'] = cur_rsync_task.project
             iq.send(block=False)
-
-    def _pack(self, data):
-        data = pickle.dumps(data)
-        return struct.pack('>i', len(data)) + data
-
-    def _unpack(self, data):
-        data = pickle.loads(data)
-        return data
 
     def _verify_subscription(self, iq, jid, node):
         """ Verify if the bare jid is a subscriber/owner on the node.

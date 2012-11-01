@@ -396,9 +396,7 @@ class WatchTransport(CommonTransport):
         # Sets the future socket response dict.
         ret = {'from': self.boundjid.bare}
 
-        # Unpacks the recv data.
-        recv = payload['data']
-        data = self._unpack(recv)
+        data = payload['data']
 
         # Gets the current project.
         ret['node'] = data['node']
@@ -438,15 +436,7 @@ class WatchTransport(CommonTransport):
         ret['delta'] = deltas
 
         # Sends the result over the socket.
-        self.streamer.send(self.sid, self._pack(ret))
-
-    def _pack(self, data):
-        data = pickle.dumps(data)
-        return struct.pack('>i', len(data)) + data
-
-    def _unpack(self, data):
-        data = pickle.loads(data)
-        return data
+        self.streamer.send(self.sid, ret)
 
     def merge_verification(self, project):
         """ Sends an IQ to verify if there's a conflict or not.
