@@ -102,9 +102,9 @@ class AlertTask(Task):
         """ Build the appropriate message and publish it to the node.
         """
 
-        conflict_msg = '[%s] Conflict detected with %s and %s.' % (
+        conflict_msg = '[%s] Conflict detected between %s and %s.' % (
             self.project_name, self.username, self.dest_username)
-        good_msg = '[%s] No conflict detected with %s and %s.' % (
+        good_msg = '[%s] No conflict detected between %s and %s.' % (
             self.project_name, self.username, self.dest_username)
         msg = conflict_msg if self.merge_conflict else good_msg
 
