@@ -11,7 +11,7 @@ Baboon is **the** solution for you ! It's a lightweight daemon that detects
 merge conflicts before they actually happen. In fact, it detects them in
 **real time**.
 
-## Wanna see Baboon's running ?
+## Wanna see Baboon running ?
 
 ```
 $ baboon start
