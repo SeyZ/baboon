@@ -17,6 +17,7 @@ from sleekxmpp.plugins.xep_0060.stanza.pubsub_event import EventItem
 
 from baboon.baboon.monitor import FileEvent
 from baboon.baboon.config import config
+from baboon.common import proxy_socket
 from baboon.common.eventbus import eventbus
 from baboon.common.logger import logger
 from baboon.common import pyrsync
@@ -168,6 +169,8 @@ class CommonTransport(ClientXMPP):
         """ Called when a new rsync needs to be started.
         """
 
+        self.connected.wait()
+
         self.rsync(project, files=files)
         eventbus.fire('rsync-finished-success', project, files)
 
@@ -239,13 +242,15 @@ class WatchTransport(CommonTransport):
 
         self.register_plugin('xep_0050')  # Ad-hoc command
         self.register_plugin('xep_0065')  # Socks5 Bytestreams
-        self.add_event_handler('socks_recv', self.on_recv)
+
+        self.add_event_handler('socks_connected', self._on_socks_connected)
 
     def start(self, event):
         """ Handler for the session_start sleekxmpp event.
         """
 
-        super(WatchTransport, self).start(event)
+        self.send_presence()
+        self.get_roster()
 
         # Shortcut to access to the xep_0050 plugin.
         self.adhoc = self.plugin["xep_0050"]
@@ -258,7 +263,7 @@ class WatchTransport(CommonTransport):
             streamhost_used = self.streamer.handshake(self.server_addr,
                                                       self.streamer_addr)
         except IqError as e:
-            self.logger.error("Cannot established the socket connection. "
+            self.logger.error("Cannot established the proxy_socket connection. "
                               "Exiting...")
             # If the socks5 bytestream can't be established, disconnect the
             # XMPP connection clearly.
@@ -266,8 +271,19 @@ class WatchTransport(CommonTransport):
             return
 
         # Registers the SID to retrieve later to send/recv data to the
-        # good socket stored in self.streamer.proxy_threads dict.
+        # good proxy_socket stored in self.streamer.proxy_threads dict.
         self.sid = streamhost_used['socks']['sid']
+
+    def _on_socks_connected(self, event):
+        """
+        """
+
+        proxy_sock = self.streamer.get_socket(self.sid)
+        proxy_listener = proxy_socket.listen(self.sid, proxy_sock,
+                                             self._on_socks5_data)
+
+        self.logger.debug("Connected.")
+        self.connected.set()
 
         # Retrieve the list of pending users.
         for project in config['projects']:
@@ -284,7 +300,7 @@ class WatchTransport(CommonTransport):
             self.rsync_finished.wait()
             self.logger.info("Ok, all syncs are now finished.")
 
-        # Close the proxy socket.
+        # Close the proxy proxy_socket.
         if hasattr(self, 'streamer') and self.streamer:
             self.streamer.close()
 
@@ -386,17 +402,15 @@ class WatchTransport(CommonTransport):
         for i in xrange(0, len(files), step):
             yield files[i:i + step]
 
-    def on_recv(self, payload):
-        """ Called when receiving data over the socks5 socket (xep
+    def _on_socks5_data(self, sid, data, **kwargs):
+        """ Called when receiving data over the socks5 proxy_socket (xep
         0065).
         """
 
         deltas = []  # The list of delta.
 
-        # Sets the future socket response dict.
+        # Sets the future proxy_socket response dict.
         ret = {'from': self.boundjid.bare}
-
-        data = payload['data']
 
         # Gets the current project.
         ret['node'] = data['node']
@@ -435,8 +449,8 @@ class WatchTransport(CommonTransport):
         # Adds the list of deltas in the response dict.
         ret['delta'] = deltas
 
-        # Sends the result over the socket.
-        self.streamer.send(self.sid, ret)
+        # Sends the result over the proxy_socket.
+        self.streamer.send(sid, proxy_socket.pack(ret))
 
     def merge_verification(self, project):
         """ Sends an IQ to verify if there's a conflict or not.

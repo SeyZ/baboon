@@ -12,7 +12,7 @@ from sleekxmpp.jid import JID
 from baboon.baboond.dispatcher import dispatcher
 from baboon.baboond.transport import transport
 from baboon.baboond.config import config
-from baboon.common import pyrsync
+from baboon.common import pyrsync, proxy_socket
 from baboon.common.utils import exec_cmd
 from baboon.common.eventbus import eventbus
 from baboon.common.file import FileEvent
@@ -315,7 +315,7 @@ class RsyncTask(Task):
         """ Sends over the transport streamer the hash h.
         """
 
-        # Sets the future socket response dict.
+        # Sets the future proxy_socket response dict.
         payload = {
             'sid': self.sid,
             'rid': self.rid,
@@ -323,7 +323,9 @@ class RsyncTask(Task):
             'hashes': [h],
         }
 
-        transport.streamer.send(self.sid, payload)
+        # Gets the proxy_socket associated to the SID and send the payload.
+        proxy_sock = transport.streamer.get_socket(self.sid)
+        proxy_sock.sendall(proxy_socket.pack(payload))
 
         # Wait until the rsync is finished.
         # TODO: It takes sometimes more than 240 sec (i.e. git pack files)
@@ -340,7 +342,7 @@ class RsyncTask(Task):
         and return the future rsync payload to send.
         """
 
-        # Sets the future socket response dict.
+        # Sets the future proxy_socket response dict.
         ret = {
             'sid': self.sid,
             'rid': self.rid

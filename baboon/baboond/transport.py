@@ -15,6 +15,7 @@ from sleekxmpp.xmlstream.matcher import StanzaPath
 
 from baboon.baboond.dispatcher import dispatcher
 from baboon.baboond.config import config
+from baboon.common import proxy_socket
 from baboon.common.stanza.rsync import MergeStatus
 from baboon.common.eventbus import eventbus
 from baboon.common.logger import logger
@@ -86,7 +87,7 @@ class Transport(ClientXMPP):
 
         self.add_event_handler('session_start', self._on_session_start)
         self.add_event_handler('failed_auth', self._on_failed_auth)
-        self.add_event_handler('socks_recv', self._on_socks5_data)
+        self.add_event_handler('socks_connected', self._on_socks_connected)
 
         self.register_handler(Callback('First Git Init Handler',
                                        StanzaPath('iq@type=set/git-init'),
@@ -121,6 +122,15 @@ class Transport(ClientXMPP):
         self.logger.error("Authentication failed.")
         eventbus.fire('failed-auth')
         self.close()
+
+    def _on_socks_connected(self, sid):
+        """ Called when the Socks5 bytestream plugin is connected.
+        """
+
+        proxy_sock = self.streamer.get_socket(sid)
+        proxy_listener = proxy_socket.listen(sid, proxy_sock,
+                                             self._on_socks5_data)
+        self.logger.debug("Socks5 connected.")
 
     def _on_git_init_stanza(self, iq):
         """ Called when a GitInit stanza is received. This handler creates a
@@ -218,14 +228,12 @@ class Transport(ClientXMPP):
         # Reply to the request.
         reply.send()
 
-    def _on_socks5_data(self, payload):
+    def _on_socks5_data(self, sid, data, **kwargs):
         """ Called when receiving data over the socks5 socket (xep
         0065).
         """
 
         self.logger.debug("Received data over socks5 socket.")
-
-        data = payload['data']
 
         # Get the useful data.
         node = data['node']
