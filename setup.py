@@ -16,7 +16,7 @@ conflicts before they actually happen. In fact, it detects them in real time.
 
 setup(
     name='baboon',
-    version='0.1.2',
+    version='0.1.3',
     description='Detect merge conflict in realtime.',
     long_description=long_description,
     author='Sandro Munda',
@@ -29,8 +29,8 @@ setup(
     scripts=['bin/baboon', 'bin/baboond'],
     data_files=[('{0}/baboon/conf'.format(get_python_lib()), [
         'baboon/conf/baboondrc', 'baboon/conf/baboonrc'])],
-    dependency_links=['https://github.com/fritzy/SleekXMPP/tarball/develop'
-                      '#egg=sleekxmpp-1.1.5beta'],
+    dependency_links=['https://github.com/SeyZ/SleekXMPP/tarball/develop'
+                      '#egg=sleekxmpp-1.1.11beta'],
     classifiers=[
         'Development Status :: 5 - Production/Stable',
         'Environment :: Console',
