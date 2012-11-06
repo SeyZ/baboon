@@ -1,4 +1,4 @@
 dnspython>=1.9.4
 watchdog>=0.6.0
-sleekxmpp>=1.1.11beta
+sleekxmpp==1.1.11beta
 termcolor>=1.1.0
