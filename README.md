@@ -1,6 +1,7 @@
-**Baboon project is in active development. Any contributions are welcome. Fork the project !**
 
-http://baboon-project.org
+![My image](http://i1.minus.com/jyaT1d3kWY1hH_e.jpg)
+**Detect merge conflicts in realtime!** http://baboon-project.org
+![My image](http://i3.minus.com/jbuMtAj0zbpNb1_e.jpg)
 
 ## What is Baboon ?
 
