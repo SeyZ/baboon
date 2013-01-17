@@ -1,4 +1,3 @@
-
 ![My image](http://i1.minus.com/jyaT1d3kWY1hH_e.jpg)
 **Detect merge conflicts in realtime!** http://baboon-project.org
 ![My image](http://i3.minus.com/jbuMtAj0zbpNb1_e.jpg)
@@ -76,7 +75,7 @@ baboon start
 
 (the MIT license)
 
-Copyright (C) 2012 Sandro Munda <munda.sandro@gmail.com>
+Copyright (C) 2012 Sandro Munda <sandro@munda.me>
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of
 this software and associated documentation files (the "Software"), to deal in
