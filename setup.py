@@ -20,7 +20,7 @@ setup(
     description='Detect merge conflict in realtime.',
     long_description=long_description,
     author='Sandro Munda',
-    author_email='munda.sandro@gmail.com',
+    author_email='sandro@munda.me',
     license='MIT',
     url='http://baboon-project.org',
     download_url='https://github.com/SeyZ/baboon/tarball/master',
