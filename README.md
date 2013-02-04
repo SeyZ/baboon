@@ -2,7 +2,7 @@
 **Detect merge conflicts in realtime!** http://baboon-project.org
 ![My image](http://i3.minus.com/jbuMtAj0zbpNb1_e.jpg)
 
-## What is Baboon ?
+## What is Baboon?
 
 Do you waste your time in resolving merge conflicts with your favorite source
 code manager? Do you want to get rid of "Merge Hell"?
@@ -11,7 +11,10 @@ Baboon is **the** solution for you! It's a lightweight daemon that detects
 merge conflicts before they actually happen. In fact, it detects them in
 **real time**.
 
-## Wanna see Baboon running ?
+## Need help?
+Tutorials are available [on the Wiki pages!](https://github.com/SeyZ/baboon/wiki)
+
+## Wanna see Baboon running?
 
 ```
 $ baboon start
