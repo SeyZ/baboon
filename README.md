@@ -13,8 +13,10 @@ merge conflicts before they actually happen. In fact, it detects them in
 
 ## Need help?
 Tutorials are available [on the Wiki pages!](https://github.com/SeyZ/baboon/wiki)
+
 If you encounter a bug, post it to the issue tracker.
-For any questions, feedbacks or whatever, feel free to email me at: [sandro@munda.me](mailto:sandro@munda.me)
+
+For any questions, feedbacks or whatever... feel free to email me at: [sandro@munda.me](mailto:sandro@munda.me)
 
 ## Wanna see Baboon running?
 
