@@ -1,5 +1,5 @@
 ![My image](http://i1.minus.com/jyaT1d3kWY1hH_e.jpg)
-**Detect merge conflicts in realtime!** http://baboon-project.org
+**Detect merge conflicts in realtime!** [http://baboon-project.org](http://baboon-project.org)
 ![My image](http://i3.minus.com/jbuMtAj0zbpNb1_e.jpg)
 
 ## What is Baboon?
@@ -13,6 +13,8 @@ merge conflicts before they actually happen. In fact, it detects them in
 
 ## Need help?
 Tutorials are available [on the Wiki pages!](https://github.com/SeyZ/baboon/wiki)
+If you encounter a bug, post it to the issue tracker.
+For any questions, feedbacks or whatever, feel free to email me at: [sandro@munda.me](mailto:sandro@munda.me)
 
 ## Wanna see Baboon running?
 
