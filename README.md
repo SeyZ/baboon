@@ -1,63 +1,21 @@
 ![My image](http://i1.minus.com/jyaT1d3kWY1hH_e.jpg)
-**Detect merge conflicts in realtime!** [http://baboon-project.org](http://baboon-project.org)
+**Detect merge conflicts in realtime!**
+[http://baboon-project.org](http://baboon-project.org)
 ![My image](http://i3.minus.com/jbuMtAj0zbpNb1_e.jpg)
 
 ## What is Baboon?
 
-Do you waste your time in resolving merge conflicts with your favorite source
-code manager? Do you want to get rid of "Merge Hell"?
+One single merge conflict is pretty easy to solve. However, you might take
+several days before realizing there is one conflict. The longer you wait, the
+more conflicts you will have to solve.
 
-Baboon is **the** solution for you! It's a lightweight daemon that detects
-merge conflicts before they actually happen. In fact, it detects them in
-**real time**.
+**Overlooking them will lead you to a merge hell.**
 
-## Need help?
-Tutorials are available [on the Wiki pages!](https://github.com/SeyZ/baboon/wiki)
-
-If you encounter a bug, post it to the issue tracker.
-
-For any questions, feedbacks or whatever... feel free to email me at: [sandro@munda.me](mailto:sandro@munda.me)
-
-## Wanna see Baboon running?
-
-```
-$ baboon start
-[synapse-agent 13:37:33] startup initialization...
-[synapse-agent 13:37:36] ready 
-[synapse-agent 13:39:19] No conflict detected with seyz and raphdg.
-[synapse-agent 13:40:13] Conflict detected with seyz and raphdg.
-> error: patch failed: synapse/config.py:23
-> error: patch failed: synapse/resources/resources.py:89
-[synapse-agent 13:44:54] No conflict detected with seyz and raphdg.
-```
-
-## How does it work ?
-As soon as Baboon is installed and configured on your project's contributors
-computers (a matter of seconds, honest! A minute, tops), it starts its job.
-
-Baboon syncs your files in **real time** (well, every time you save one) with
-the ones of your co-workers on a central server and simulates a merge of the
-files.
-
-If a conflict is detected, every contributor receives an alert to warn them that
-eventually, a conflict will occur (Baboon even tells you on which file it will
-happen).
-
-Time to blame the culprit ! (Yeah, Baboon also tells you who originated the
-conflict.)
-
-He's lucky anyway. At this point, the merge conflict is super easy to solve,
-it's small. Remember, you're warned in **real time**.
-
-A few keywords:
-* Python
-* XMPP (with XEP-0060 and XEP-0065)
-* Rsync (over XMPP)
-* Git
+Baboon is a lightweight daemon that detects merge conflicts in realtime.
 
 ## Installation
 
-```pip install baboon``` or ```easy_install baboon``` 
+```pip install baboon``` or ```easy_install baboon```
 
 ## Quickstart
 
@@ -77,6 +35,29 @@ baboon join <project> <project-path>
 baboon init <project> <git-project-url>
 baboon start
 ```
+
+## Documentation
+Check out the [Wiki pages!](https://github.com/SeyZ/baboon/wiki).
+
+If you encounter a bug, post it to the issue tracker.  For questions, feedback
+or whatever, feel free to contact me at
+[sandro@munda.me](mailto:sandro@munda.me)
+
+## How does it work ?
+
+Baboon syncs your files in **real time** (well, every time you save one) with
+the ones of your contributors on a centralized server and simulates a merge of
+the files.
+
+If a conflict is detected, everyone notified. Time to blame the culprit! He is
+lucky anyway. At this point, the merge conflict is super easy to solve: it is
+small. Remember, you are warned in **real time**.
+
+A few keywords:
+* Python
+* XMPP (with XEP-0060 and XEP-0065)
+* Rsync (over XMPP)
+* Git
 
 ## License
 
