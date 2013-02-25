@@ -64,7 +64,7 @@ class Transport(ClientXMPP):
         self.disconnected.set()
         self.logger.info("Disconnected from the XMPP server.")
 
-    def alert(self, node, msg, files=[]):
+    def alert(self, node, msg, files=[], merge_conflict=False):
         """ Build a MergeStatus stanza and publish it to the pubsub node.
         """
 
@@ -72,6 +72,7 @@ class Transport(ClientXMPP):
         status_msg = MergeStatus()
         status_msg['node'] = node
         status_msg['status'] = msg
+        status_msg['type'] = 'error' if merge_conflict else 'ok'
         status_msg.set_files(files)
 
         try:

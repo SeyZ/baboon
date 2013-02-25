@@ -96,7 +96,7 @@ class MergeVerification(ElementBase):
 class MergeStatus(ElementBase):
     name = 'merge_status'
     namespace = 'baboon'
-    interfaces = set(('node', 'status', 'files'))
+    interfaces = set(('node', 'status', 'files', 'type'))
     subinterfaces = set(('files',))
     plugin_attrib = 'merge_status'
 

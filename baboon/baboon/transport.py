@@ -166,8 +166,8 @@ class CommonTransport(ClientXMPP):
                             err = "> %s" % err_f.text
                             self.logger.warning(err)
                             notif_msg = "%s\n%s" % (notif_msg, err)
-
-                    eventbus.fire('conflict-result', notif_msg)
+                    if item['payload'].get('type') == 'error':
+                        eventbus.fire('conflict-result', notif_msg)
         else:
             self.logger.debug("Received pubsub event: \n%s" %
                               msg['pubsub_event'])

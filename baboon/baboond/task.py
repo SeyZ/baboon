@@ -108,7 +108,8 @@ class AlertTask(Task):
             self.project_name, self.username, self.dest_username)
         msg = conflict_msg if self.merge_conflict else good_msg
 
-        transport.alert(self.project_name, msg, self.conflict_files)
+        transport.alert(self.project_name, msg, self.conflict_files,
+                        merge_conflict=self.merge_conflict)
 
 
 @logger
