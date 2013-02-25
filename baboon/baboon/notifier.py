@@ -18,4 +18,4 @@ class Notifier(object):
 
     def _on_message(self, message):
 
-        exec_cmd("%s '%s'" % (self.notif_cmd, message))
+        exec_cmd(self.notif_cmd %(message))
