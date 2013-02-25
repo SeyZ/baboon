@@ -86,6 +86,7 @@ def dump():
         with open(baboonrc_path, 'w') as fd:
             print >>fd, get_dumped_user()
             print >>fd, get_dumped_server()
+            print >>fd, get_dumped_notification()
             print >>fd, get_dumped_projects()
             print >>fd, get_dumped_example_project()
 
@@ -107,6 +108,13 @@ def get_dumped_user():
     """
 
     return '\n'.join(_get_dumped_section('user')) + '\n'
+
+
+def get_dumped_notification():
+    """ Returns a dumped representation of the notification section.
+    """
+
+    return '\n'.join(_get_dumped_section('notification')) + '\n'
 
 
 def get_dumped_projects():
@@ -149,7 +157,7 @@ def get_baboon_config():
     # The known section tuple contains the list of sections to put directly
     # as a root key in the config dict. Other sections will be interpreted as a
     # project and placed into the 'projects' key.
-    known_section = ('server', 'user')
+    known_section = ('server', 'user', 'notification')
     for key in file_attrs:
         if key in known_section:
             config[key] = file_attrs[key]

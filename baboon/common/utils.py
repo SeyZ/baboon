@@ -33,7 +33,7 @@ def cmp_to_key(mycmp):
     return K
 
 
-def exec_cmd(cmd, cwd):
+def exec_cmd(cmd, cwd=None):
     """ Execute the cmd command in a subprocess.
     """
 

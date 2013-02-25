@@ -156,11 +156,18 @@ class CommonTransport(ClientXMPP):
 
             items = msg['pubsub_event']['items']['substanzas']
             for item in items:
+                notif_msg = ""
                 if isinstance(item, EventItem):
                     self.logger.info(item['payload'].get('status'))
+                    notif_msg += item['payload'].get('status')
+
                     for err_f in item['payload']:
                         if err_f.text:
-                            self.logger.warning("> %s" % err_f.text)
+                            err = "> %s" % err_f.text
+                            self.logger.warning(err)
+                            notif_msg = "%s\n%s" % (notif_msg, err)
+
+                    eventbus.fire('conflict-result', notif_msg)
         else:
             self.logger.debug("Received pubsub event: \n%s" %
                               msg['pubsub_event'])

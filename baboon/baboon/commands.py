@@ -8,6 +8,7 @@ from baboon.baboon.transport import WatchTransport
 from baboon.baboon.initializor import MetadirController
 from baboon.baboon.transport import RegisterTransport, AdminTransport
 from baboon.baboon.fmt import cinput, confirm_cinput, cwarn, csuccess, cerr
+from baboon.baboon.notifier import Notifier
 
 from baboon.baboon.config import check_user, check_server, check_project
 from baboon.baboon.config import check_config, config, dump, SCMS
@@ -37,6 +38,13 @@ def start():
 
     # Ensure the validity of the configuration file.
     check_config(add_mandatory_server_fields=['streamer', 'max_stanza_size'])
+
+    # If notification is configured, start the notifier.
+    try:
+        notif_cmd = config['notification']['cmd']
+        Notifier(notif_cmd)
+    except:
+        pass
 
     metadirs = []
     monitor = None
